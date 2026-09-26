@@ -106,78 +106,6 @@
 	margin: 0;
 }
 
-/* Budget tab */
-
-.nwt-budget-header {
-	justify-content: flex-start;
-}
-
-.nwt-month-nav {
-	align-items: center;
-	display: flex;
-	gap: var(--size-4-2);
-}
-
-.nwt-month-nav-btn {
-	background: none;
-	border: none;
-	color: var(--text-muted);
-	cursor: pointer;
-	font-size: var(--font-ui-medium);
-}
-
-.nwt-month-nav-btn:disabled {
-	cursor: default;
-	opacity: 0.5;
-}
-
-.nwt-month-label {
-	color: var(--text-normal);
-	font-weight: 600;
-	min-width: 8ch;
-	text-align: center;
-}
-
-.nwt-budget-layout {
-	display: grid;
-	gap: var(--size-4-4);
-	grid-template-columns: 2fr 1fr;
-}
-
-.nwt-budget-side {
-	display: flex;
-	flex-direction: column;
-	gap: var(--size-4-4);
-}
-
-/* Budget categories */
-
-.nwt-category-list {
-	display: flex;
-	flex-direction: column;
-	gap: var(--size-4-2);
-}
-
-.nwt-category {
-	border-bottom: 1px solid var(--background-modifier-border);
-	padding-bottom: var(--size-4-2);
-}
-
-.nwt-category:last-child {
-	border-bottom: none;
-	padding-bottom: 0;
-}
-
-.nwt-category-header {
-	align-items: center;
-	display: flex;
-	justify-content: space-between;
-}
-
-.nwt-category-name {
-	font-weight: 600;
-}
-
 .nwt-row-actions {
 	display: flex;
 	gap: var(--size-4-1);
@@ -197,25 +125,7 @@
 	color: var(--text-normal);
 }
 
-.nwt-subcategory-list {
-	display: flex;
-	flex-direction: column;
-	margin-left: var(--size-4-4);
-	margin-top: var(--size-4-1);
-}
-
-.nwt-subcategory {
-	align-items: center;
-	display: flex;
-	justify-content: space-between;
-	padding: var(--size-4-1) 0;
-}
-
-.nwt-subcategory-name {
-	color: var(--text-muted);
-}
-
-/* Modals (PromptModal / ConfirmModal) */
+/* Modals (PromptModal) */
 
 .nwt-modal-input {
 	margin-bottom: var(--size-4-4);
@@ -242,7 +152,7 @@
 	width: 100%;
 }
 
-/* Assets tab */
+/* Assets & Debt tabs */
 
 .nwt-account-list {
 	display: flex;
@@ -251,7 +161,7 @@
 }
 
 .nwt-account {
-	align-items: center;
+	align-items: baseline;
 	display: flex;
 	justify-content: space-between;
 	padding: var(--size-4-1) 0;
@@ -261,12 +171,23 @@
 	border-bottom: 1px solid var(--background-modifier-border);
 }
 
+.nwt-account-info {
+	align-items: baseline;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-4-2);
+}
+
 .nwt-account-name {
 	font-weight: 600;
 }
 
-.nwt-account-kind {
+.nwt-account-kind,
+.nwt-account-balance {
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
+}
+
+.nwt-account-kind {
 	text-transform: capitalize;
 }

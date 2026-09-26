@@ -3,7 +3,7 @@
 	"name": "Net Worth Tracker",
 	"version": "0.1.0",
 	"minAppVersion": "1.7.2",
-	"description": "Track net worth, accounts, and budget over time, right inside your vault.",
+	"description": "Track net worth and accounts over time, right inside your vault.",
 	"author": "Fernando Berlanga",
 	"authorUrl": "https://github.com/fernanluyano",
 	"isDesktopOnly": false

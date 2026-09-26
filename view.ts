@@ -1,59 +1,54 @@
 import { ArcElement, Chart, DoughnutController, Legend, Tooltip } from "chart.js";
 import { App, ItemView, Modal, setIcon, setTooltip, WorkspaceLeaf } from "obsidian";
+import { accountTypeName, addAccountType, type AccountType } from "./accountTypes";
 import {
-	accountTypeLabel,
 	addAccount,
 	assetBreakdownByType,
 	formatCents,
+	latestBalanceCents,
 	netWorthAt,
+	recordSnapshot,
 	type Account,
 	type AccountKind,
-	type AssetAccountType,
 } from "./accounts";
-import {
-	addCategory,
-	addSubcategory,
-	deleteCategory,
-	deleteSubcategory,
-	renameCategory,
-	renameSubcategory,
-	type BudgetCategory,
-} from "./budgetCategories";
 import type NetWorthTrackerPlugin from "./main";
 
 Chart.register(DoughnutController, ArcElement, Legend, Tooltip);
 
 export const VIEW_TYPE_NET_WORTH = "net-worth-tracker-view";
 
-// Validated categorical palette (dataviz skill), fixed to ACCOUNT_TYPES_BY_KIND.asset's
-// order so a type's color never depends on which other types are present.
-const ASSET_TYPE_COLORS: Record<AssetAccountType, { light: string; dark: string }> = {
-	cash: { light: "#2a78d6", dark: "#3987e5" },
-	"real-estate": { light: "#eb6834", dark: "#d95926" },
-	"precious-metals": { light: "#1baf7a", dark: "#199e70" },
-	retirement: { light: "#eda100", dark: "#c98500" },
-	investments: { light: "#e87ba4", dark: "#d55181" },
-	vehicle: { light: "#008300", dark: "#008300" },
-	other: { light: "#4a3aa7", dark: "#9085e9" },
-};
+// Validated categorical palette (dataviz skill). A type's color comes from its
+// index within the plugin's assetTypes list (its fixed "seat"), not from the
+// breakdown's filtered/sorted order, so it never depends on which other types
+// are present. Cycles via modulo once custom types exceed the palette length.
+const ASSET_TYPE_COLOR_PALETTE: { light: string; dark: string }[] = [
+	{ light: "#2a78d6", dark: "#3987e5" },
+	{ light: "#eb6834", dark: "#d95926" },
+	{ light: "#1baf7a", dark: "#199e70" },
+	{ light: "#eda100", dark: "#c98500" },
+	{ light: "#e87ba4", dark: "#d55181" },
+	{ light: "#008300", dark: "#008300" },
+	{ light: "#4a3aa7", dark: "#9085e9" },
+];
+
+const NEW_TYPE_SENTINEL = "__new_type__";
 
 function todayIso(): string {
 	return new Date().toISOString().slice(0, 10);
 }
 
-type TabId = "overview" | "budget" | "debt" | "assets";
+type TabId = "overview" | "debt" | "assets";
 
 const TABS: { id: TabId; label: string }[] = [
 	{ id: "overview", label: "Overview" },
-	{ id: "budget", label: "Budget" },
 	{ id: "debt", label: "Debt" },
 	{ id: "assets", label: "Assets" },
 ];
 
 export class NetWorthView extends ItemView {
 	private plugin: NetWorthTrackerPlugin;
-	// Overview leads, not Budget (the trading app's default) — the net worth
-	// view should be the first thing shown, not buried behind navigation.
+	// Overview leads — the net worth view should be the first thing shown,
+	// not buried behind navigation.
 	private activeTab: TabId = "overview";
 	private charts: Chart[] = [];
 
@@ -117,9 +112,6 @@ export class NetWorthView extends ItemView {
 			case "overview":
 				this.renderOverviewTab(content);
 				break;
-			case "budget":
-				this.renderBudgetTab(content);
-				break;
 			case "debt":
 				this.renderDebtTab(content);
 				break;
@@ -134,7 +126,7 @@ export class NetWorthView extends ItemView {
 	// ---------------------------------------------------------------------
 
 	private renderOverviewTab(root: HTMLElement): void {
-		const sections = ["Net Worth", "Trends", "Savings Buckets", "Recurring Expenses", "Assets", "Debts"];
+		const sections = ["Net Worth", "Trends", "Savings Buckets", "Assets", "Debts"];
 		for (const title of sections) {
 			const section = root.createDiv({ cls: "nwt-section" });
 			section.createDiv({ cls: "nwt-section-header", text: title });
@@ -162,8 +154,19 @@ export class NetWorthView extends ItemView {
 		card.createEl("p", { cls: "nwt-net-worth-total", text: formatCents(total) });
 	}
 
+	private assetTypeColor(typeId: string, isDark: boolean): string {
+		const index = this.plugin.assetTypes.findIndex((type) => type.id === typeId);
+		const entry = ASSET_TYPE_COLOR_PALETTE[(index < 0 ? 0 : index) % ASSET_TYPE_COLOR_PALETTE.length];
+		return isDark ? entry.dark : entry.light;
+	}
+
 	private renderAssetBreakdownCard(card: HTMLElement): void {
-		const breakdown = assetBreakdownByType(this.plugin.accounts, this.plugin.snapshots, todayIso());
+		const breakdown = assetBreakdownByType(
+			this.plugin.accounts,
+			this.plugin.snapshots,
+			this.plugin.assetTypes,
+			todayIso()
+		);
 		if (breakdown.length === 0) {
 			card.createEl("p", { cls: "nwt-placeholder", text: "Nothing tracked yet." });
 			return;
@@ -182,9 +185,7 @@ export class NetWorthView extends ItemView {
 					datasets: [
 						{
 							data: breakdown.map((entry) => entry.totalCents),
-							backgroundColor: breakdown.map((entry) =>
-								isDark ? ASSET_TYPE_COLORS[entry.type].dark : ASSET_TYPE_COLORS[entry.type].light
-							),
+							backgroundColor: breakdown.map((entry) => this.assetTypeColor(entry.type, isDark)),
 							borderWidth: 0,
 						},
 					],
@@ -205,125 +206,20 @@ export class NetWorthView extends ItemView {
 	}
 
 	// ---------------------------------------------------------------------
-	// Budget tab
-	// ---------------------------------------------------------------------
-
-	private renderBudgetTab(root: HTMLElement): void {
-		const header = root.createDiv({ cls: "nwt-section-header nwt-budget-header" });
-		const nav = header.createDiv({ cls: "nwt-month-nav" });
-		const prevBtn = nav.createEl("button", { cls: "nwt-month-nav-btn", text: "‹" });
-		prevBtn.disabled = true;
-		nav.createSpan({ cls: "nwt-month-label", text: "—" });
-		const nextBtn = nav.createEl("button", { cls: "nwt-month-nav-btn", text: "›" });
-		nextBtn.disabled = true;
-
-		this.renderStatRow(root, ["Planned", "Actual", "Diff"]);
-
-		const layout = root.createDiv({ cls: "nwt-budget-layout" });
-		const categoriesCard = layout.createDiv({ cls: "nwt-card nwt-budget-categories" });
-		this.renderCategoryList(categoriesCard);
-
-		const side = layout.createDiv({ cls: "nwt-budget-side" });
-		side.createDiv({ cls: "nwt-card" }).createEl("p", { cls: "nwt-placeholder", text: "Nothing here yet." });
-		side.createDiv({ cls: "nwt-card" }).createEl("p", { cls: "nwt-placeholder", text: "No transactions yet." });
-	}
-
-	// ---------------------------------------------------------------------
-	// Budget categories
-	// ---------------------------------------------------------------------
-
-	private renderCategoryList(root: HTMLElement): void {
-		root.empty();
-
-		const header = root.createDiv({ cls: "nwt-section-header" });
-		header.createSpan({ text: "Categories" });
-		const addBtn = header.createEl("button", { cls: "nwt-btn", text: "+ Category" });
-		addBtn.addEventListener("click", () => {
-			new PromptModal(this.app, "New category", "e.g. Groceries", "", (name) => {
-				void this.plugin.saveCategories(addCategory(this.plugin.categories, name)).then(() => this.render());
-			}).open();
-		});
-
-		if (this.plugin.categories.length === 0) {
-			root.createEl("p", { cls: "nwt-placeholder", text: "No budget categories yet." });
-			return;
-		}
-
-		const list = root.createDiv({ cls: "nwt-category-list" });
-		for (const category of this.plugin.categories) {
-			this.renderCategoryRow(list, category);
-		}
-	}
-
-	private renderCategoryRow(root: HTMLElement, category: BudgetCategory): void {
-		const row = root.createDiv({ cls: "nwt-category" });
-		const rowHeader = row.createDiv({ cls: "nwt-category-header" });
-		rowHeader.createSpan({ cls: "nwt-category-name", text: category.name });
-
-		const actions = rowHeader.createDiv({ cls: "nwt-row-actions" });
-		this.createIconButton(actions, "plus", "Add subcategory", () => {
-			new PromptModal(this.app, "New subcategory", "e.g. Produce", "", (name) => {
-				void this.plugin
-					.saveCategories(addSubcategory(this.plugin.categories, category.id, name))
-					.then(() => this.render());
-			}).open();
-		});
-		this.createIconButton(actions, "pencil", "Rename category", () => {
-			new PromptModal(this.app, "Rename category", "Category name", category.name, (name) => {
-				void this.plugin
-					.saveCategories(renameCategory(this.plugin.categories, category.id, name))
-					.then(() => this.render());
-			}).open();
-		});
-		this.createIconButton(actions, "trash-2", "Delete category", () => {
-			new ConfirmModal(this.app, `Delete "${category.name}" and its subcategories?`, () => {
-				void this.plugin
-					.saveCategories(deleteCategory(this.plugin.categories, category.id))
-					.then(() => this.render());
-			}).open();
-		});
-
-		if (category.subcategories.length > 0) {
-			const subList = row.createDiv({ cls: "nwt-subcategory-list" });
-			for (const sub of category.subcategories) {
-				const subRow = subList.createDiv({ cls: "nwt-subcategory" });
-				subRow.createSpan({ cls: "nwt-subcategory-name", text: sub.name });
-
-				const subActions = subRow.createDiv({ cls: "nwt-row-actions" });
-				this.createIconButton(subActions, "pencil", "Rename subcategory", () => {
-					new PromptModal(this.app, "Rename subcategory", "Subcategory name", sub.name, (name) => {
-						void this.plugin
-							.saveCategories(renameSubcategory(this.plugin.categories, category.id, sub.id, name))
-							.then(() => this.render());
-					}).open();
-				});
-				this.createIconButton(subActions, "trash-2", "Delete subcategory", () => {
-					new ConfirmModal(this.app, `Delete "${sub.name}"?`, () => {
-						void this.plugin
-							.saveCategories(deleteSubcategory(this.plugin.categories, category.id, sub.id))
-							.then(() => this.render());
-					}).open();
-				});
-			}
-		}
-	}
-
-	private createIconButton(root: HTMLElement, icon: string, tooltip: string, onClick: () => void): void {
-		const btn = root.createEl("button", { cls: "nwt-icon-btn" });
-		setIcon(btn, icon);
-		setTooltip(btn, tooltip);
-		btn.addEventListener("click", onClick);
-	}
-
-	// ---------------------------------------------------------------------
 	// Debt tab
 	// ---------------------------------------------------------------------
 
 	private renderDebtTab(root: HTMLElement): void {
 		this.renderStatRow(root, ["Total Debt", "Total Min. Payment", "Accounts"]);
 
-		const grid = root.createDiv({ cls: "nwt-card-grid" });
-		grid.createEl("p", { cls: "nwt-placeholder", text: "No debts tracked yet." });
+		const header = root.createDiv({ cls: "nwt-section-header nwt-assets-header" });
+		header.createSpan({ text: "Debts" });
+		const actions = header.createDiv({ cls: "nwt-header-actions" });
+		actions.createEl("button", { cls: "nwt-btn", text: "+ Add" }).addEventListener("click", () => {
+			this.openAddAccountModal("debt");
+		});
+
+		this.renderAccountList(root, "debt", "No debts tracked yet.");
 	}
 
 	// ---------------------------------------------------------------------
@@ -335,19 +231,48 @@ export class NetWorthView extends ItemView {
 		header.createSpan({ text: "Assets" });
 		const actions = header.createDiv({ cls: "nwt-header-actions" });
 		actions.createEl("button", { cls: "nwt-btn", text: "+ Add" }).addEventListener("click", () => {
-			new AddAccountModal(this.app, (name, kind) => {
-				void this.plugin.saveAccounts(addAccount(this.plugin.accounts, name, kind)).then(() => this.render());
-			}).open();
+			this.openAddAccountModal("asset");
 		});
 		// Present but inert — nothing external to refresh from yet.
 		actions.createEl("button", { cls: "nwt-btn", text: "Refresh" });
 
-		const accounts = this.plugin.accounts.filter((account) => !account.archived);
+		this.renderAccountList(root, "asset", "No accounts tracked yet.");
+	}
+
+	// ---------------------------------------------------------------------
+	// Add account — shared between the Assets and Debt tabs
+	// ---------------------------------------------------------------------
+
+	private openAddAccountModal(initialKind: AccountKind): void {
+		new AddAccountModal(
+			this.app,
+			initialKind,
+			this.plugin.assetTypes,
+			this.plugin.debtTypes,
+			async (kind, name) => {
+				const current = kind === "asset" ? this.plugin.assetTypes : this.plugin.debtTypes;
+				const updated = addAccountType(current, name);
+				if (updated === current) return undefined; // no-op: blank or duplicate name
+				if (kind === "asset") await this.plugin.saveAssetTypes(updated);
+				else await this.plugin.saveDebtTypes(updated);
+				return updated;
+			},
+			(name, kind, typeId, aprBps) => {
+				const types = kind === "asset" ? this.plugin.assetTypes : this.plugin.debtTypes;
+				void this.plugin
+					.saveAccounts(addAccount(this.plugin.accounts, name, kind, typeId, types, aprBps))
+					.then(() => this.render());
+			}
+		).open();
+	}
+
+	// Shared by the Assets and Debt tabs — same row rendering, filtered to
+	// the tab's own account kind so a debt account doesn't also show up on
+	// the Assets side (and vice versa).
+	private renderAccountList(root: HTMLElement, kind: AccountKind, emptyText: string): void {
+		const accounts = this.plugin.accounts.filter((account) => !account.archived && account.kind === kind);
 		if (accounts.length === 0) {
-			root.createDiv({ cls: "nwt-card" }).createEl("p", {
-				cls: "nwt-placeholder",
-				text: "No accounts tracked yet.",
-			});
+			root.createDiv({ cls: "nwt-card" }).createEl("p", { cls: "nwt-placeholder", text: emptyText });
 			return;
 		}
 
@@ -359,10 +284,28 @@ export class NetWorthView extends ItemView {
 
 	private renderAccountRow(root: HTMLElement, account: Account): void {
 		const row = root.createDiv({ cls: "nwt-account" });
-		row.createSpan({ cls: "nwt-account-name", text: account.name });
-		const typeLabel = account.type ? accountTypeLabel(account.kind, account.type) : undefined;
+
+		const info = row.createDiv({ cls: "nwt-account-info" });
+		info.createSpan({ cls: "nwt-account-name", text: account.name });
+		const types = account.kind === "asset" ? this.plugin.assetTypes : this.plugin.debtTypes;
+		const typeLabel = accountTypeName(types, account.type);
 		const meta = typeLabel ? `${account.kind} · ${typeLabel}` : account.kind;
-		row.createSpan({ cls: "nwt-account-kind", text: meta });
+		info.createSpan({ cls: "nwt-account-kind", text: meta });
+
+		const balanceCents = latestBalanceCents(this.plugin.snapshots, account.id, todayIso());
+		info.createSpan({
+			cls: "nwt-account-balance",
+			text: balanceCents === undefined ? "No balance yet" : formatCents(balanceCents),
+		});
+
+		const rowActions = row.createDiv({ cls: "nwt-row-actions" });
+		this.createIconButton(rowActions, "circle-dollar-sign", "Record balance", () => {
+			new RecordBalanceModal(this.app, account.name, (date, balanceCents) => {
+				void this.plugin
+					.saveSnapshots(recordSnapshot(this.plugin.snapshots, account.id, date, balanceCents))
+					.then(() => this.render());
+			}).open();
+		});
 	}
 
 	// ---------------------------------------------------------------------
@@ -376,6 +319,13 @@ export class NetWorthView extends ItemView {
 			stat.createDiv({ cls: "nwt-stat-value", text: "—" });
 			stat.createDiv({ cls: "nwt-stat-label", text: label });
 		}
+	}
+
+	private createIconButton(root: HTMLElement, icon: string, tooltip: string, onClick: () => void): void {
+		const btn = root.createEl("button", { cls: "nwt-icon-btn" });
+		setIcon(btn, icon);
+		setTooltip(btn, tooltip);
+		btn.addEventListener("click", onClick);
 	}
 }
 
@@ -427,13 +377,28 @@ class PromptModal extends Modal {
 
 class AddAccountModal extends Modal {
 	private name = "";
-	private kind: AccountKind = "asset";
+	private kind: AccountKind;
+	private typeId = "";
+	private aprText = "";
+	private typeSelect!: HTMLSelectElement;
+	private aprRow!: HTMLElement;
 
 	constructor(
 		app: App,
-		private onSubmit: (name: string, kind: AccountKind) => void
+		initialKind: AccountKind,
+		private assetTypes: AccountType[],
+		private debtTypes: AccountType[],
+		// Returns the kind's updated type list with the new type appended, or
+		// undefined for a no-op (blank/duplicate name) — never throws.
+		private onCreateType: (kind: AccountKind, name: string) => Promise<AccountType[] | undefined>,
+		private onSubmit: (name: string, kind: AccountKind, typeId: string, aprBps: number | undefined) => void
 	) {
 		super(app);
+		this.kind = initialKind;
+	}
+
+	private typesForKind(kind: AccountKind): AccountType[] {
+		return kind === "asset" ? this.assetTypes : this.debtTypes;
 	}
 
 	onOpen(): void {
@@ -448,12 +413,35 @@ class AddAccountModal extends Modal {
 			if (evt.key === "Enter") this.submit();
 		});
 
-		const select = this.contentEl.createEl("select", { cls: "nwt-modal-input" });
-		select.createEl("option", { value: "asset", text: "Asset" });
-		select.createEl("option", { value: "liability", text: "Liability" });
-		select.addEventListener("change", () => {
-			this.kind = select.value as AccountKind;
+		const kindSelect = this.contentEl.createEl("select", { cls: "nwt-modal-input" });
+		kindSelect.createEl("option", { value: "asset", text: "Asset" });
+		kindSelect.createEl("option", { value: "debt", text: "Debt" });
+		kindSelect.value = this.kind;
+		kindSelect.addEventListener("change", () => {
+			this.kind = kindSelect.value as AccountKind;
+			this.rebuildTypeOptions();
+			this.aprRow.hidden = this.kind !== "debt";
 		});
+
+		this.typeSelect = this.contentEl.createEl("select", { cls: "nwt-modal-input" });
+		this.typeSelect.addEventListener("change", () => {
+			if (this.typeSelect.value === NEW_TYPE_SENTINEL) {
+				this.promptNewType();
+				return;
+			}
+			this.typeId = this.typeSelect.value;
+		});
+		this.rebuildTypeOptions();
+
+		this.aprRow = this.contentEl.createDiv();
+		const aprInput = this.aprRow.createEl("input", { type: "number", cls: "nwt-modal-input" });
+		aprInput.placeholder = "APR % (optional)";
+		aprInput.step = "0.01";
+		aprInput.min = "0";
+		aprInput.addEventListener("input", () => {
+			this.aprText = aprInput.value;
+		});
+		this.aprRow.hidden = this.kind !== "debt";
 
 		const buttonRow = this.contentEl.createDiv({ cls: "nwt-modal-buttons" });
 		buttonRow.createEl("button", { text: "Cancel" }).addEventListener("click", () => this.close());
@@ -462,10 +450,47 @@ class AddAccountModal extends Modal {
 		input.focus();
 	}
 
+	private rebuildTypeOptions(): void {
+		this.typeSelect.empty();
+		const types = this.typesForKind(this.kind);
+		for (const type of types) {
+			this.typeSelect.createEl("option", { value: type.id, text: type.name });
+		}
+		this.typeSelect.createEl("option", { value: NEW_TYPE_SENTINEL, text: "+ New type…" });
+		this.typeId = types[0]?.id ?? "";
+		this.typeSelect.value = this.typeId || NEW_TYPE_SENTINEL;
+	}
+
+	private promptNewType(): void {
+		const kindAtPrompt = this.kind;
+		new PromptModal(this.app, "New type", "e.g. Brokerage", "", (typeName) => {
+			void this.onCreateType(kindAtPrompt, typeName).then((updated) => {
+				if (kindAtPrompt !== this.kind) return; // kind changed while the prompt was open — ignore stale result
+				if (!updated) {
+					this.rebuildTypeOptions();
+					return;
+				}
+				if (kindAtPrompt === "asset") this.assetTypes = updated;
+				else this.debtTypes = updated;
+				const created = updated[updated.length - 1];
+				this.rebuildTypeOptions();
+				this.typeId = created.id;
+				this.typeSelect.value = created.id;
+			});
+		}).open();
+	}
+
 	private submit(): void {
-		if (!this.name.trim()) return;
+		if (!this.name.trim() || !this.typeId) return;
+		let aprBps: number | undefined;
+		if (this.kind === "debt" && this.aprText.trim()) {
+			const pct = Number.parseFloat(this.aprText);
+			if (!Number.isFinite(pct) || pct < 0) return;
+			// Basis points, not a float percentage — see Account.aprBps.
+			aprBps = Math.round(pct * 100);
+		}
 		this.close();
-		this.onSubmit(this.name, this.kind);
+		this.onSubmit(this.name, this.kind, this.typeId, aprBps);
 	}
 
 	onClose(): void {
@@ -473,24 +498,54 @@ class AddAccountModal extends Modal {
 	}
 }
 
-class ConfirmModal extends Modal {
+class RecordBalanceModal extends Modal {
+	private date = todayIso();
+	private amount = "";
+
 	constructor(
 		app: App,
-		private message: string,
-		private onConfirm: () => void
+		private accountName: string,
+		private onSubmit: (date: string, balanceCents: number) => void
 	) {
 		super(app);
 	}
 
 	onOpen(): void {
-		this.contentEl.createEl("p", { text: this.message });
+		this.contentEl.createEl("h3", { text: `Record balance — ${this.accountName}` });
+
+		const dateInput = this.contentEl.createEl("input", { type: "date", cls: "nwt-modal-input" });
+		dateInput.value = this.date;
+		dateInput.addEventListener("input", () => {
+			this.date = dateInput.value;
+		});
+
+		const amountInput = this.contentEl.createEl("input", { type: "number", cls: "nwt-modal-input" });
+		amountInput.placeholder = "0.00";
+		amountInput.step = "0.01";
+		amountInput.min = "0";
+		amountInput.addEventListener("input", () => {
+			this.amount = amountInput.value;
+		});
+		amountInput.addEventListener("keydown", (evt) => {
+			if (evt.key === "Enter") this.submit();
+		});
 
 		const buttonRow = this.contentEl.createDiv({ cls: "nwt-modal-buttons" });
 		buttonRow.createEl("button", { text: "Cancel" }).addEventListener("click", () => this.close());
-		buttonRow.createEl("button", { text: "Delete", cls: "mod-warning" }).addEventListener("click", () => {
-			this.close();
-			this.onConfirm();
-		});
+		buttonRow.createEl("button", { text: "Save", cls: "mod-cta" }).addEventListener("click", () => this.submit());
+
+		amountInput.focus();
+	}
+
+	private submit(): void {
+		// Rounded rather than a bare `* 100` — floats like 19.99 * 100 can land
+		// on 1998.9999999999998, which would silently truncate to the wrong cent.
+		if (!this.date) return;
+		const dollars = Number.parseFloat(this.amount);
+		if (!Number.isFinite(dollars) || dollars < 0) return;
+		const balanceCents = Math.round(dollars * 100);
+		this.close();
+		this.onSubmit(this.date, balanceCents);
 	}
 
 	onClose(): void {

@@ -1,7 +1,7 @@
 {
 	"name": "net-worth-tracker",
 	"version": "0.1.0",
-	"description": "Track net worth, accounts, and budget over time, right inside your vault.",
+	"description": "Track net worth and accounts over time, right inside your vault.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

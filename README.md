@@ -1,6 +1,6 @@
 # 💰 Net Worth Tracker
 
-An [Obsidian](https://obsidian.md) plugin to track net worth, accounts, and budget over time, right inside your vault.
+An [Obsidian](https://obsidian.md) plugin to track net worth and accounts over time, right inside your vault.
 
 **Status:** early scaffold — no real features yet, just the plugin skeleton (ribbon icon + a "Say hello" command) to build on.
 

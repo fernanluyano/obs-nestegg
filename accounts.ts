@@ -1,52 +1,16 @@
-export type AccountKind = "asset" | "liability";
+import type { AccountType } from "./accountTypes";
 
-export type AssetAccountType =
-	| "cash"
-	| "real-estate"
-	| "precious-metals"
-	| "retirement"
-	| "investments"
-	| "vehicle"
-	| "other";
-
-export type LiabilityAccountType = "credit-card" | "mortgage" | "loan" | "other-liability";
-
-export type AccountType = AssetAccountType | LiabilityAccountType;
-
-// Single source of truth for which `type` values are valid for each `kind`,
-// and their display labels — both addAccount's validation and the Add
-// Account modal's dropdown read from this instead of duplicating the list.
-export const ACCOUNT_TYPES_BY_KIND: Record<AccountKind, { value: AccountType; label: string }[]> = {
-	asset: [
-		{ value: "cash", label: "Cash/Bank" },
-		{ value: "real-estate", label: "Real Estate" },
-		{ value: "precious-metals", label: "Precious Metals" },
-		{ value: "retirement", label: "Retirement" },
-		{ value: "investments", label: "Investments/Brokerage" },
-		{ value: "vehicle", label: "Vehicle" },
-		{ value: "other", label: "Other" },
-	],
-	liability: [
-		{ value: "credit-card", label: "Credit Card" },
-		{ value: "mortgage", label: "Mortgage" },
-		{ value: "loan", label: "Loan" },
-		{ value: "other-liability", label: "Other Liability" },
-	],
-};
-
-export function isValidAccountType(kind: AccountKind, type: AccountType): boolean {
-	return ACCOUNT_TYPES_BY_KIND[kind].some((option) => option.value === type);
-}
-
-export function accountTypeLabel(kind: AccountKind, type: AccountType): string | undefined {
-	return ACCOUNT_TYPES_BY_KIND[kind].find((option) => option.value === type)?.label;
-}
+export type AccountKind = "asset" | "debt";
 
 export interface Account {
 	id: string;
 	name: string;
 	kind: AccountKind;
-	type?: AccountType;
+	type: string; // AccountType id — asset types and debt types are separate lists, scoped by kind
+	// Debt only, uniform across every debt type (matches the trading app's finances
+	// prior art, which never makes apr type-conditional). Basis points (100 = 1%),
+	// not a float percentage, for the same reason every *Cents field is an integer.
+	aprBps?: number;
 	archived: boolean;
 }
 
@@ -61,11 +25,21 @@ function generateId(): string {
 	return crypto.randomUUID();
 }
 
-export function addAccount(accounts: Account[], name: string, kind: AccountKind, type?: AccountType): Account[] {
+export function addAccount(
+	accounts: Account[],
+	name: string,
+	kind: AccountKind,
+	typeId: string,
+	availableTypes: AccountType[],
+	aprBps?: number
+): Account[] {
 	const trimmed = name.trim();
 	if (!trimmed) return accounts;
-	const account: Account = { id: generateId(), name: trimmed, kind, archived: false };
-	if (type && isValidAccountType(kind, type)) account.type = type;
+	if (!availableTypes.some((type) => type.id === typeId)) return accounts;
+	const account: Account = { id: generateId(), name: trimmed, kind, type: typeId, archived: false };
+	if (kind === "debt" && aprBps !== undefined && Number.isFinite(aprBps) && aprBps >= 0) {
+		account.aprBps = aprBps;
+	}
 	return [...accounts, account];
 }
 
@@ -105,6 +79,10 @@ function latestSnapshotOnOrBefore(snapshots: Snapshot[], accountId: string, date
 	return latest;
 }
 
+export function latestBalanceCents(snapshots: Snapshot[], accountId: string, date: string): number | undefined {
+	return latestSnapshotOnOrBefore(snapshots, accountId, date)?.balanceCents;
+}
+
 // Not filtered by `archived` — an archived account's last recorded balance
 // still belongs in the historical total for any date up to and including
 // when it was closed out, same as any other account's latest snapshot.
@@ -119,32 +97,33 @@ export function netWorthAt(accounts: Account[], snapshots: Snapshot[], date: str
 }
 
 export interface AssetTypeBreakdown {
-	type: AssetAccountType;
+	type: string; // AccountType id
 	label: string;
 	totalCents: number;
 }
 
 // Same latest-snapshot-per-account logic as netWorthAt, grouped by asset type
-// instead of summed into one total. An untyped account folds into the same
-// "Other" bucket as an explicit type "other" — both are the catch-all slice.
-// Fixed output order (ACCOUNT_TYPES_BY_KIND.asset's order) regardless of which
-// types are actually present, so a type's chart color never depends on what
-// else is in the breakdown.
-export function assetBreakdownByType(accounts: Account[], snapshots: Snapshot[], date: string): AssetTypeBreakdown[] {
-	const totals = new Map<AssetAccountType, number>();
+// instead of summed into one total. Iterates assetTypes (not the accounts) so
+// a type's position — and therefore its chart color — stays fixed regardless
+// of which types actually have a balance on the given date. An account whose
+// type id has no match in assetTypes (e.g. pre-existing data from before type
+// was required) has no entry to project onto and silently drops out of the
+// breakdown, though it's still counted in netWorthAt's kind-based total.
+export function assetBreakdownByType(
+	accounts: Account[],
+	snapshots: Snapshot[],
+	assetTypes: AccountType[],
+	date: string
+): AssetTypeBreakdown[] {
+	const totals = new Map<string, number>();
 	for (const account of accounts) {
 		if (account.kind !== "asset") continue;
 		const latest = latestSnapshotOnOrBefore(snapshots, account.id, date);
 		if (!latest) continue;
-		const type = (account.type ?? "other") as AssetAccountType;
-		totals.set(type, (totals.get(type) ?? 0) + latest.balanceCents);
+		totals.set(account.type, (totals.get(account.type) ?? 0) + latest.balanceCents);
 	}
-	return ACCOUNT_TYPES_BY_KIND.asset
-		.map((option) => ({
-			type: option.value as AssetAccountType,
-			label: option.label,
-			totalCents: totals.get(option.value as AssetAccountType) ?? 0,
-		}))
+	return assetTypes
+		.map((type) => ({ type: type.id, label: type.name, totalCents: totals.get(type.id) ?? 0 }))
 		.filter((entry) => entry.totalCents !== 0)
 		.sort((a, b) => b.totalCents - a.totalCents);
 }
