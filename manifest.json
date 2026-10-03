@@ -1,6 +1,6 @@
 {
-	"id": "net-worth-tracker",
-	"name": "Net Worth Tracker",
+	"id": "nestegg",
+	"name": "Nestegg",
 	"version": "0.1.0",
 	"minAppVersion": "1.7.2",
 	"description": "Track net worth and accounts over time, right inside your vault.",

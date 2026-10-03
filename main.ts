@@ -12,7 +12,7 @@ interface PluginData {
 	debtTypes: AccountType[];
 }
 
-export default class NetWorthTrackerPlugin extends Plugin {
+export default class NesteggPlugin extends Plugin {
 	accounts: Account[] = [];
 	snapshots: Snapshot[] = [];
 	assetTypes: AccountType[] = [];
@@ -23,13 +23,13 @@ export default class NetWorthTrackerPlugin extends Plugin {
 
 		this.registerView(VIEW_TYPE_NET_WORTH, (leaf) => new NetWorthView(leaf, this));
 
-		this.addRibbonIcon("wallet", "Net worth tracker", () => {
+		this.addRibbonIcon("wallet", "Nestegg", () => {
 			void this.activateView();
 		});
 
 		this.addCommand({
-			id: "open-net-worth-tracker",
-			name: "Open net worth tracker",
+			id: "open-nestegg",
+			name: "Open Nestegg",
 			callback: () => {
 				void this.activateView();
 			},

@@ -1,4 +1,4 @@
-# Net Worth Tracker
+# Nestegg
 
 Obsidian plugin to track net worth and accounts over time, right inside the user's vault. Wealth tracking only — no budget or transaction tracking. Early scaffold — see `ideas.md` (local, untracked) for the feature backlog.
 

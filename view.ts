@@ -11,11 +11,11 @@ import {
 	type Account,
 	type AccountKind,
 } from "./accounts";
-import type NetWorthTrackerPlugin from "./main";
+import type NesteggPlugin from "./main";
 
 Chart.register(DoughnutController, ArcElement, Legend, Tooltip);
 
-export const VIEW_TYPE_NET_WORTH = "net-worth-tracker-view";
+export const VIEW_TYPE_NET_WORTH = "nestegg-view";
 
 // Validated categorical palette (dataviz skill). A type's color comes from its
 // index within the plugin's assetTypes list (its fixed "seat"), not from the
@@ -46,13 +46,13 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 export class NetWorthView extends ItemView {
-	private plugin: NetWorthTrackerPlugin;
+	private plugin: NesteggPlugin;
 	// Overview leads — the net worth view should be the first thing shown,
 	// not buried behind navigation.
 	private activeTab: TabId = "overview";
 	private charts: Chart[] = [];
 
-	constructor(leaf: WorkspaceLeaf, plugin: NetWorthTrackerPlugin) {
+	constructor(leaf: WorkspaceLeaf, plugin: NesteggPlugin) {
 		super(leaf);
 		this.plugin = plugin;
 	}
@@ -62,7 +62,7 @@ export class NetWorthView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return "Net worth tracker";
+		return "Nestegg";
 	}
 
 	getIcon(): string {

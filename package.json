@@ -1,5 +1,5 @@
 {
-	"name": "net-worth-tracker",
+	"name": "nestegg",
 	"version": "0.1.0",
 	"description": "Track net worth and accounts over time, right inside your vault.",
 	"main": "main.js",

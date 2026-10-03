@@ -1,4 +1,4 @@
-# 💰 Net Worth Tracker
+# 💰 Nestegg
 
 An [Obsidian](https://obsidian.md) plugin to track net worth and accounts over time, right inside your vault.
 
@@ -8,9 +8,9 @@ An [Obsidian](https://obsidian.md) plugin to track net worth and accounts over t
 
 **Manual (development):**
 
-1. Clone this repo into `<your vault>/.obsidian/plugins/net-worth-tracker/`
+1. Clone this repo into `<your vault>/.obsidian/plugins/nestegg/`
 2. `make install && make build`
-3. Reload Obsidian and enable **Net Worth Tracker** under Settings → Community plugins
+3. Reload Obsidian and enable **Nestegg** under Settings → Community plugins
 
 ## 🛠️ Development
 
