@@ -1,6 +1,6 @@
 # Nestegg
 
-Obsidian plugin for personal finance, right inside the user's vault: budgeting and transactions first, then accounts/net worth, then long-term investments. Single plugin, USD only, personal use first. Being rebuilt from a clean slate — see `roadmap.md` for decisions, milestones and open questions.
+Obsidian plugin for personal finance, right inside the user's vault: budgeting and transactions first, then accounts/net worth, then long-term investments. Single plugin, USD only, personal use first. Being rebuilt from a clean slate. Work is planned and tracked as tickets in the Project Manager kanban board (no GitHub Issues, no roadmap file): tagged `nestegg` under `~/Documents/obsidian/personal/Projects/Personal/_tasks/`, one Markdown note per ticket. Decisions live in the tickets and in this file.
 
 ## Sources and licensing
 
@@ -9,7 +9,11 @@ Obsidian plugin for personal finance, right inside the user's vault: budgeting a
 
 ## Data
 
-Markdown files in the vault (tables and frontmatter, Penny Wallet's format) are the source of truth — no JSON store. Stock Valuations integration is out of scope for v1.
+Markdown files in the vault (tables and frontmatter, Penny Wallet's format) are the source of truth — no JSON store. One file per month for transactions, readable and diffable in git. Stock Valuations integration is out of scope for v1.
+
+## Development
+
+Develop in the `Dev` vault (`~/Documents/obsidian/Dev`), where this repo is symlinked into `.obsidian/plugins/nestegg` like `obs-stock-valuations`. Run `make dev` and reload Obsidian.
 
 ## Stack
 
@@ -41,5 +45,5 @@ Follow the patterns in the sibling plugin `../obs-stock-valuations` (same author
 - Keep pure logic (calculations, formatting, data transforms) in standalone modules separate from `main.ts` and Obsidian-view code, so it can be unit tested without mocking the Obsidian API.
 - Persisted data shape changes go through an explicit schema version + migration function, not silent reshaping. **Exception: pre-release** (no version has shipped to users yet, per `manifest.json`/`versions.json`) — reshape the persisted data in place instead; formal migrations start mattering once real user vaults exist to protect.
 - Records refer to wallets and categories by name, as Penny Wallet's tables do, so renaming one is an explicit cascading rewrite of the files that mention it.
-- Every money amount is stored and computed as an integer number of cents (`...Cents` fields), never a float/decimal — including inside the Markdown tables, where it is parsed straight to cents without going through a float. Formatting to a dollar string is a pure display transform applied only at render time — its output is never persisted or fed back into arithmetic. `obs-stock-valuations` had to retrofit this after a money/shares scale bug; this project does it from the start.
+- Every money amount is stored and computed as an integer number of cents (`...Cents` fields), never a float/decimal — including inside the Markdown tables, where the amount column (`AmountCents`) holds the literal integer. Always two decimals (USD); there is no decimal-places setting. Typed dollar input is parsed to cents from its digits, never via `parseFloat(x) * 100`. Formatting to a dollar string is a pure display transform applied only at render time — its output is never persisted or fed back into arithmetic. `obs-stock-valuations` had to retrofit this after a money/shares scale bug; this project does it from the start.
 - No comments explaining *what* code does; only *why*, for non-obvious constraints or workarounds.

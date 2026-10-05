@@ -4,7 +4,7 @@ An [Obsidian](https://obsidian.md) plugin for personal finance, right inside you
 
 Data lives in plain Markdown files in your vault (tables and frontmatter), so it stays readable and diffable. USD only.
 
-**Status:** being rebuilt from a clean slate — no real features yet. See `roadmap.md` for the plan.
+**Status:** being rebuilt from a clean slate — no real features yet.
 
 ## 📥 Installation
 

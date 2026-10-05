@@ -1,1 +1,2615 @@
-/* Nestegg styles go here. */
+:root {
+  /* Base type colors */
+  --ne-income-base: #5DCAA5;
+  --ne-expense-base: #EF9F27;
+  --ne-bank-base: #378ADD;
+  --ne-cash-base: #1D9E75;
+  --ne-credit-base: #D85A30;
+  --ne-transfer-base: #85B7EB;
+  --ne-payment-base: #AFA9EC;
+
+  /* Global brightness knobs */
+  --ne-dark-brighten: 0%;    /* mix base with white for dark theme */
+  --ne-light-darken: 5%;    /* mix base with black for light theme */
+
+  /* Type colors — default tuned for dark theme */
+  --ne-income: color-mix(in srgb, var(--ne-income-base), white var(--ne-dark-brighten));
+  --ne-expense: color-mix(in srgb, var(--ne-expense-base), white var(--ne-dark-brighten));
+  --ne-bank: color-mix(in srgb, var(--ne-bank-base), white var(--ne-dark-brighten));
+  --ne-cash: color-mix(in srgb, var(--ne-cash-base), white var(--ne-dark-brighten));
+  --ne-credit: color-mix(in srgb, var(--ne-credit-base), white var(--ne-dark-brighten));
+  --ne-transfer: color-mix(in srgb, var(--ne-transfer-base), white var(--ne-dark-brighten));
+  --ne-payment: color-mix(in srgb, var(--ne-payment-base), white var(--ne-dark-brighten));
+
+  /* Refund: lighter shade in income family */
+  --ne-refund: color-mix(in srgb, var(--ne-income) 65%, white 35%);
+
+  /* Type color tints (badge backgrounds) — semi-transparent so chip stays visible
+     regardless of row bg (default / hover / selected). Earlier color-mix with primary
+     produced a solid color identical to default row bg, making chips invisible. */
+  --ne-income-tint: color-mix(in srgb, var(--ne-income) 18%, transparent);
+  --ne-expense-tint: color-mix(in srgb, var(--ne-expense) 18%, transparent);
+  --ne-bank-tint: color-mix(in srgb, var(--ne-bank) 18%, transparent);
+  --ne-credit-tint: color-mix(in srgb, var(--ne-credit) 18%, transparent);
+  --ne-transfer-tint: color-mix(in srgb, var(--ne-transfer) 18%, transparent);
+  --ne-payment-tint: color-mix(in srgb, var(--ne-payment) 18%, transparent);
+
+  /* Stronger tints — used by filter pill active state to win contrast against
+   * sheet/header backgrounds. Original tints stay 16-22% for chip/badge use. */
+  --ne-income-tint-strong:   color-mix(in srgb, var(--ne-income)   30%, transparent);
+  --ne-expense-tint-strong:  color-mix(in srgb, var(--ne-expense)  30%, transparent);
+  --ne-bank-tint-strong:     color-mix(in srgb, var(--ne-bank)     30%, transparent);
+  --ne-credit-tint-strong:   color-mix(in srgb, var(--ne-credit)   30%, transparent);
+  --ne-transfer-tint-strong: color-mix(in srgb, var(--ne-transfer) 30%, transparent);
+  --ne-cash-tint-strong:     color-mix(in srgb, var(--ne-cash)     30%, transparent);
+
+  /* Card elevation */
+  --ne-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --ne-card-shadow-raised: 0 2px 8px rgba(0, 0, 0, 0.12);
+
+  /* UI component shadows */
+  --ne-shadow-dropdown: 0 4px 14px rgba(0, 0, 0, 0.15);
+  --ne-shadow-tooltip: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --ne-shadow-overlay: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --ne-shadow-overlay-above: 0 -4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Vars that depend on Obsidian theme tokens (--interactive-accent, --text-normal)
+ * must live on body, not :root — those tokens are declared on body and unreachable
+ * from :root, which makes the var() reference invalid (declaration becomes empty). */
+body {
+  --ne-neutral-tint: color-mix(in srgb, var(--text-normal) 18%, transparent);
+  --ne-accent-tint-strong: color-mix(in srgb, var(--interactive-accent) 30%, transparent);
+}
+
+.theme-light {
+  /* Type colors */
+  --ne-income: color-mix(in srgb, var(--ne-income-base), black var(--ne-light-darken));
+  --ne-expense: color-mix(in srgb, var(--ne-expense-base), black var(--ne-light-darken));
+  --ne-bank: color-mix(in srgb, var(--ne-bank-base), black var(--ne-light-darken));
+  --ne-cash: color-mix(in srgb, var(--ne-cash-base), black var(--ne-light-darken));
+  --ne-credit: color-mix(in srgb, var(--ne-credit-base), black var(--ne-light-darken));
+  --ne-transfer: color-mix(in srgb, var(--ne-transfer-base), black var(--ne-light-darken));
+  --ne-payment: color-mix(in srgb, var(--ne-payment-base), black var(--ne-light-darken));
+
+  /* Type color tints (badge backgrounds) — semi-transparent (see :root note) */
+  --ne-income-tint: color-mix(in srgb, var(--ne-income) 22%, transparent);
+  --ne-expense-tint: color-mix(in srgb, var(--ne-expense) 22%, transparent);
+  --ne-bank-tint: color-mix(in srgb, var(--ne-bank) 22%, transparent);
+  --ne-credit-tint: color-mix(in srgb, var(--ne-credit) 22%, transparent);
+  --ne-transfer-tint: color-mix(in srgb, var(--ne-transfer) 22%, transparent);
+  --ne-payment-tint: color-mix(in srgb, var(--ne-payment) 22%, transparent);
+  --ne-neutral-tint: color-mix(in srgb, var(--text-normal) 22%, transparent);
+
+  /* Stronger tints — light theme override (32% vs dark 28%) */
+  --ne-income-tint-strong:   color-mix(in srgb, var(--ne-income)   60%, transparent);
+  --ne-expense-tint-strong:  color-mix(in srgb, var(--ne-expense)  60%, transparent);
+  --ne-bank-tint-strong:     color-mix(in srgb, var(--ne-bank)     60%, transparent);
+  --ne-credit-tint-strong:   color-mix(in srgb, var(--ne-credit)   60%, transparent);
+  --ne-transfer-tint-strong: color-mix(in srgb, var(--ne-transfer) 60%, transparent);
+  --ne-cash-tint-strong:     color-mix(in srgb, var(--ne-cash)     60%, transparent);
+  --ne-accent-tint-strong:   color-mix(in srgb, var(--interactive-accent) 60%, transparent);
+
+  /* Refund: mix ratio stays legible on light background */
+  --ne-refund: color-mix(in srgb, var(--ne-income) 80%, var(--background-primary) 20%);
+
+  /* Card elevation */
+  --ne-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --ne-card-shadow-raised: 0 2px 8px rgba(0, 0, 0, 0.16);
+
+  /* UI component shadows — softer for light theme */
+  --ne-shadow-dropdown: 0 4px 14px rgba(0, 0, 0, 0.08);
+  --ne-shadow-tooltip: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --ne-shadow-overlay: 0 4px 16px rgba(0, 0, 0, 0.20);
+  --ne-shadow-overlay-above: 0 -4px 16px rgba(0, 0, 0, 0.20);
+}
+
+/* ── PennyWallet Plugin Styles ── */
+
+/* Allow text selection in all PennyWallet views (Obsidian sets user-select: none on leaves) */
+.ne-dashboard,
+.ne-detail,
+.ne-asset {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Prevent native long-press copy/callout on interactive elements */
+.ne-tx-row,
+.ne-chart-wrap,
+.ne-pie-wrap,
+.ne-pie-canvas-wrap,
+canvas {
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── Modal ── */
+
+@media (pointer: coarse) {
+  /* TransactionModal: keep modal at top once user starts interacting.
+     Class added by JS on first focusin — stays until modal closes.
+     Avoids layout jumping when switching between keyboard/picker fields (select, date). */
+  .modal-container.ne-modal-keyboard-open {
+    align-items: flex-start;
+    padding-top: 20px;
+  }
+
+  .modal-container.ne-modal-keyboard-open .modal {
+    max-height: 55vh;
+    overflow-y: auto;
+  }
+
+}
+
+/* ── Mobile full-screen transaction modal ── */
+
+/* Tripled .ne-transaction-modal-container beats Obsidian's
+   body.is-phone .modal-container (0,2,1) and body.is-phone .modal-container .modal (0,3,1). */
+.ne-transaction-modal-container.ne-transaction-modal-container.ne-transaction-modal-container {
+  padding: 0;
+  align-items: stretch;
+}
+
+.ne-transaction-modal-container.ne-transaction-modal-container.ne-transaction-modal-container .modal {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  border-radius: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ne-transaction-modal-container .modal-close-button {
+  display: none;
+}
+
+/* Hidden native date input used to trigger the mobile date picker on tap */
+.ne-hidden-date-trigger {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.ne-mobile-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Top bar — safe area handled via padding-top only; height is auto to avoid double-offset */
+.ne-mobile-top-bar {
+  display: flex;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 8px 6px;
+  min-height: 44px;
+  max-height: calc(56px + env(safe-area-inset-top, 0px));
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Both side buttons are fixed width so the title stays centered */
+.ne-mobile-top-btn {
+  background: none;
+  border: none;
+  color: var(--text-normal);
+  font-size: 13px;
+  flex: 0 0 44px;
+  height: 44px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  box-shadow: none;
+  position: relative;
+}
+
+/* 32×32 visible hit zone centred inside the 44×44 touch area */
+.ne-mobile-top-btn::after {
+  content: '';
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: background 0.1s;
+}
+
+.ne-mobile-top-btn:active::after {
+  background: var(--background-modifier-hover);
+}
+
+.ne-mobile-top-confirm {
+  color: var(--interactive-accent);
+  font-weight: 600;
+}
+
+.ne-mobile-top-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.ne-modal-title-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.ne-modal-title-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Type tabs */
+.ne-mobile-tabs {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Doubled .ne-transaction-modal-container so .ne-mobile-tab beats Obsidian's
+   body.is-phone .modal-container button:hover (0,3,2) without !important. */
+.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+  padding: 14px 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab:hover,
+.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab:active,
+.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab:focus,
+.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab:focus-visible {
+  background: none;
+  outline: none;
+  box-shadow: none;
+  color: var(--text-muted);
+}
+
+.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab.is-active,
+.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab.is-active:hover,
+.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab.is-active:active,
+.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab.is-active:focus,
+.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab.is-active:focus-visible {
+  background: none;
+  outline: none;
+  box-shadow: none;
+  color: var(--interactive-accent);
+  font-weight: 600;
+}
+
+.ne-mobile-tab.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: var(--interactive-accent);
+  border-radius: 1px;
+}
+
+/* Amount display */
+.ne-mobile-amount-area {
+  padding: 10px 20px 8px;
+  text-align: center;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ne-mobile-amount-area:active {
+  background: var(--background-modifier-hover);
+}
+
+.ne-mobile-amount-display {
+  font-size: 48px;
+  font-weight: 500;
+  color: var(--text-normal);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  min-height: 44px;
+  line-height: 1.2;
+  transition: color 0.15s;
+}
+
+.ne-mobile-amount-display.is-empty {
+  color: var(--text-muted);
+}
+
+/* Error in mobile modal */
+.ne-mobile-error {
+  margin: 0;
+  border-radius: 0;
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 6px 16px;
+}
+
+/* Field rows */
+.ne-mobile-rows {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 16px;
+}
+
+.ne-mobile-row {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  height: 48px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  position: relative;
+}
+
+.ne-mobile-refund-hint-row {
+  padding: 6px 20px 8px 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ne-refund-block .ne-mobile-row {
+  padding-left: 0;
+  gap: 10px;
+}
+
+.ne-mobile-row-label {
+  font-size: 15px;
+  color: var(--text-muted);
+  flex: 0 0 auto;
+  min-width: 64px;
+  white-space: nowrap;
+}
+
+.ne-mobile-row-value {
+  flex: 1;
+  font-size: 16px;
+  color: var(--text-normal);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ne-mobile-date-row {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ne-mobile-date-row::after {
+  content: '›';
+  flex: 0 0 24px;
+  margin-left: 6px;
+  color: var(--text-muted);
+  font-size: 22px;
+  line-height: 1;
+  text-align: right;
+}
+
+.ne-mobile-bottom-sheet-row {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ne-mobile-bottom-sheet-row:active {
+  background: var(--background-modifier-hover);
+}
+
+.ne-mobile-bottom-sheet-row::after {
+  content: '›';
+  flex: 0 0 24px;
+  margin-left: 6px;
+  color: var(--text-muted);
+  font-size: 22px;
+  line-height: 1;
+  text-align: right;
+}
+
+/* Invisible native picker overlay (date + select) */
+
+/* Tripled .ne-transaction-modal-container to beat Obsidian's
+   body.is-phone .modal input[type=text] (0,3,2) attribute selector. */
+.ne-transaction-modal-container.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-note-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  font-size: 16px;
+  color: var(--text-normal);
+  text-align: right;
+  outline: none;
+  padding: 0;
+  min-width: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  box-shadow: none;
+}
+
+.ne-mobile-note-input::placeholder {
+  color: var(--text-faint);
+}
+
+/* iOS WKWebView doesn't shrink viewport when keyboard rises; pad the scroll
+   container so scrollIntoView has room to lift the focused row above the keyboard.
+   --ne-keyboard-h is set by visualViewport listener (exact px); falls back to 60vh. */
+@media (pointer: coarse) {
+  .ne-mobile-content.ne-mobile-text-focus .ne-mobile-rows,
+  .ne-mobile-content.ne-bottom-sheet-active .ne-mobile-rows {
+    padding-bottom: var(--ne-keyboard-h, 60vh);
+  }
+}
+
+body.ne-bottom-sheet-lock {
+  overflow: hidden;
+}
+
+.ne-bottom-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0);
+  transition: background-color 200ms ease-out;
+}
+
+.ne-bottom-sheet-backdrop.is-leaf-context {
+  padding-bottom: 0;
+}
+
+.ne-bottom-sheet-backdrop.is-leaf-context .ne-bottom-sheet {
+  height: min(85vh, 760px);
+}
+
+.ne-bottom-sheet-backdrop.is-open {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.ne-bottom-sheet-backdrop.is-closing {
+  background: rgba(0, 0, 0, 0);
+}
+
+.ne-bottom-sheet {
+  width: calc(100% - 16px);
+  height: min(78vh, 640px);
+  display: flex;
+  flex-direction: column;
+  background: var(--background-primary);
+  border-radius: 12px 12px 0 0;
+  box-shadow: var(--ne-shadow-overlay-above);
+  transform: translateY(100%);
+  transition: transform 200ms ease-out;
+  margin: 0 8px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.ne-bottom-sheet-backdrop.is-open .ne-bottom-sheet {
+  transform: translateY(0);
+}
+
+.ne-bottom-sheet-backdrop.is-closing .ne-bottom-sheet {
+  transform: translateY(100%);
+}
+
+.ne-bottom-sheet-handle {
+  width: 36px;
+  height: 4px;
+  margin: 8px auto 4px;
+  border-radius: 2px;
+  background: var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.ne-bottom-sheet-bar {
+  display: grid;
+  grid-template-columns: 64px 1fr 64px;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+/* Doubled .ne-bottom-sheet prefix beats Obsidian's body.is-phone .modal-container button (0,3,2)
+   without !important. All sibling rules (--done, .is-selected, etc.) doubled for consistent cascade. */
+.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-btn {
+  justify-self: start;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--interactive-accent);
+  font-size: 15px;
+  padding: 8px 0;
+}
+
+.ne-bottom-sheet-title {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ne-bottom-sheet-spacer {
+  width: 64px;
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-search {
+  margin: 10px 14px 8px;
+  width: calc(100% - 28px);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  font-size: 16px;
+  border-radius: 8px;
+}
+
+.ne-bottom-sheet-options {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-option {
+  width: 100%;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: 16px;
+  text-align: left;
+  padding: 0 20px;
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-option:active {
+  background: var(--background-modifier-hover);
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-option.is-selected {
+  color: var(--interactive-accent);
+  font-weight: 600;
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-option.is-selected::after {
+  content: '✓';
+  color: var(--interactive-accent);
+  font-size: 16px;
+}
+
+.ne-bottom-sheet-empty {
+  padding: 18px 20px 24px;
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* ===== Tag Picker (Phase 3a) ===== */
+
+.ne-tag-picker {
+  display: flex;
+  flex-direction: column;
+  position: relative; /* anchor for .is-dimmed ::after overlay */
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-btn--done {
+  justify-self: end;
+  font-weight: 600;
+}
+
+.ne-tag-picker-chips {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 14px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+}
+
+/* Chip appears in two contexts: bottom sheet picker + modal-side .ne-mobile-tag-chips.
+   Doubled prefix in both so chip styles beat Obsidian's modal button rules. */
+.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-chip,
+.ne-mobile-tag-chips.ne-mobile-tag-chips .ne-tag-picker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: color-mix(in srgb, var(--interactive-accent) 30%, var(--background-primary) 70%);
+  color: var(--text-normal);
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background-color 200ms ease-out, color 200ms ease-out, opacity 200ms ease-out;
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-chip.is-selected,
+.ne-mobile-tag-chips.ne-mobile-tag-chips .ne-tag-picker-chip.is-selected {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-chip.is-disabled,
+.ne-mobile-tag-chips.ne-mobile-tag-chips .ne-tag-picker-chip.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ne-tag-picker-empty {
+  width: 100%;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 24px 12px;
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-add-row {
+  width: 100%;
+  min-height: 48px;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--background-modifier-border);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--interactive-accent);
+  font-size: 16px;
+  text-align: left;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-add-row:active {
+  background: var(--background-modifier-hover);
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-add-row.is-disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-add-row.is-disabled:active {
+  background: transparent;
+}
+
+/* Inline add button — sits between search and chip area, always visible
+   above the keyboard when it rises. */
+.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-inline-add {
+  width: calc(100% - 28px);
+  margin: 4px 14px 0;
+  min-height: 40px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--interactive-accent);
+  font-size: 15px;
+  text-align: left;
+  padding: 0 6px;
+  flex-shrink: 0;
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-inline-add:active {
+  background: var(--background-modifier-hover);
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-inline-add.is-disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-inline-add.is-disabled:active {
+  background: transparent;
+}
+
+/* Modal-side mobile tag row — chips OR placeholder, whole row taps to open picker.
+   Uses .ne-tag-picker-chip.is-selected styling for visual consistency with picker. */
+.ne-mobile-tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  flex: 1;
+  min-height: 24px;
+  cursor: pointer;
+}
+
+.ne-mobile-tag-chip,
+.ne-tx-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid color-mix(in srgb, var(--interactive-accent) 24%, var(--background-modifier-border) 76%);
+  background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
+  color: color-mix(in srgb, var(--interactive-accent) 68%, var(--text-muted) 32%);
+  white-space: nowrap;
+}
+
+.ne-mobile-tag-chip {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.ne-mobile-tag-row-placeholder {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* Mobile delete row (edit mode only) — last row inside fields area */
+.ne-mobile-danger-zone {
+  margin-top: 24px;
+  padding-top: 8px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+button.ne-mobile-delete-row {
+  width: 100%;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--text-error);
+  font-size: 15px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button.ne-mobile-delete-row:hover,
+button.ne-mobile-delete-row:active {
+  background: rgba(var(--color-red-rgb), 0.08);
+}
+
+.ne-mobile-calculator-sheet {
+  --ne-mobile-calculator-bg: var(--interactive-normal);
+
+  height: auto;
+  min-height: 0;
+  background: var(--ne-mobile-calculator-bg);
+}
+
+.ne-mobile-calculator-sheet .ne-bottom-sheet-handle,
+.ne-mobile-calculator-sheet .ne-bottom-sheet-bar {
+  background: var(--ne-mobile-calculator-bg);
+}
+
+.ne-mobile-calculator-sheet .ne-bottom-sheet-bar {
+  min-height: 36px;
+  border-bottom: 0;
+}
+
+.ne-mobile-calculator-sheet .ne-bottom-sheet-title {
+  color: var(--text-muted);
+  font-size: 18px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+  overflow: visible;
+}
+
+.ne-mobile-calculator-sheet .ne-bottom-sheet-title.is-empty {
+  color: transparent;
+}
+
+.ne-mobile-calculator-sheet .ne-bottom-sheet-title.is-warning {
+  color: var(--text-warning);
+}
+
+.ne-mobile-calculator-pad {
+  width: 100%;
+  background: var(--ne-mobile-calculator-bg);
+}
+
+.ne-mobile-calculator-error {
+  display: none;
+  min-height: 28px;
+  padding: 6px 16px;
+  color: var(--text-error);
+  font-size: 12px;
+  line-height: 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ne-mobile-calculator-error.is-visible {
+  display: block;
+}
+
+.ne-mobile-calculator-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--ne-mobile-calculator-bg);
+}
+
+button.ne-mobile-calculator-btn {
+  height: 54px;
+  border: 0;
+  border-radius: 0;
+  background: var(--interactive-normal);
+  color: var(--text-normal);
+  font-size: 22px;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button.ne-mobile-calculator-operator,
+button.ne-mobile-calculator-clear {
+  color: var(--text-muted);
+}
+
+button.ne-mobile-calculator-equals {
+  font-weight: 600;
+}
+
+button.ne-mobile-calculator-done {
+  color: var(--interactive-accent);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Doubled .ne-transaction-modal-container beats Obsidian's body.is-phone .modal-container button:hover (0,3,2).
+   .is-pressed needs triple to beat the doubled hover rule above it. */
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-btn:hover,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-btn:active,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-btn:focus,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-btn:focus-visible {
+  background: var(--interactive-normal);
+  color: var(--text-normal);
+  outline: none;
+  box-shadow: none;
+}
+
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-operator:hover,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-operator:active,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-operator:focus,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-operator:focus-visible,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-clear:hover,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-clear:active,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-clear:focus,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-clear:focus-visible {
+  color: var(--text-muted);
+}
+
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-done:hover,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-done:active,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-done:focus,
+.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-done:focus-visible {
+  color: var(--interactive-accent);
+}
+
+.ne-transaction-modal-container.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-btn.is-pressed {
+  background: var(--background-modifier-hover);
+}
+
+.ne-modal h2 {
+  margin-bottom: 16px;
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ne-type-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.ne-type-tab {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--background-modifier-border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s, color 0.15s;
+  outline: none;
+  box-shadow: none;
+}
+
+.ne-type-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.ne-type-tab.is-active {
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
+}
+
+.ne-type-tab.is-active:hover {
+  background: var(--background-secondary);
+}
+
+.ne-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ne-field-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ne-field-row:last-child {
+  border-bottom: none;
+}
+
+.ne-field-label {
+  min-width: 72px;
+  font-size: 13px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.ne-field-required {
+  color: var(--ne-expense);
+  margin-left: 2px;
+}
+
+.ne-field-input {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 14px;
+  min-height: 32px;
+}
+
+.ne-field-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+.ne-select-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.ne-select-wrapper::after {
+  content: '▾';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.ne-select-wrapper > select.ne-field-input {
+  width: 100%;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 28px;
+}
+
+.ne-select-wrapper > select.ne-field-input:hover {
+  background: var(--background-modifier-hover);
+}
+
+.ne-field-input[type="checkbox"] {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  min-height: unset;
+  padding: 0;
+  margin-left: auto;
+  margin-right: 0;
+  cursor: pointer;
+}
+
+.ne-refund-block {
+  margin-left: 24px;
+  padding: 8px 0 8px 12px;
+  border-left: 2px solid var(--background-modifier-border);
+}
+
+.ne-refund-row .ne-field-input[type="checkbox"] {
+  margin-left: 0;
+}
+
+.ne-amount-field-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ne-amount-field-wrapper input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  outline: none;
+  min-height: unset;
+  color: inherit;
+  font-size: inherit;
+}
+
+.ne-tag-input-wrapper.ne-field-input,
+.ne-amount-field-wrapper.ne-field-input {
+  padding: 0 8px;
+}
+
+.ne-tag-input-wrapper input:focus,
+.ne-amount-field-wrapper input:focus {
+  box-shadow: none;
+}
+
+.ne-tag-input-wrapper:focus-within,
+.ne-amount-field-wrapper:focus-within {
+  border-color: var(--background-modifier-border-focus);
+  box-shadow: 0 0 0 var(--input-border-width-focus) var(--background-modifier-border-focus);
+}
+
+.ne-amount-prefix {
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1;
+  display: none;
+}
+
+.ne-amount-prefix.is-visible {
+  display: inline;
+}
+
+.ne-error {
+  color: var(--text-error);
+  font-size: 13px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(var(--color-red-rgb), 0.1);
+}
+
+.ne-btn-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.ne-btn-row button:not(.mod-cta) {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  box-shadow: none;
+}
+
+.ne-btn-row button:not(.mod-cta):hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.ne-btn-row button.ne-btn-delete {
+  margin-right: auto;
+  color: var(--text-error);
+}
+
+.ne-btn-row button.ne-btn-delete:hover {
+  color: var(--text-error);
+  background: rgba(var(--color-red-rgb), 0.1);
+}
+
+/* ── Dashboard ── */
+.ne-dashboard {
+  padding-bottom: 40px;
+}
+
+/* Asset view */
+.ne-asset {
+  padding: 16px;
+}
+
+.ne-grid-2.ne-asset-grid {
+  grid-template-columns: 300px 1fr;
+  padding-top: 16px;
+}
+
+.ne-asset-left,
+.ne-asset-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ne-asset-right > .ne-card:last-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.ne-asset-right > .ne-card:last-child > .ne-chart-wrap {
+  flex: 1;
+}
+
+/* Card header row — title + inline controls (e.g. range buttons) */
+.ne-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ne-card-header-row .ne-card-title {
+  margin-bottom: 0;
+}
+
+.ne-card-header-row .ne-range-row {
+  margin-bottom: 0;
+}
+
+/* Chart legend (rect + label, horizontal) */
+
+/* Navigation arrow buttons (month navigation) */
+.ne-nav-btn {
+  background: none;
+  border: 0.5px solid var(--background-modifier-border-hover);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+}
+
+.ne-nav-btn:hover {
+  background: var(--background-secondary);
+}
+
+.ne-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.ne-month-label {
+  font-size: 15px;
+  color: var(--text-normal);
+  min-width: 72px;
+  text-align: center;
+}
+
+/* Action buttons (add / trend / detail) */
+.ne-action-btn {
+  background: none;
+  border: 0.5px solid var(--background-modifier-border-hover);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-normal);
+  transition: background 0.1s;
+}
+
+.ne-action-btn:hover {
+  background: var(--background-secondary);
+}
+
+/* Shared header (overview / asset / detail) */
+.ne-shared-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px 12px;
+  border-bottom: 0.5px solid var(--background-modifier-border);
+}
+
+.ne-shared-header-month {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-self: start;
+  min-height: 28px;
+}
+
+.ne-shared-header-month.is-disabled .ne-month-label {
+  opacity: 0.4;
+}
+
+.ne-shared-header-tabs {
+  justify-self: center;
+  display: flex;
+  border: 0.5px solid var(--background-modifier-border-hover);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.ne-shared-header-tab {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 5px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.1s, color 0.1s;
+  box-shadow: none;
+}
+
+.ne-shared-header-tab + .ne-shared-header-tab {
+  border-left: 0.5px solid var(--background-modifier-border-hover);
+}
+
+.ne-shared-header-tab:hover:not(.is-active) {
+  background: var(--background-secondary);
+  color: var(--text-normal);
+}
+
+.ne-shared-header-tab.is-active {
+  background: color-mix(in srgb, var(--text-normal) 8%, var(--background-primary) 92%);
+  color: var(--text-normal);
+  font-weight: 500;
+  cursor: default;
+}
+
+.ne-shared-header-actions {
+  justify-self: end;
+}
+
+/* Wallet list */
+.ne-wallet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ne-asset-wallet-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ne-asset-wallet-row:last-child {
+  border-bottom: none;
+}
+
+.ne-wallet-left { display: flex; align-items: center; gap: 8px; }
+
+.ne-wallet-badge { font-size: 11px; padding: 2px 7px; border-radius: 10px; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
+.ne-badge-cash       { background: var(--ne-income-tint); color: var(--ne-cash); }
+.ne-badge-bank       { background: var(--ne-bank-tint); color: var(--ne-bank); }
+.ne-badge-creditCard { background: var(--ne-credit-tint); color: var(--ne-credit); }
+
+.ne-wallet-name {
+  color: var(--text-normal);
+  font-size: 14px;
+}
+
+.ne-wallet-balance {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.ne-wallet-balance.is-negative {
+  color: var(--ne-expense);
+}
+
+.ne-net-asset-row {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 2px solid var(--background-modifier-border);
+  border-bottom: none;
+}
+
+.ne-net-label {
+  font-weight: 600;
+}
+
+.ne-net-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ne-income);
+}
+
+.ne-net-value.is-negative {
+  color: var(--ne-expense);
+}
+
+/* Charts */
+
+/* PC 2-column dashboard grid */
+.ne-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 12px;
+  padding: 0 20px 20px;
+}
+
+.ne-grid-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Bar chart card — flex so chart-wrap fills height */
+.ne-inc-exp-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ne-inc-exp-card .ne-chart-wrap {
+  flex: 1;
+  min-height: 200px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ne-chart-wrap {
+  flex: 1;
+  min-width: 180px;
+  position: relative;
+}
+
+.ne-no-data {
+  color: var(--text-faint);
+  font-size: 13px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.ne-pie-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.ne-pie-canvas-wrap {
+  flex-shrink: 0;
+  position: relative;
+}
+
+.ne-pie-legend {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  width: 100%;
+}
+
+.ne-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.ne-legend-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ne-legend-amt {
+  color: var(--text-normal);
+  font-variant-numeric: tabular-nums;
+  margin-right: 8px;
+}
+
+.ne-legend-pct { color: var(--text-faint); }
+
+.ne-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Detail View ── */
+.ne-detail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.ne-detail-header {
+  padding: 16px 16px 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ne-detail-list-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 16px;
+}
+
+.ne-type-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.ne-cat-dropdown {
+  position: relative;
+  margin-left: auto;
+}
+
+.ne-cat-toggle {
+  background: none;
+  border: 0.5px solid var(--background-modifier-border-hover);
+  border-radius: 99px;
+  padding: 4px 11px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+
+.ne-cat-toggle:hover {
+  background: var(--background-secondary);
+}
+
+.ne-cat-toggle.is-active {
+  background: color-mix(in srgb, var(--text-normal) 8%, var(--background-primary) 92%);
+  border-color: var(--text-normal);
+  font-weight: 500;
+}
+
+.ne-cat-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 100;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 140px;
+  box-shadow: var(--ne-shadow-dropdown);
+}
+
+.ne-cat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-normal);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ne-cat-item:hover {
+  background: var(--background-secondary);
+}
+
+.ne-cat-check {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--background-modifier-border-hover);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 9px;
+  color: white;
+}
+
+.ne-cat-check.is-checked {
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+}
+
+/* Filter tabs (pill-shaped buttons for transaction type filtering)
+ * Color via modifier class .ne-pill-color-<key>:
+ *   sets --ne-pill-color (border + text active)
+ *   sets --ne-pill-tint  (background active)
+ * Base rule below reads both. */
+button.ne-pill {
+  background: transparent;
+  border: 0.5px solid var(--background-modifier-border-hover);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+/* Color modifiers — set the two vars consumed below.
+ * Active uses *-tint-strong (28-32%) for adequate contrast against sheet
+ * panels; chip/badge consumers stick with the regular *-tint (16-22%).
+ * Neutral pill uses --interactive-accent so dark/light themes both look
+ * coherent (raw --text-normal tint reads as white-fog in dark, black-fog
+ * in light — visually inconsistent). */
+.ne-pill-color-income    { --ne-pill-color: var(--ne-income);            --ne-pill-tint: var(--ne-income-tint-strong); }
+.ne-pill-color-expense   { --ne-pill-color: var(--ne-expense);           --ne-pill-tint: var(--ne-expense-tint-strong); }
+.ne-pill-color-transfer  { --ne-pill-color: var(--ne-transfer);          --ne-pill-tint: var(--ne-transfer-tint-strong); }
+.ne-pill-color-bank      { --ne-pill-color: var(--ne-bank);              --ne-pill-tint: var(--ne-bank-tint-strong); }
+.ne-pill-color-cash      { --ne-pill-color: var(--ne-cash);              --ne-pill-tint: var(--ne-cash-tint-strong); }
+.ne-pill-color-credit    { --ne-pill-color: var(--ne-credit);            --ne-pill-tint: var(--ne-credit-tint-strong); }
+.ne-pill-color-neutral   { --ne-pill-color: var(--interactive-accent);   --ne-pill-tint: var(--ne-accent-tint-strong); }
+
+/* Hover (only when not active) — 8% same-color tint as a pre-active hint */
+.ne-pill:hover:not(.is-active) {
+  background: color-mix(in srgb, var(--ne-pill-color, var(--text-normal)) 8%, transparent);
+}
+
+/* Active — tint background + same-color border + same-color text */
+.ne-pill.is-active {
+  background: var(--ne-pill-tint, var(--background-secondary));
+  border-color: var(--ne-pill-color, var(--text-normal));
+  color: var(--ne-pill-color, var(--text-normal));
+}
+
+/* iOS sticky :active fix — prevent Obsidian global button styles from overriding */
+.ne-pill:active:not(.is-active) {
+  background: color-mix(in srgb, var(--ne-pill-color, var(--text-normal)) 8%, transparent);
+  color: var(--text-muted);
+}
+
+.ne-pill.is-active:active {
+  background: var(--ne-pill-tint, var(--background-secondary));
+  border-color: var(--ne-pill-color, var(--text-normal));
+  color: var(--ne-pill-color, var(--text-normal));
+}
+
+.ne-detail-search-row .ne-search-input {
+  flex: 1;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.ne-detail-search-row .ne-search-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+/* Detail account dropdown — sibling of ne-cat-dropdown, no auto margin */
+.ne-account-dropdown {
+  position: relative;
+}
+
+/* Detail date range row — two inputs separated by ─, clear btn right-aligned */
+.ne-detail-date-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ne-date-sep {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 14px;
+  user-select: none;
+}
+
+.ne-detail-date-row .ne-clear-btn {
+  margin-left: auto;
+}
+
+/* Mobile filter sheet override: inputs stretch to fill sheet */
+.ne-filter-sheet-body .ne-detail-date-row .ne-date-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Mobile narrow fallback (desktop window <=380px): stack vertically */
+@media (max-width: 380px) {
+  .ne-detail-date-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ne-detail-date-row .ne-date-sep {
+    display: none;
+  }
+  .ne-detail-date-row .ne-clear-btn {
+    margin-left: 0;
+  }
+}
+
+.ne-date-input {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 0.5px solid var(--background-modifier-border-hover);
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+/* Detail search row (search + mobile filter btn) */
+.ne-detail-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ne-detail-search-row:not(:first-child) {
+  margin-top: 8px;
+}
+
+.ne-filter-btn {
+  background: none;
+  border: 0.5px solid var(--background-modifier-border-hover);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-normal);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ne-filter-btn:hover {
+  background: var(--background-secondary);
+}
+
+.ne-filter-btn.is-active {
+  background: color-mix(in srgb, var(--text-normal) 8%, var(--background-primary) 92%);
+  border-color: var(--text-normal);
+  font-weight: 500;
+}
+
+/* Whole filter sheet (header + body) shares grey panel */
+.ne-bottom-sheet.ne-filter-sheet {
+  background: var(--background-secondary);
+}
+
+/* Filter bottom sheet body */
+.ne-filter-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Date inputs inside filter sheet body — match desktop input style */
+.ne-filter-sheet-body .ne-date-input {
+  background: var(--background-modifier-form-field);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  font-size: 13px;
+}
+
+.ne-filter-section {
+  margin-bottom: 16px;
+}
+
+.ne-filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.ne-filter-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.ne-pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ne-filter-clear-all {
+  width: 100%;
+  text-align: center;
+  padding: 10px 12px;
+  margin-top: 72px;
+  font-size: 14px;
+  color: var(--text-error);
+}
+
+.ne-tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ne-tx-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 6px;
+  border-radius: 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ne-tx-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.ne-tx-row-stack {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ne-tx-row-line3 {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ne-tx-date {
+  color: var(--text-normal);
+  white-space: nowrap;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  min-width: 48px;
+}
+
+.ne-type-badge {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.ne-type-expense  { background: var(--ne-expense-tint); color: var(--ne-expense); }
+.ne-type-income   { background: var(--ne-income-tint);  color: var(--ne-income); }
+.ne-type-transfer { background: var(--ne-transfer-tint); color: var(--ne-transfer); }
+.ne-type-payment  { background: var(--ne-payment-tint); color: var(--ne-payment); }
+
+.ne-tx-category {
+  font-weight: 500;
+  color: var(--text-normal);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ne-tx-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ne-tx-empty {
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.ne-tx-wallet {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ne-tx-amount {
+  margin-left: auto;
+  text-align: right;
+  font-weight: 600;
+  font-size: 16px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.ne-tx-amount.is-income  { color: var(--ne-income); }
+.ne-tx-amount.is-expense { color: var(--ne-expense); }
+.ne-tx-amount.is-refund  { color: var(--ne-refund); }
+
+.ne-subtotal-row {
+  display: flex;
+  gap: 24px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-top: 1px solid var(--background-modifier-border);
+  font-size: 13px;
+}
+
+@media (pointer: coarse) {
+  .ne-subtotal-row {
+    padding-bottom: calc(8px + var(--mobile-toolbar-height, 48px) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .ne-detail.ne-keyboard-open .ne-subtotal-row {
+    display: none;
+  }
+
+  /* When keyboard is open, constrain list to visible area above keyboard.
+     --ne-keyboard-h is set by visualViewport listener (JS also sets ne-keyboard-open). */
+  .ne-detail.ne-keyboard-open .ne-detail-list-wrap {
+    flex: none;
+    max-height: 35vh;
+  }
+}
+
+.ne-subtotal-income  { color: var(--ne-income); font-weight: 600; }
+.ne-subtotal-expense { color: var(--ne-expense); font-weight: 600; }
+
+/* Card container for charts */
+.ne-card {
+  background: var(--background-secondary);
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--ne-card-shadow);
+}
+
+.ne-card--raised {
+  box-shadow: var(--ne-card-shadow-raised);
+}
+
+.ne-card-title {
+  font-size: 16px;
+  color: var(--text-muted);
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+/* Chart legend */
+
+.ne-leg {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Metrics (summary cards at bottom) */
+.ne-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 10px;
+  padding: 16px 20px;
+  margin-bottom: 0;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ne-asset .ne-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ne-metric {
+  background: var(--background-secondary);
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+}
+
+.ne-metric--hero {
+  border-left: 4px solid currentColor;
+  padding-left: calc(1rem - 4px);
+}
+.ne-metric--hero.income,
+.ne-metric--hero.positive { color: var(--ne-income); }
+.ne-metric--hero.expense,
+.ne-metric--hero.negative { color: var(--ne-expense); }
+
+.ne-metric-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+  letter-spacing: 0.03em;
+}
+
+.ne-metric-value {
+  font-size: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ne-metric-value.income   { color: var(--ne-income); }
+.ne-metric-value.expense  { color: var(--ne-expense); }
+.ne-metric-value.positive { color: var(--ne-income); }
+.ne-metric-value.negative { color: var(--ne-expense); }
+
+.ne-range-row {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 16px;
+}
+
+/* Range selection tabs (3 / 6 / 12 months) */
+.ne-range-btn {
+  background: none;
+  border: 0.5px solid var(--background-modifier-border-hover);
+  border-radius: 6px;
+  padding: 4px 13px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.1s, color 0.1s;
+}
+
+.ne-range-btn:hover:not(.is-active) {
+  background: var(--background-secondary);
+}
+
+.ne-range-btn.is-active {
+  background: var(--text-normal);
+  color: var(--background-primary);
+  border-color: var(--text-normal);
+}
+
+/* Chart tooltip */
+
+/* ── Settings ── */
+
+/* Grouped settings rows (replaces per-item cards) */
+.ne-settings-group {
+  background: var(--background-secondary);
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin: 4px 0 16px;
+}
+
+.ne-settings-group .setting-item {
+  border-top: none;
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: 0;
+  margin: 0;
+  padding: 10px 14px;
+}
+
+.ne-settings-group .setting-item:last-child {
+  border-bottom: none;
+}
+
+/* Wallet list rows */
+.ne-wallet-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ne-wallet-row:last-child {
+  border-bottom: none;
+}
+
+.ne-wallet-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.ne-wallet-row-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-normal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.ne-wallet-row-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ne-wallet-row-balance {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.ne-wallet-row-balance.is-debt {
+  color: var(--text-error);
+}
+
+.ne-drag-handle {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-right: 6px;
+  color: var(--text-faint);
+  cursor: grab;
+  padding: 0 2px;
+}
+
+.ne-drag-handle:active {
+  cursor: grabbing;
+}
+
+.ne-wallet-row.ne-dragging {
+  opacity: 0.4;
+}
+
+.ne-drag-ghost {
+  opacity: 0.4;
+}
+
+.ne-wallet-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ne-wallet-row-actions button {
+  box-shadow: 0 0 0 1px var(--background-modifier-border-hover);
+  border-radius: var(--button-radius, 4px);
+}
+
+.ne-add-wallet-card,
+.ne-category-card {
+  background: var(--setting-items-background);
+  margin-left: 0;
+  margin-top: 8px;
+  padding: 0.875rem 1rem 1rem 0.875rem;
+}
+
+.ne-add-wallet-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.ne-add-wallet-field {
+  min-width: 0;
+}
+
+.ne-add-wallet-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+select.ne-add-wallet-input {
+  appearance: auto;
+  padding-right: 28px;
+}
+
+.ne-add-wallet-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 1px var(--interactive-accent-hover);
+}
+
+.ne-balance-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 10px 0 0;
+}
+
+.ne-wallet-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ne-wallet-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ne-wallet-edit-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.ne-wallet-edit-form .ne-field-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 10px;
+}
+
+.ne-wallet-edit-hint {
+  margin-top: -2px;
+}
+
+.ne-add-wallet-submit {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 0 0;
+}
+
+.ne-setting-input-subtitle {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.ne-category-divider {
+  border: none;
+  border-top: 1px solid var(--background-modifier-border);
+  margin: 14px 0;
+}
+
+.ne-category-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.ne-category-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px 3px 12px;
+  border-radius: 16px;
+  background: var(--background-modifier-hover);
+  border: 1px solid var(--background-modifier-border);
+  font-size: 13px;
+}
+
+.ne-tag-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--background-modifier-border);
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.ne-tag-remove:hover {
+  background: var(--text-error);
+  color: #ffffff;
+}
+
+.ne-category-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ne-category-input {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 14px;
+}
+
+.ne-settings-empty {
+  color: var(--text-faint);
+  font-size: 13px;
+}
+
+/* ── Mobile responsiveness ── */
+@media (max-width: 480px) {
+  .ne-add-wallet-submit {
+    justify-content: stretch;
+  }
+
+  .ne-add-wallet-submit button {
+    width: 100%;
+  }
+
+  
+
+  .ne-grid-2 {
+    grid-template-columns: 1fr;
+    padding: 0 12px 20px;
+  }
+
+  .ne-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 12px;
+  }
+
+  
+
+  
+
+  
+
+  .ne-shared-header {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "month actions"
+      "tabs  tabs";
+    row-gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .ne-shared-header-month { grid-area: month; }
+  .ne-shared-header-actions { grid-area: actions; }
+
+  .ne-shared-header-tabs {
+    grid-area: tabs;
+    justify-self: stretch;
+  }
+
+  .ne-shared-header-tabs .ne-shared-header-tab {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+}
+
+/* ── Asset view: mobile overrides ── */
+.is-mobile .ne-grid-2.ne-asset-grid {
+  grid-template-columns: 1fr;
+  padding-top: 0;
+}
+
+.is-mobile .ne-asset-right > .ne-card:last-child {
+  flex: none;
+}
+
+/* ── Tag chips in transaction rows ── */
+.ne-tx-tags {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.ne-tx-tag-chip {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 999px;
+}
+
+/* ── Tag input in modals ── */
+.ne-tag-input-wrapper {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.ne-tag-dropdown {
+  position: fixed;
+  z-index: 9999;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  box-shadow: var(--ne-shadow-overlay);
+  max-height: 320px; /* desktop: ~10 items before scroll */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile: keyboard open, dropdown shows above input */
+
+.ne-tag-dropdown-item {
+  padding: 7px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-normal);
+  border-radius: 4px;
+}
+
+.ne-tag-dropdown-item:hover {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.ne-tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ne-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+.ne-tag-chip-remove {
+  cursor: pointer;
+  color: var(--text-faint);
+  font-size: 13px;
+  line-height: 1;
+  padding: 8px;
+  margin: -8px -4px -8px 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  min-height: 16px;
+}
+
+.ne-tag-chip-remove:hover {
+  color: var(--text-normal);
+}
+
+/* Tripled .ne-tag-input-wrapper to beat Obsidian's body.is-phone .modal input[type=text] (0,3,2). */
+.ne-tag-input-wrapper.ne-tag-input-wrapper.ne-tag-input-wrapper .ne-tag-input {
+  flex: 1;
+  min-width: 80px;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: var(--text-normal);
+  padding: 0;
+}
+
+/* ── ValidationModal ── */
+
+.ne-validation-modal {
+  padding: 0;
+}
+
+/* Header: [X] [title] [spacer] — three columns, title centered */
+.ne-validation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  height: 44px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.ne-validation-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--background-secondary);
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.ne-validation-close-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.ne-validation-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-normal);
+  margin: 0;
+  text-align: center;
+  flex: 1;
+}
+
+.ne-validation-header-spacer {
+  width: 32px;
+  flex-shrink: 0;
+}
+
+/* Content area */
+.ne-validation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+/* Section */
+.ne-validation-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ne-validation-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Issue card */
+.ne-validation-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+}
+
+.ne-validation-card-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Footer row for frontmatter cards (fix button, right-aligned) */
+.ne-validation-card-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Actions row for orphan cards (remap select + fix button) */
+.ne-validation-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ne-validation-remap-select {
+  flex: 1;
+  font-size: 12px;
+}
+
+.ne-validation-fix-btn {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.ne-validation-fix-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Divider */
+.ne-validation-divider {
+  height: 1px;
+  background: var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+/* Footer: full-width fix-all button */
+.ne-validation-footer {
+  padding: 16px;
+  flex-shrink: 0;
+}
+
+.ne-validation-fix-all-btn {
+  width: 100%;
+  padding: 12px 0;
+  border-radius: 10px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ne-validation-fix-all-btn:hover {
+  background: var(--interactive-accent-hover);
+}
+
+/* ── A11y: keyboard focus rings ── */
+.ne-action-btn:focus-visible,
+.ne-nav-btn:focus-visible,
+.ne-pill:focus-visible,
+.ne-range-btn:focus-visible,
+.ne-cat-toggle:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
