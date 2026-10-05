@@ -1,9 +1,10 @@
 import { Events, ItemView, WorkspaceLeaf } from 'obsidian'
-import { WalletFile } from '../io/WalletFile'
+import type { Ledger } from '../services/Ledger'
+import { groupByCategory, monthEntries, monthSummaries, netAssetTimeline } from '../snapshot/queries'
 import { t, formatMonthLabel, formatYearMonth } from '../labels'
 import { currentYearMonth } from '../utils'
 import { createMetric, renderCard } from './components'
-import { TransactionType } from '../types'
+import type { TransactionType } from '../domain/types'
 import { DETAIL_VIEW_TYPE } from './DetailView'
 import { renderSharedHeader } from './SharedHeader'
 import { Chart } from 'chart.js'
@@ -12,7 +13,7 @@ import { MonthData, drawIncExpChart, drawPie, getMonthRangeEndingAt } from './ch
 export const DASHBOARD_VIEW_TYPE = 'nestegg-dashboard'
 
 export class DashboardView extends ItemView {
-  private walletFile: WalletFile
+  private ledger: Ledger
   private currentYearMonth: string
   private charts: Chart[] = []
 
@@ -21,9 +22,9 @@ export class DashboardView extends ItemView {
     this.charts = []
   }
 
-  constructor(leaf: WorkspaceLeaf, walletFile: WalletFile) {
+  constructor(leaf: WorkspaceLeaf, ledger: Ledger) {
     super(leaf)
-    this.walletFile = walletFile
+    this.ledger = ledger
     this.currentYearMonth = currentYearMonth()
   }
 
@@ -55,26 +56,22 @@ export class DashboardView extends ItemView {
 
     const months = getMonthRangeEndingAt(this.currentYearMonth, 6)
 
-    const [transactions, summaries, netTimeline] = await Promise.all([
-      this.walletFile.readMonth(this.currentYearMonth),
-      this.walletFile.getMonthSummaries(months),
-      this.walletFile.getNetAssetTimeline(months),
-    ])
+    const { snapshot } = this.ledger
+    const { index } = this.ledger.store
+    const entries = monthEntries(snapshot, this.currentYearMonth)
+    const summaries = monthSummaries(snapshot, months)
+    const netTimeline = netAssetTimeline(snapshot, months)
 
     renderSharedHeader(contentEl, {
       view: this,
-      walletFile: this.walletFile,
+      ledger: this.ledger,
       activeView: 'dashboard',
       yearMonth: this.currentYearMonth,
       onMonthChange: (ym) => { this.currentYearMonth = ym; void this.render() },
     })
 
     // ── Monthly metrics ──────────────────────────────────────────────────────
-    let monthIncome = 0, monthExpense = 0
-    for (const tx of transactions) {
-      if (tx.type === 'income') monthIncome += tx.amountCents
-      if (tx.type === 'expense') monthExpense += tx.amountCents
-    }
+    const { incomeCents: monthIncome, expenseCents: monthExpense } = summaries.get(this.currentYearMonth)!
     const monthBalance = monthIncome - monthExpense
 
     const metricsEl = contentEl.createDiv('ne-metrics')
@@ -107,8 +104,8 @@ export class DashboardView extends ItemView {
     // ── Category pies ────────────────────────────────────────────────────────
     const gridRight = grid2.createDiv('ne-grid-right')
 
-    const expenseMap = this.walletFile.groupByCategory(transactions, 'expense')
-    const incomeMap  = this.walletFile.groupByCategory(transactions, 'income')
+    const expenseMap = groupByCategory(entries, index, 'expense')
+    const incomeMap  = groupByCategory(entries, index, 'income')
 
     const expCard = renderCard(gridRight, { title: t('dash.expenseByCategory') })
     if (expenseMap.size > 0) this.charts.push(drawPie(expCard, expenseMap, (cat: string) => { void this.openDetailWithFilter('expense', cat) }, 200))

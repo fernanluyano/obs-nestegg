@@ -4,7 +4,18 @@ An [Obsidian](https://obsidian.md) plugin for personal finance, right inside you
 
 Data lives in plain Markdown files in your vault (tables and frontmatter), so it stays readable and diffable. USD only.
 
-**Status:** being rebuilt from a clean slate — no real features yet.
+**Status:** early development. Transactions, accounts, categories and net worth views work; budgeting and investments are not built yet.
+
+## 🗂️ How your data is stored
+
+Everything lives under a `Nestegg/` folder at the vault root. The notes are written and managed by the plugin as you make changes, so don't edit them by hand. Run **Validate data** from the command palette if you suspect a note was damaged.
+
+- `Settings.md` — default account and startup validation
+- `Accounts/<Name>/<Name>.md` — one note per account (cash or credit card), with its entered balance and date
+- `Accounts/<Name>/Transactions/YYYY-MM.md` — one table of transactions per account per month
+- `Categories/<Category>.md` — one note per category, listing its subcategories
+
+Amounts are stored as integer cents. A transaction's amount is signed from its account's point of view, and a transfer is two rows, one in each account. Every note carries a `nestegg/...` tag, so you can query them from Obsidian.
 
 ## 📥 Installation
 
@@ -20,4 +31,4 @@ See `CLAUDE.md` for project conventions and the `Makefile` for common commands (
 
 ## 📄 License
 
-MIT. Portions are derived from [Penny Wallet](https://github.com/twrusstw/penny-wallet) (MIT, © twrusstw) — see `NOTICE`.
+MIT. See `LICENSE`.

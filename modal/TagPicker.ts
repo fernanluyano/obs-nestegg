@@ -1,57 +1,17 @@
 import { t } from '../labels'
-import { validateTag } from '../utils'
-import type { WalletFile } from '../io/WalletFile'
-
-export const TAG_LIMIT = 3
-
-const TAG_MAX_LENGTH = 10
-
-export function filterTagsByQuery(tags: readonly string[], query: string): string[] {
-  const needle = query.trim().toLowerCase()
-  if (needle === '') return [...tags]
-  return tags.filter(tag => tag.toLowerCase().includes(needle))
-}
-
-export function toggleStagedTag(staged: ReadonlySet<string>, tag: string): Set<string> {
-  const next = new Set(staged)
-  if (next.has(tag)) next.delete(tag)
-  else next.add(tag)
-  return next
-}
-
-export type AddRowState =
-  | { kind: 'empty' }                       // search empty — row prompts to focus search
-  | { kind: 'invalid'; name: string }       // search has chars but fails validateTag (e.g. ,|)
-  | { kind: 'too-long'; name: string }      // exceeds the length cap
-  | { kind: 'duplicate'; name: string }     // exact match against existing tag
-  | { kind: 'limit'; name: string }         // would exceed 3-tag staged cap
-  | { kind: 'addable'; name: string }       // ready to add
-
-export function getAddRowState(
-  query: string,
-  existingTags: readonly string[],
-  stagedCount: number,
-): AddRowState {
-  const normalized = query.trim().replace(/^#/, '').trim()
-  if (!normalized) return { kind: 'empty' }
-  if ([...normalized].length > TAG_MAX_LENGTH) return { kind: 'too-long', name: normalized }
-  if (!validateTag(normalized)) return { kind: 'invalid', name: normalized }
-  if (existingTags.includes(normalized)) return { kind: 'duplicate', name: normalized }
-  if (stagedCount >= TAG_LIMIT) return { kind: 'limit', name: normalized }
-  return { kind: 'addable', name: normalized }
-}
-
-// ── UI ────────────────────────────────────────────────────────────────────────
+import { filterTagsByQuery, getAddRowState, toggleStagedTag, withNewTag } from './tagPickerState'
+import { TAG_LIMIT } from './transactionState'
 
 interface TagPickerParams {
   containerEl: HTMLElement
-  walletFile: WalletFile
+  availableTags: readonly string[]
   initialSelected: readonly string[]
   onCommit: (selected: string[]) => void
 }
 
 export function openTagPicker(params: TagPickerParams): () => void {
-  const { containerEl, walletFile, initialSelected, onCommit } = params
+  const { containerEl, availableTags, initialSelected, onCommit } = params
+  let known = [...availableTags]
   let staged = new Set<string>(initialSelected)
   let query = ''
   let closeTimer: number | null = null
@@ -119,8 +79,7 @@ export function openTagPicker(params: TagPickerParams): () => void {
 
   const renderChips = () => {
     chipArea.empty()
-    const all = walletFile.getConfig().tags
-    const visible = filterTagsByQuery(all, query)
+    const visible = filterTagsByQuery(known, query)
 
     if (visible.length === 0 && query.trim() !== '') {
       chipArea.createDiv({
@@ -153,7 +112,7 @@ export function openTagPicker(params: TagPickerParams): () => void {
   }
 
   const renderAddUI = () => {
-    const state = getAddRowState(query, walletFile.getConfig().tags, staged.size)
+    const state = getAddRowState(query, known, staged.size)
 
     // Bottom row only when search is empty (keyboard down → reachable).
     if (state.kind === 'empty') {
@@ -197,11 +156,10 @@ export function openTagPicker(params: TagPickerParams): () => void {
     }
   }
 
-  const submitNewTag = async () => {
-    const state = getAddRowState(query, walletFile.getConfig().tags, staged.size)
+  const submitNewTag = () => {
+    const state = getAddRowState(query, known, staged.size)
     if (state.kind !== 'addable') return
-    const result = await walletFile.addTag(state.name)
-    if (!result.ok) return // race: another path added it; silent
+    known = withNewTag(known, state.name)
     staged.add(state.name)
     searchInput.value = ''
     query = ''
@@ -226,9 +184,7 @@ export function openTagPicker(params: TagPickerParams): () => void {
     searchInput.focus()
   })
 
-  inlineAdd.addEventListener('click', () => {
-    void submitNewTag()
-  })
+  inlineAdd.addEventListener('click', submitNewTag)
 
   renderChips()
   renderAddUI()

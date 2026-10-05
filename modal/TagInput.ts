@@ -1,10 +1,13 @@
-import { addTagToList } from './transactionState'
+import { addTagToList, pendingTagProblem } from './transactionState'
 import { t } from '../labels'
 
+// `onPending` receives the text still in the box, so the form can refuse to save while it is not a
+// valid tag instead of silently leaving it out.
 export function buildTagInput(
   tags: string[],
   availableTags: string[],
   onChange: (tags: string[]) => void,
+  onPending: (raw: string) => void = () => {},
 ): HTMLElement {
   let currentTags = [...tags]
 
@@ -18,8 +21,19 @@ export function buildTagInput(
   })
   input.dataset['testid'] = 'tag-input-field'
   input.setAttribute('enterkeyhint', 'done')
+  const errorEl = wrapper.createDiv('ne-tag-error')
+  errorEl.hide()
   const dropdown = wrapper.createDiv('ne-tag-dropdown')
   dropdown.hide()
+
+  // Shows why the text in the box can't be a tag, and tells the form what is pending.
+  const refreshPending = () => {
+    const problem = pendingTagProblem(currentTags, input.value)
+    errorEl.setText(problem ? t(problem) : '')
+    errorEl.toggle(problem !== null)
+    input.toggleClass('is-invalid', problem !== null)
+    onPending(input.value)
+  }
 
   const updateDropdown = () => {
     const val = input.value.replace(/^#/, '').toLowerCase()
@@ -62,12 +76,15 @@ export function buildTagInput(
     switch (result.kind) {
       case 'empty':
       case 'max':
-        return
+        break
+      case 'too-long':
       case 'invalid':
+        // Keep the text and show the error: dropping it would let the form save without the tag.
+        break
       case 'duplicate':
         input.value = ''
         dropdown.hide()
-        return
+        break
       case 'added':
         currentTags = result.next
         onChange(currentTags)
@@ -75,14 +92,16 @@ export function buildTagInput(
         dropdown.hide()
         renderChips()
         if (currentTags.length >= 3) input.setAttribute('disabled', 'true')
-        return
+        break
     }
+    refreshPending()
   }
 
-  input.addEventListener('input', updateDropdown)
+  input.addEventListener('input', () => { updateDropdown(); refreshPending() })
   input.addEventListener('focus', updateDropdown)
   input.addEventListener('keydown', (e: KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag() }
+    // Space ends a tag like Enter and comma do; tag names can't contain one.
+    if (e.key === 'Enter' || e.key === ',' || e.key === ' ') { e.preventDefault(); addTag() }
     if (e.key === 'Escape') {
       if (!dropdown.isShown()) return
       e.preventDefault()

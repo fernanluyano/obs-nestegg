@@ -1,41 +1,42 @@
-import type { Transaction } from '../types'
-import { formatCents } from '../money'
+import type { LedgerEntry, TransactionType } from '../domain/types'
+import { formatCents } from '../domain/money'
 
 export type Line3Display =
   | { kind: 'tags'; tags: string[] }
   | { kind: 'note'; text: string }
   | { kind: 'empty' }
 
-export function isRefund(tx: Transaction): boolean {
-  return tx.type === 'expense' && tx.amountCents < 0
+// Money coming back under an expense category.
+export function isRefund(entry: LedgerEntry, type: TransactionType | undefined): boolean {
+  return type === 'expense' && entry.amountCents > 0
 }
 
-export function buildWalletText(tx: Transaction): string {
-  if (tx.wallet) return tx.wallet
-  if (tx.fromWallet && tx.toWallet) return `${tx.fromWallet} → ${tx.toWallet}`
-  return '—'
+// A transfer row shows the direction its sign gives: sent rows read "this → other".
+export function buildAccountText(entry: LedgerEntry): string {
+  if (!entry.fromTo) return entry.account || '—'
+  return entry.amountCents < 0 ? `${entry.account} → ${entry.fromTo}` : `${entry.fromTo} → ${entry.account}`
+}
+
+export function buildTitleText(entry: LedgerEntry): string {
+  return entry.merchant ? `${entry.subcategory} · ${entry.merchant}` : entry.subcategory
 }
 
 export function buildAmountDisplay(
-  tx: Transaction,
+  entry: LedgerEntry,
+  type: TransactionType | undefined,
 ): { text: string; className: string } {
-  const refund = isRefund(tx)
+  const refund = isRefund(entry, type)
   const className = refund
     ? 'ne-tx-amount is-refund'
-    : tx.type === 'income'  ? 'ne-tx-amount is-income'
-    : tx.type === 'expense' ? 'ne-tx-amount is-expense'
+    : type === 'income' ? 'ne-tx-amount is-income'
+    : type === 'expense' ? 'ne-tx-amount is-expense'
     : 'ne-tx-amount'
-  const prefix = refund
-    ? '+'
-    : tx.type === 'expense' ? '-'
-    : tx.type === 'income'  ? '+'
-    : ''
-  const displayAmount = refund ? -tx.amountCents : tx.amountCents
-  return { text: prefix + formatCents(displayAmount), className }
+  const sign = entry.amountCents > 0 ? '+' : entry.amountCents < 0 ? '-' : ''
+  return { text: sign + formatCents(Math.abs(entry.amountCents)), className }
 }
 
-export function buildLine3Display(tx: Transaction): Line3Display {
-  if (tx.tags && tx.tags.length > 0) return { kind: 'tags', tags: tx.tags }
-  if (tx.note && tx.note.trim() !== '') return { kind: 'note', text: tx.note.trim() }
+export function buildLine3Display(entry: LedgerEntry): Line3Display {
+  if (entry.tags.length > 0) return { kind: 'tags', tags: entry.tags }
+  if (entry.note.trim() !== '') return { kind: 'note', text: entry.note.trim() }
   return { kind: 'empty' }
 }

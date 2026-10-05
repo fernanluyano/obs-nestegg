@@ -1,9 +1,10 @@
 import { setIcon } from 'obsidian'
-import { TransactionType, NesteggConfig } from '../types'
+import type { TransactionType } from '../domain/types'
 import { t } from '../labels'
+import { knownMerchants, suggestedTags } from '../snapshot/queries'
 import { TransactionModal } from './TransactionModal'
 import { formatMobileHeroAmount } from '../utils'
-import { getTransferWalletCandidates } from './transactionState'
+import { accountChoices, activeAccounts, categoryChoices, transferAccountCandidates } from './transactionState'
 import { openBottomSheetPicker, openBottomSheetShell, type BottomSheetOption } from './BottomSheetPicker'
 import { openTagPicker } from './TagPicker'
 import { MobileCalculatorPad } from './MobileCalculatorPad'
@@ -25,14 +26,12 @@ export class MobileTransactionModal extends TransactionModal {
   private viewportCleanups: (() => void)[] = []
 
   onOpen() {
-    const config = this.walletFile.getConfig()
-    this.initState(config)
-    this.buildMobileUI(config)
+    this.buildMobileUI()
     // iOS auto-focuses first button; delay ensures blur after animation
     setTimeout(() => (document.activeElement as HTMLElement)?.blur(), 100)
   }
 
-  private buildMobileUI(config: NesteggConfig) {
+  private buildMobileUI() {
     const { contentEl, containerEl } = this
     contentEl.empty()
     contentEl.addClass('ne-mobile-content')
@@ -43,9 +42,9 @@ export class MobileTransactionModal extends TransactionModal {
     const cancelBtn = topBar.createEl('button', { cls: 'ne-mobile-top-btn', text: '✕' })
     const titleEl = topBar.createEl('span', {
       cls: 'ne-mobile-top-title',
-      text: this.editingTx ? t('modal.editTitle') : t('modal.addTitle'),
+      text: this.editing ? t('modal.editTitle') : t('modal.addTitle'),
     })
-    if (this.editingTx) {
+    if (this.editing) {
       const iconEl = titleEl.createSpan('ne-modal-title-icon')
       setIcon(iconEl, 'pencil')
     }
@@ -62,7 +61,7 @@ export class MobileTransactionModal extends TransactionModal {
 
     // Type tabs
     this.mobileTabsEl = contentEl.createDiv('ne-mobile-tabs')
-    this.renderMobileTabs(config)
+    this.renderMobileTabs()
 
     // Amount display
     const amountArea = contentEl.createDiv('ne-mobile-amount-area')
@@ -75,7 +74,7 @@ export class MobileTransactionModal extends TransactionModal {
       this.openCalculatorPad()
     })
     this.mobileAmountEl = amountArea.createDiv('ne-mobile-amount-display')
-    this.mobileCalculatorState = createMobileCalculatorState(this.amount)
+    this.mobileCalculatorState = createMobileCalculatorState(this.form.amount)
     this.updateAmountDisplay()
 
     // Error
@@ -84,7 +83,7 @@ export class MobileTransactionModal extends TransactionModal {
 
     // Field rows (delete row appended inside renderMobileRows when editing)
     this.mobileRowsEl = contentEl.createDiv('ne-mobile-rows')
-    this.renderMobileRows(config)
+    this.renderMobileRows()
 
     this.bindMobileTextFocusState()
   }
@@ -124,37 +123,39 @@ export class MobileTransactionModal extends TransactionModal {
     }
   }
 
-  private renderMobileTabs(config: NesteggConfig) {
+  private renderMobileTabs() {
     this.mobileTabsEl.empty()
     const types: TransactionType[] = ['expense', 'income', 'transfer']
     for (const tp of types) {
       const tab = this.mobileTabsEl.createEl('button', {
         text: t(`label.type.${tp}`),
-        cls: 'ne-mobile-tab' + (this.type === tp ? ' is-active' : ''),
+        cls: 'ne-mobile-tab' + (this.form.type === tp ? ' is-active' : ''),
       })
       tab.addEventListener('click', () => {
-        this.resetStateForType(tp)
-        this.renderMobileTabs(config)
-        this.renderMobileRows(config)
+        this.changeType(tp)
+        this.renderMobileTabs()
+        this.renderMobileRows()
       })
     }
   }
 
-  private renderMobileRows(config: NesteggConfig) {
+  private renderMobileRows() {
     this.mobileRowsEl.empty()
-    const activeWallets = this.getActiveWallets(config)
+    const ctx = this.context()
+    const { form } = this
+    const isTransfer = form.type === 'transfer'
 
     // Refund toggle first (expense only) — sub-option of the type tab, visually adjacent.
-    if (this.type === 'expense') {
+    if (form.type === 'expense') {
       const block = this.mobileRowsEl.createDiv('ne-refund-block')
       const refundRow = block.createDiv('ne-mobile-row ne-mobile-refund-row')
       const checkboxId = 'ne-mobile-refund-checkbox'
       refundRow.createEl('label', { cls: 'ne-mobile-row-label', text: t('modal.isRefund'), attr: { for: checkboxId } })
       const checkbox = refundRow.createEl('input', { type: 'checkbox' })
       checkbox.id = checkboxId
-      checkbox.checked = this.isRefund
+      checkbox.checked = form.isRefund
       checkbox.addEventListener('change', () => {
-        this.isRefund = checkbox.checked
+        this.update({ isRefund: checkbox.checked })
         this.updateAmountDisplay()
       })
       block.createDiv({ cls: 'ne-mobile-refund-hint-row', text: t('modal.isRefund.hint') })
@@ -166,10 +167,10 @@ export class MobileTransactionModal extends TransactionModal {
       this.mobileRowsEl, t('modal.date'), this.formatMobileDate(),
       (valueEl) => {
         dateInput = createEl('input', { type: 'date' })
-        dateInput.value = this.date
+        dateInput.value = form.date
         dateInput.addClass('ne-hidden-date-trigger')
         dateInput.addEventListener('change', () => {
-          this.date = dateInput.value
+          this.update({ date: dateInput.value })
           valueEl.textContent = this.formatMobileDate()
         })
         return dateInput
@@ -177,63 +178,57 @@ export class MobileTransactionModal extends TransactionModal {
       () => dateInput.focus(),
     ).addClass('ne-mobile-date-row')
 
-    const categories = this.getCategoryOptions(config)
-    const catLabel = categories.find(c => c.key === this.category)?.label ?? (this.category || '—')
-    const isTransferOrPayment = this.type !== 'expense' && this.type !== 'income'
-    const onCategoryChange = isTransferOrPayment
-      ? (key: string) => { this.category = key; this.renderMobileRows(config) }
-      : (key: string) => { this.category = key }
-
+    const choices = categoryChoices(ctx.categories, form.type)
     this.addMobileBottomSheetRow(
       this.mobileRowsEl,
-      t('modal.category'),
-      catLabel,
-      this.withEmptyOption(categories),
-      () => this.category,
-      onCategoryChange,
+      t('modal.subcategory'),
+      form.subcategory || '—',
+      this.withEmptyOption(choices.map(c => ({ key: c.key, label: `${c.category} › ${c.label}` }))),
+      () => this.form.subcategory,
+      (key) => {
+        this.update({ subcategory: key })
+        if (isTransfer) {
+          this.normalizeAccounts()
+          this.renderMobileRows()
+        }
+      },
       true,
     )
 
-    if (isTransferOrPayment) {
-      this.normalizeWalletForCategory(config)
-
-      const { fromCandidates: fromWallets, toCandidates: toWallets }
-        = getTransferWalletCandidates(activeWallets, this.category)
-
+    if (isTransfer) {
+      const { fromCandidates, toCandidates } = transferAccountCandidates(activeAccounts(ctx.accounts), form.subcategory)
       this.addMobileBottomSheetRow(
-        this.mobileRowsEl,
-        t('modal.fromWallet'),
-        this.fromWallet || '—',
-        this.withEmptyOption(fromWallets.map(w => ({ key: w.name, label: w.name }))),
-        () => this.fromWallet,
-        (key) => { this.fromWallet = key },
-        true,
+        this.mobileRowsEl, t('modal.fromAccount'), form.fromAccount || '—',
+        this.withEmptyOption(fromCandidates.map(a => ({ key: a.name, label: a.name }))),
+        () => this.form.fromAccount, (key) => this.update({ fromAccount: key }), true,
       )
-
       this.addMobileBottomSheetRow(
-        this.mobileRowsEl,
-        t('modal.toWallet'),
-        this.toWallet || '—',
-        this.withEmptyOption(toWallets.map(w => ({ key: w.name, label: w.name }))),
-        () => this.toWallet,
-        (key) => { this.toWallet = key },
-        true,
+        this.mobileRowsEl, t('modal.toAccount'), form.toAccount || '—',
+        this.withEmptyOption(toCandidates.map(a => ({ key: a.name, label: a.name }))),
+        () => this.form.toAccount, (key) => this.update({ toAccount: key }), true,
       )
     } else {
-      const walletOptions = this.type === 'income'
-        ? activeWallets.filter(w => w.type !== 'creditCard')
-        : activeWallets
-
       this.addMobileBottomSheetRow(
-        this.mobileRowsEl,
-        t('modal.wallet'),
-        this.wallet || '—',
-        this.withEmptyOption(walletOptions.map(w => ({ key: w.name, label: w.name }))),
-        () => this.wallet,
-        (key) => { this.wallet = key },
-        true,
+        this.mobileRowsEl, t('modal.account'), form.account || '—',
+        this.withEmptyOption(accountChoices(ctx.accounts, form.type).map(a => ({ key: a.name, label: a.name }))),
+        () => this.form.account, (key) => this.update({ account: key }), true,
       )
     }
+
+    // Merchant — free text with the known merchants offered as suggestions
+    const merchantRow = this.mobileRowsEl.createDiv('ne-mobile-row')
+    merchantRow.createEl('span', { cls: 'ne-mobile-row-label', text: t('modal.merchant') })
+    const merchantInput = merchantRow.createEl('input', {
+      type: 'text', cls: 'ne-mobile-note-input', placeholder: t('modal.merchant'),
+    })
+    merchantInput.setAttribute('list', 'ne-mobile-merchant-list')
+    merchantInput.setAttribute('enterkeyhint', 'done')
+    merchantInput.value = form.merchant
+    const merchantList = merchantRow.createEl('datalist', { attr: { id: 'ne-mobile-merchant-list' } })
+    for (const merchant of knownMerchants(this.ledger.snapshot)) merchantList.createEl('option', { value: merchant })
+    merchantInput.addEventListener('focus', () => this.closeCalculatorPad())
+    merchantInput.addEventListener('input', () => this.update({ merchant: merchantInput.value }))
+    merchantInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') merchantInput.blur() })
 
     // Tags — chips-or-placeholder row, taps anywhere to open multi-select picker
     const tagRow = this.mobileRowsEl.createDiv('ne-mobile-row')
@@ -245,14 +240,14 @@ export class MobileTransactionModal extends TransactionModal {
 
     const renderMobChips = () => {
       tagChipsEl.empty()
-      if (this.tags.length === 0) {
+      if (this.form.tags.length === 0) {
         tagChipsEl.createSpan({
           cls: 'ne-mobile-tag-row-placeholder',
           text: t('tagPicker.rowPlaceholder'),
         })
         return
       }
-      for (const tag of this.tags) {
+      for (const tag of this.form.tags) {
         const chip = tagChipsEl.createSpan({
           cls: 'ne-mobile-tag-chip',
           text: `#${tag}`,
@@ -266,10 +261,10 @@ export class MobileTransactionModal extends TransactionModal {
       this.closeCalculatorPad()
       openTagPicker({
         containerEl: this.contentEl,
-        walletFile: this.walletFile,
-        initialSelected: this.tags,
+        availableTags: suggestedTags(this.ledger.snapshot),
+        initialSelected: this.form.tags,
         onCommit: (selected) => {
-          this.tags = selected
+          this.update({ tags: selected })
           renderMobChips()
         },
       })
@@ -285,17 +280,17 @@ export class MobileTransactionModal extends TransactionModal {
       cls: 'ne-mobile-note-input',
       placeholder: t('modal.note'),
     })
-    noteInput.value = this.note
+    noteInput.value = this.form.note
     noteInput.setAttribute('enterkeyhint', 'done')
     noteInput.addEventListener('focus', () => this.closeCalculatorPad())
-    noteInput.addEventListener('input', () => { this.note = noteInput.value })
+    noteInput.addEventListener('input', () => this.update({ note: noteInput.value }))
     noteInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') noteInput.blur() })
 
     this.renderMobileDeleteRow()
   }
 
   private renderMobileDeleteRow() {
-    if (!this.editingTx) return
+    if (!this.editing) return
     const deleteWrap = this.mobileRowsEl.createDiv('ne-mobile-danger-zone')
     const deleteBtn = deleteWrap.createEl('button', {
       cls: 'ne-mobile-row ne-mobile-delete-row',
@@ -389,7 +384,7 @@ export class MobileTransactionModal extends TransactionModal {
     if (this.mobileCalculatorPad) return
     this.mobileCalculatorState = {
       ...this.mobileCalculatorState,
-      amountValue: this.amount,
+      amountValue: this.form.amount,
     }
     this.contentEl.addClass('ne-mobile-calculator-active')
     const { sheet, titleEl, close } = openBottomSheetShell({
@@ -430,7 +425,7 @@ export class MobileTransactionModal extends TransactionModal {
   private handleCalculatorKey(key: MobileCalculatorKey) {
     this.clearError()
     this.mobileCalculatorState = pressMobileCalculatorKey(this.mobileCalculatorState, key)
-    this.amount = this.mobileCalculatorState.amountValue
+    this.update({ amount: this.mobileCalculatorState.amountValue })
     this.mobileCalculatorPad?.update(this.mobileCalculatorState)
     this.updateAmountDisplay()
     this.updateCalculatorTitle()
@@ -441,8 +436,8 @@ export class MobileTransactionModal extends TransactionModal {
 
   private updateAmountDisplay() {
     if (!this.mobileAmountEl) return
-    const isEmpty = this.amount === ''
-    this.mobileAmountEl.textContent = formatMobileHeroAmount(this.amount, this.isRefund)
+    const isEmpty = this.form.amount === ''
+    this.mobileAmountEl.textContent = formatMobileHeroAmount(this.form.amount, this.form.isRefund)
     this.mobileAmountEl.toggleClass('is-empty', isEmpty)
   }
 
@@ -455,7 +450,7 @@ export class MobileTransactionModal extends TransactionModal {
   }
 
   private formatMobileDate(): string {
-    return this.date.replace(/-/g, '/')
+    return this.form.date.replace(/-/g, '/')
   }
 
   protected async handleConfirm() {

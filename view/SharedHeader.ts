@@ -1,8 +1,9 @@
 import { Events, ItemView, Platform } from 'obsidian'
-import { WalletFile } from '../io/WalletFile'
+import type { Ledger } from '../services/Ledger'
 import { TransactionModal } from '../modal/TransactionModal'
 import { MobileTransactionModal } from '../modal/MobileTransactionModal'
 import { t } from '../labels'
+import { SetupWizard } from '../wizard/SetupWizard'
 import { stepMonth, isAfterCurrentMonth } from '../utils'
 import { DASHBOARD_VIEW_TYPE } from './DashboardView'
 import { ASSET_VIEW_TYPE } from './AssetView'
@@ -12,7 +13,7 @@ export type ActiveView = 'dashboard' | 'asset' | 'detail'
 
 export type SharedHeaderOptions = {
   view: ItemView
-  walletFile: WalletFile
+  ledger: Ledger
   activeView: ActiveView
   yearMonth: string | null
   onMonthChange?: (newYearMonth: string) => void
@@ -65,6 +66,8 @@ export function renderSharedHeader(container: HTMLElement, opts: SharedHeaderOpt
   }
 
   const actionsCell = root.createDiv('ne-shared-header-actions')
+  actionsCell.createEl('button', { text: t('ui.setup'), cls: 'ne-action-btn' })
+    .addEventListener('click', () => new SetupWizard(opts.view.app, opts.ledger).open())
   const addBtn = actionsCell.createEl('button', {
     text: '+ ' + t('ui.addTransaction'),
     cls: 'ne-action-btn ne-shared-header-add',
@@ -72,7 +75,7 @@ export function renderSharedHeader(container: HTMLElement, opts: SharedHeaderOpt
   addBtn.addEventListener('click', () => {
     addBtn.disabled = true
     const ModalClass = Platform.isMobile ? MobileTransactionModal : TransactionModal
-    new ModalClass(opts.view.app, opts.walletFile, {}, null, null,
+    new ModalClass(opts.view.app, opts.ledger, {}, null,
       () => (opts.view.app.workspace as Events).trigger('nestegg:refresh'),
       () => { addBtn.disabled = false },
     ).open()

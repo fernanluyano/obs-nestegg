@@ -10,8 +10,8 @@
 	},
 	"license": "MIT",
 	"devDependencies": {
+		"@tgrosinger/md-advanced-tables": "^3.11.0",
 		"@types/node": "^20.14.2",
-		"@types/sortablejs": "^1.15.9",
 		"@vitest/coverage-v8": "^2.1.9",
 		"esbuild": "0.21.5",
 		"obsidian": "latest",
@@ -21,7 +21,6 @@
 	},
 	"dependencies": {
 		"chart.js": "^4.5.1",
-		"chartjs-plugin-datalabels": "^2.2.0",
-		"sortablejs": "^1.15.7"
+		"chartjs-plugin-datalabels": "^2.2.0"
 	}
 }

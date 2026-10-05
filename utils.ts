@@ -13,10 +13,13 @@ export function isAfterCurrentMonth(ym: string): boolean {
   return ym > currentYearMonth()
 }
 
+export const TAG_MAX_LENGTH = 16
+
+// Letters, digits and dashes only: tags stay easy to type, search, and read back from a table cell.
+const TAG_CHARS_RE = /^[a-z0-9-]+$/i
+
 export function validateTag(tag: string): boolean {
-  if (!tag.trim()) return false
-  if (tag.includes(',') || tag.includes('|')) return false
-  return [...tag].length <= 10
+  return TAG_CHARS_RE.test(tag) && tag.length <= TAG_MAX_LENGTH
 }
 
 export function formatHeroAmount(raw: string): string {
@@ -37,10 +40,6 @@ export function formatHeroAmount(raw: string): string {
 export function formatMobileHeroAmount(raw: string, isRefund: boolean): string {
   const amount = `$${formatHeroAmount(raw)}`
   return isRefund && raw !== '' ? `+ ${amount}` : amount
-}
-
-export function dateToYearMonth(date: string): string {
-  return date.substring(0, 7)
 }
 
 export function dateToMonthDay(date: string): string {

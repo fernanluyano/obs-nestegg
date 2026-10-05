@@ -1,4 +1,4 @@
-import { centsToDecimal, parseCents } from '../money'
+import { centsToDecimal, parseCents } from '../domain/money'
 
 const DECIMAL_PLACES = 2
 

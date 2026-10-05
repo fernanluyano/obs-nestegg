@@ -1,158 +1,114 @@
-import { centsToDecimal } from '../money'
 import { App, Modal, Notice, setIcon } from 'obsidian'
-import { Transaction, TransactionType, TransactionModalParams, NesteggConfig } from '../types'
-import { WalletFile } from '../io/WalletFile'
-import { dateToYearMonth } from '../utils'
+import { todayString } from '../domain/dates'
+import type { LedgerEntry, TransactionModalParams, TransactionType } from '../domain/types'
 import { t } from '../labels'
-import { parseAmountForEdit, getCategoryOptions as getCategoryOptionsFromState, validateTransactionForm, buildTransactionPayload, getTransferWalletCandidates, type TransactionFormState } from './transactionState'
-import { buildTagInput } from './TagInput'
+import type { Ledger } from '../services/Ledger'
+import { knownMerchants, suggestedTags } from '../snapshot/queries'
 import { ConfirmModal } from './ConfirmModal'
+import { buildTagInput } from './TagInput'
+import {
+  accountChoices, buildDraft, categoryChoices, formFromEntry, initialFormState, normalizeAccountsForSubcategory,
+  pendingTagProblem, resetFormForType, transferAccountCandidates, validateTransactionForm, activeAccounts,
+  type FormContext, type TransactionFormState,
+} from './transactionState'
 
 export class TransactionModal extends Modal {
-  protected walletFile: WalletFile
-  private params: TransactionModalParams
-  protected editingTx: Transaction | null
-  private editingYearMonth: string | null
-  private onSuccess: (() => void) | null
-  private onDismiss: (() => void) | null
-
-  // Form state
-  protected type: TransactionType = 'expense'
-  protected date: string = ''       // yyyy-mm-dd
-  protected wallet: string = ''
-  protected fromWallet: string = ''
-  protected toWallet: string = ''
-  protected category: string = ''
-  protected note: string = ''
-  protected tags: string[] = []
-  protected amount: string = ''
-  protected isRefund: boolean = false
-
-  // DOM refs
-  private typeTabsEl!: HTMLElement
-  private fieldsEl!: HTMLElement
+  protected form: TransactionFormState
   protected errorEl!: HTMLElement
+  private fieldsEl!: HTMLElement
+  private typeTabsEl!: HTMLElement
   private amountPrefixEl: HTMLElement | null = null
-  private isConfirming = false
-  private isDeleting = false
+  private busy = false
+  private pendingTag = ''
 
   constructor(
     app: App,
-    walletFile: WalletFile,
+    protected ledger: Ledger,
     params: TransactionModalParams = {},
-    editingTx: Transaction | null = null,
-    editingYearMonth: string | null = null,
-    onSuccess: (() => void) | null = null,
-    onDismiss: (() => void) | null = null,
+    protected editing: LedgerEntry | null = null,
+    private onSuccess: (() => void) | null = null,
+    private onDismiss: (() => void) | null = null,
   ) {
     super(app)
-    this.walletFile = walletFile
-    this.params = params
-    this.editingTx = editingTx
-    this.editingYearMonth = editingYearMonth
-    this.onSuccess = onSuccess
-    this.onDismiss = onDismiss
+    const ctx = this.context()
+    this.form = editing ? formFromEntry(editing, ctx.index) : initialFormState(params, todayString(), ctx)
   }
 
-  onOpen() {
-    const config = this.walletFile.getConfig()
-    this.initState(config)
-    this.buildUI(config)
-  }
-
-  protected initState(config: NesteggConfig) {
-    if (this.editingTx) {
-      const tx = this.editingTx
-      this.type = tx.type
-      // editingYearMonth is "yyyy-mm", tx.date is "MM/DD" e.g. "04/03"
-      const ym = this.editingYearMonth ?? ''
-      const day = tx.date.split('/')[1]
-      this.date = ym && day ? `${ym}-${day}` : todayString()
-      this.wallet = tx.wallet ?? ''
-      this.fromWallet = tx.fromWallet ?? ''
-      this.toWallet = tx.toWallet ?? ''
-      this.category = tx.category ?? ''
-      this.note = tx.note
-      this.tags = tx.tags ? [...tx.tags] : []
-      const parsed = parseAmountForEdit(tx.amountCents)
-      this.amount = parsed.display
-      this.isRefund = parsed.isRefund
-    } else {
-      this.type = (this.params.type as TransactionType) ?? 'expense'
-      this.date = this.params.date ?? todayString()
-      const activeWallets = this.getActiveWallets(config)
-      const defaultWallet = activeWallets.find(w => w.name === config.defaultWallet)
-        ?? activeWallets[0]
-      this.wallet = this.params.wallet ?? defaultWallet?.name ?? ''
-      this.fromWallet = this.params.fromWallet ?? ''
-      this.toWallet = this.params.toWallet ?? ''
-      this.category = this.params.category ?? ''
-      this.note = this.params.note ?? ''
-      this.tags = this.params.tags ? [...this.params.tags] : []
-      this.amount = this.params.amountCents != null ? centsToDecimal(this.params.amountCents) : ''
+  protected context(): FormContext {
+    const { snapshot } = this.ledger
+    return {
+      accounts: snapshot.accounts.map(a => a.account),
+      categories: snapshot.categories.map(c => c.category),
+      index: this.ledger.store.index,
+      defaultAccount: this.ledger.settings.current.defaultAccount,
     }
   }
 
-  private buildUI(config: NesteggConfig) {
+  protected update(patch: Partial<TransactionFormState>) {
+    this.form = { ...this.form, ...patch }
+  }
+
+  protected changeType(type: TransactionType) {
+    this.form = resetFormForType(this.form, type, this.context())
+  }
+
+  protected normalizeAccounts() {
+    this.form = normalizeAccountsForSubcategory(this.form, this.context().accounts)
+  }
+
+  onOpen() {
     const { contentEl } = this
     contentEl.empty()
     contentEl.addClass('ne-modal')
 
     const titleRow = contentEl.createDiv('ne-modal-title-row')
-    const titleEl = titleRow.createEl('h2', {
-      text: this.editingTx ? t('modal.editTitle') : t('modal.addTitle'),
-    })
-    if (this.editingTx) {
-      const iconEl = titleEl.createSpan('ne-modal-title-icon')
-      setIcon(iconEl, 'pencil')
-    }
+    const titleEl = titleRow.createEl('h2', { text: this.editing ? t('modal.editTitle') : t('modal.addTitle') })
+    if (this.editing) setIcon(titleEl.createSpan('ne-modal-title-icon'), 'pencil')
 
     this.typeTabsEl = contentEl.createDiv('ne-type-tabs')
     this.renderTypeTabs()
-
     this.fieldsEl = contentEl.createDiv('ne-fields')
-    this.renderFields(config)
+    this.renderFields()
 
     this.errorEl = contentEl.createDiv('ne-error')
     this.errorEl.hide()
+    this.buildButtons(contentEl.createDiv('ne-btn-row'))
+    this.bindModalBehavior()
+  }
 
-    const btnRow = contentEl.createDiv('ne-btn-row')
-    if (this.editingTx) {
-      const deleteBtn = btnRow.createEl('button', { text: t('ui.delete'), cls: 'ne-btn-delete' })
-      deleteBtn.dataset['action'] = 'delete'
-      deleteBtn.addEventListener('touchend', (e) => { e.preventDefault(); this.handleDelete() })
-      deleteBtn.addEventListener('click', () => this.handleDelete())
+  private buildButtons(row: HTMLElement) {
+    const on = (btn: HTMLElement, fn: () => void) => {
+      // touchend fires before blur (keyboard dismissal), preventing the double-tap issue on iOS
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); fn() })
+      btn.addEventListener('click', fn)
     }
-    const confirmBtn = btnRow.createEl('button', { text: t('ui.confirm'), cls: 'mod-cta' })
-    confirmBtn.dataset['action'] = 'confirm'
-    const cancelBtn = btnRow.createEl('button', { text: t('ui.cancel') })
-    cancelBtn.dataset['action'] = 'cancel'
+    if (this.editing) {
+      const del = row.createEl('button', { text: t('ui.delete'), cls: 'ne-btn-delete' })
+      del.dataset['action'] = 'delete'
+      on(del, () => this.handleDelete())
+    }
+    const confirm = row.createEl('button', { text: t('ui.confirm'), cls: 'mod-cta' })
+    confirm.dataset['action'] = 'confirm'
+    on(confirm, () => { void this.handleConfirm() })
+    const cancel = row.createEl('button', { text: t('ui.cancel') })
+    cancel.dataset['action'] = 'cancel'
+    on(cancel, () => this.close())
+  }
 
-    // touchend fires before blur (keyboard dismissal), preventing the double-tap issue on iOS
-    confirmBtn.addEventListener('touchend', (e) => { e.preventDefault(); void this.handleConfirm() })
-    cancelBtn.addEventListener('touchend', (e) => { e.preventDefault(); this.close() })
-    confirmBtn.addEventListener('click', () => { void this.handleConfirm() })
-    cancelBtn.addEventListener('click', () => this.close())
-
-    // Also fix Obsidian's built-in X close button
-    const closeBtn = this.modalEl.querySelector<HTMLElement>('.modal-close-button')
-    closeBtn?.addEventListener('touchend', (e) => { e.preventDefault(); this.close() })
-
+  private bindModalBehavior() {
+    this.modalEl.querySelector<HTMLElement>('.modal-close-button')
+      ?.addEventListener('touchend', (e) => { e.preventDefault(); this.close() })
     this.contentEl.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return
       e.preventDefault()
       this.close()
     })
-
-    // Sync modal position with keyboard visibility:
-    // - text/number input focused → keyboard opens → modal moves to top
-    // - select/date focused → keyboard closes → modal returns to center
+    // Text inputs raise the keyboard, so the modal moves up; selects and dates lower it again.
     this.contentEl.addEventListener('focusin', (e) => {
       const target = e.target as HTMLElement
       if (target instanceof HTMLInputElement && (target.type === 'text' || target.type === 'number')) {
         this.containerEl.addClass('ne-modal-keyboard-open')
-      } else if (target instanceof HTMLSelectElement ||
-                 (target instanceof HTMLInputElement && target.type === 'date')) {
+      } else if (target instanceof HTMLSelectElement || (target instanceof HTMLInputElement && target.type === 'date')) {
         this.containerEl.removeClass('ne-modal-keyboard-open')
       }
     })
@@ -161,188 +117,163 @@ export class TransactionModal extends Modal {
   private renderTypeTabs() {
     this.typeTabsEl.empty()
     const types: TransactionType[] = ['expense', 'income', 'transfer']
-    for (const tp of types) {
+    for (const type of types) {
       const tab = this.typeTabsEl.createEl('button', {
-        text: t(`label.type.${tp}`),
-        cls: 'ne-type-tab' + (this.type === tp ? ' is-active' : ''),
+        text: t(`label.type.${type}`),
+        cls: 'ne-type-tab' + (this.form.type === type ? ' is-active' : ''),
       })
-      tab.dataset['type'] = tp
-    // Update active tab immediately on touch, rebuild after touch ends
-      tab.addEventListener('touchend', (e) => {
-        e.preventDefault()
+      tab.dataset['type'] = type
+      const select = () => {
         this.containerEl.removeClass('ne-modal-keyboard-open')
-        this.resetStateForType(tp)
-        Array.from(this.typeTabsEl.children).forEach((el, i) => {
-          el.classList.toggle('is-active', types[i] === tp)
-        })
-        this.renderFields(this.walletFile.getConfig(), false)
-        // Defer full tab rebuild until after touch sequence ends
-        setTimeout(() => this.renderTypeTabs(), 50)
-      })
-      tab.addEventListener('click', () => {
-        this.resetStateForType(tp)
+        this.changeType(type)
         this.renderTypeTabs()
-        this.renderFields(this.walletFile.getConfig(), false)
-      })
+        this.renderFields(false)
+      }
+      tab.addEventListener('touchend', (e) => { e.preventDefault(); select() })
+      tab.addEventListener('click', select)
     }
   }
 
-  private renderFields(config: NesteggConfig, autoFocus = true) {
+  private renderFields(autoFocus = true) {
     this.fieldsEl.empty()
     this.amountPrefixEl = null
+    this.pendingTag = '' // the tag box is rebuilt empty
+    const { form } = this
+    const ctx = this.context()
 
-    // Refund row first (expense only) — sub-option of the type tab, visually adjacent.
-    if (this.type === 'expense') {
-      this.addRefundRow(this.fieldsEl)
-    }
+    if (form.type === 'expense') this.addRefundRow(this.fieldsEl)
 
-    // Date field (always shown)
-    this.addField(this.fieldsEl, t('modal.date'), () => {
+    this.addField(t('modal.date'), () => {
       const input = createEl('input', { type: 'date' })
-      input.value = this.date
-      input.addEventListener('change', () => { this.date = input.value })
+      input.value = form.date
+      input.addEventListener('change', () => this.update({ date: input.value }))
       this.attachPickerTouch(input)
       return input
     })
 
-    const activeWallets = this.getActiveWallets(config)
-    const categories = this.getCategoryOptions(config)
-    const isTransferOrPayment = this.type !== 'expense' && this.type !== 'income'
-    const onCategoryChange = isTransferOrPayment
-      ? (val: string) => { this.category = val; this.renderFields(config, false) }
-      : (val: string) => { this.category = val }
+    this.addField(t('modal.subcategory'), () => this.buildCategorySelect(ctx), true)
 
-    this.addField(this.fieldsEl, t('modal.category'), () =>
-      this.buildSelect(
-        categories.map(c => ({ value: c.key, label: c.label })),
-        this.category,
-        onCategoryChange
-      ), true)
-
-    if (this.type === 'expense' || this.type === 'income') {
-      this.addField(this.fieldsEl, t('modal.wallet'), () => {
-        const walletOptions = this.type === 'income'
-          ? activeWallets.filter(w => w.type !== 'creditCard')
-          : activeWallets
-        return this.buildSelect(
-          walletOptions.map(w => ({ value: w.name, label: w.name })),
-          this.wallet,
-          val => { this.wallet = val }
-        )
-      }, true)
-
+    if (form.type === 'transfer') {
+      const { fromCandidates, toCandidates } = transferAccountCandidates(activeAccounts(ctx.accounts), form.subcategory)
+      this.addField(t('modal.fromAccount'), () => this.buildSelect(fromCandidates.map(a => ({ value: a.name, label: a.name })), form.fromAccount, v => this.update({ fromAccount: v })), true)
+      this.addField(t('modal.toAccount'), () => this.buildSelect(toCandidates.map(a => ({ value: a.name, label: a.name })), form.toAccount, v => this.update({ toAccount: v })), true)
     } else {
-      this.normalizeWalletForCategory(config)
-
-      const { fromCandidates: fromWallets, toCandidates: toWallets }
-        = getTransferWalletCandidates(activeWallets, this.category)
-
-      this.addField(this.fieldsEl, t('modal.fromWallet'), () =>
-        this.buildSelect(
-          fromWallets.map(w => ({ value: w.name, label: w.name })),
-          this.fromWallet,
-          val => { this.fromWallet = val }
-        ), true)
-
-      this.addField(this.fieldsEl, t('modal.toWallet'), () =>
-        this.buildSelect(
-          toWallets.map(w => ({ value: w.name, label: w.name })),
-          this.toWallet,
-          val => { this.toWallet = val }
-        ), true)
+      this.addField(t('modal.account'), () => this.buildSelect(accountChoices(ctx.accounts, form.type).map(a => ({ value: a.name, label: a.name })), form.account, v => this.update({ account: v })), true)
     }
 
-    this.addField(this.fieldsEl, t('modal.tags'), () =>
-      buildTagInput(this.tags, this.walletFile.getConfig().tags, (next) => { this.tags = next })
-    )
-
-    this.addField(this.fieldsEl, t('modal.note'), () => {
+    this.addField(t('modal.merchant'), () => this.buildMerchantInput())
+    this.addField(t('modal.tags'), () => buildTagInput(
+      form.tags,
+      suggestedTags(this.ledger.snapshot),
+      (next) => this.update({ tags: next }),
+      (raw) => { this.pendingTag = raw },
+    ))
+    this.addField(t('modal.note'), () => {
       const input = createEl('input', { type: 'text', placeholder: t('modal.note') })
-      input.value = this.note
+      input.value = form.note
       input.setAttribute('enterkeyhint', 'done')
-      input.addEventListener('input', () => { this.note = input.value })
+      input.addEventListener('input', () => this.update({ note: input.value }))
       input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur() })
       return input
     })
-
     this.buildAmountRow(autoFocus)
   }
 
-  private buildAmountRow(autoFocus: boolean) {
-    const amountRow = this.fieldsEl.createDiv('ne-field-row')
-    amountRow.createEl('label', { text: t('modal.amount'), cls: 'ne-field-label' })
-    const amountWrapper = amountRow.createDiv('ne-amount-field-wrapper ne-field-input')
-    this.amountPrefixEl = amountWrapper.createSpan({ cls: 'ne-amount-prefix', text: '+' })
-    const amountInput = amountWrapper.createEl('input', { type: 'number', placeholder: '0.00' })
-    amountInput.value = this.amount
-    amountInput.setAttribute('min', '0')
-    amountInput.setAttribute('step', '0.01')
-    amountInput.setAttribute('enterkeyhint', 'done')
-    amountInput.addEventListener('input', () => {
-      this.amount = amountInput.value
-      this.updateDesktopAmountPrefix()
-    })
-    amountInput.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return
-      e.preventDefault()
-      if (!this.amount) {
-        amountInput.blur()
-        return
+  private buildCategorySelect(ctx: FormContext): HTMLSelectElement {
+    const sel = createEl('select')
+    sel.createEl('option', { text: '—', value: '' })
+    const groups = new Map<string, HTMLElement>()
+    for (const choice of categoryChoices(ctx.categories, this.form.type)) {
+      let group = groups.get(choice.category)
+      if (!group) {
+        group = sel.createEl('optgroup', { attr: { label: choice.category } })
+        groups.set(choice.category, group)
       }
-      void this.handleConfirm()
+      const opt = group.createEl('option', { text: choice.label, value: choice.key })
+      if (choice.key === this.form.subcategory) opt.selected = true
+    }
+    sel.addEventListener('change', () => {
+      this.update({ subcategory: sel.value })
+      if (this.form.type === 'transfer') {
+        this.normalizeAccounts()
+        this.renderFields(false)
+      }
     })
-    this.updateDesktopAmountPrefix()
-    if (autoFocus) setTimeout(() => amountInput.focus(), 50) // wait for modal open animation to complete
+    this.attachPickerTouch(sel)
+    return sel
   }
 
-  private addField(container: HTMLElement, label: string, buildInput: () => HTMLElement, required = false) {
-    const row = container.createDiv('ne-field-row')
+  private buildMerchantInput(): HTMLInputElement {
+    const listId = 'ne-merchant-list'
+    const input = createEl('input', { type: 'text', placeholder: t('modal.merchant') })
+    input.setAttribute('list', listId)
+    input.value = this.form.merchant
+    input.addEventListener('input', () => this.update({ merchant: input.value }))
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur() })
+    const list = this.fieldsEl.createEl('datalist', { attr: { id: listId } })
+    for (const merchant of knownMerchants(this.ledger.snapshot)) list.createEl('option', { value: merchant })
+    return input
+  }
+
+  private buildAmountRow(autoFocus: boolean) {
+    const row = this.fieldsEl.createDiv('ne-field-row')
+    row.createEl('label', { text: t('modal.amount'), cls: 'ne-field-label' })
+    const wrapper = row.createDiv('ne-amount-field-wrapper ne-field-input')
+    this.amountPrefixEl = wrapper.createSpan({ cls: 'ne-amount-prefix', text: '+' })
+    const input = wrapper.createEl('input', { type: 'number', placeholder: '0.00' })
+    input.value = this.form.amount
+    input.setAttribute('min', '0')
+    input.setAttribute('step', '0.01')
+    input.setAttribute('enterkeyhint', 'done')
+    input.addEventListener('input', () => {
+      this.update({ amount: input.value })
+      this.updateAmountPrefix()
+    })
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return
+      e.preventDefault()
+      if (!this.form.amount) input.blur()
+      else void this.handleConfirm()
+    })
+    this.updateAmountPrefix()
+    if (autoFocus) setTimeout(() => input.focus(), 50) // wait for modal open animation to complete
+  }
+
+  private addField(label: string, buildInput: () => HTMLElement, required = false) {
+    const row = this.fieldsEl.createDiv('ne-field-row')
     const labelEl = row.createEl('label', { text: label, cls: 'ne-field-label' })
     if (required) labelEl.createEl('span', { text: '*', cls: 'ne-field-required', attr: { 'aria-hidden': 'true' } })
     const input = buildInput()
     input.addClass('ne-field-input')
-    if (input instanceof HTMLSelectElement) {
-      const wrapper = row.createDiv('ne-select-wrapper')
-      wrapper.appendChild(input)
-      return
-    }
-    row.appendChild(input)
+    if (input instanceof HTMLSelectElement) row.createDiv('ne-select-wrapper').appendChild(input)
+    else row.appendChild(input)
   }
 
   private addRefundRow(container: HTMLElement) {
     const block = container.createDiv('ne-refund-block')
     const row = block.createDiv('ne-field-row ne-refund-row')
     row.setAttribute('title', t('modal.isRefund.hint'))
-    const checkboxId = 'ne-refund-checkbox'
-    row.createEl('label', { text: t('modal.isRefund'), cls: 'ne-field-label', attr: { for: checkboxId } })
+    row.createEl('label', { text: t('modal.isRefund'), cls: 'ne-field-label', attr: { for: 'ne-refund-checkbox' } })
     const checkbox = createEl('input', { type: 'checkbox' })
-    checkbox.id = checkboxId
-    checkbox.checked = this.isRefund
+    checkbox.id = 'ne-refund-checkbox'
+    checkbox.checked = this.form.isRefund
     checkbox.addClass('ne-field-input')
     checkbox.addEventListener('change', () => {
-      this.isRefund = checkbox.checked
-      this.updateDesktopAmountPrefix()
+      this.update({ isRefund: checkbox.checked })
+      this.updateAmountPrefix()
     })
     row.appendChild(checkbox)
   }
 
-  private updateDesktopAmountPrefix() {
-    if (!this.amountPrefixEl) return
-    const shouldShow = this.isRefund && this.amount !== ''
-    this.amountPrefixEl.toggleClass('is-visible', shouldShow)
+  private updateAmountPrefix() {
+    this.amountPrefixEl?.toggleClass('is-visible', this.form.isRefund && this.form.amount !== '')
   }
 
   private attachPickerTouch(el: HTMLElement) {
-    el.addEventListener('touchstart', () => {
-      this.containerEl.removeClass('ne-modal-keyboard-open')
-    }, { passive: true })
+    el.addEventListener('touchstart', () => this.containerEl.removeClass('ne-modal-keyboard-open'), { passive: true })
   }
 
-  private buildSelect(
-    options: { value: string; label: string }[],
-    current: string,
-    onChange: (val: string) => void
-  ): HTMLSelectElement {
+  private buildSelect(options: { value: string; label: string }[], current: string, onChange: (v: string) => void): HTMLSelectElement {
     const sel = createEl('select')
     sel.createEl('option', { text: '—', value: '' })
     for (const { value, label } of options) {
@@ -354,38 +285,6 @@ export class TransactionModal extends Modal {
     return sel
   }
 
-  protected getActiveWallets(config: NesteggConfig) {
-    return config.wallets.filter(w => w.status === 'active')
-  }
-
-  protected normalizeWalletForCategory(config: NesteggConfig): void {
-    if (this.category !== 'credit_card_payment') return
-    const fromType = config.wallets.find(w => w.name === this.fromWallet)?.type
-    const toType   = config.wallets.find(w => w.name === this.toWallet)?.type
-    if (fromType === 'creditCard') this.fromWallet = ''
-    if (toType && toType !== 'creditCard') this.toWallet = ''
-  }
-
-  protected resetStateForType(newType: TransactionType): void {
-    this.type = newType
-    if (newType !== 'expense') this.isRefund = false
-    if (newType === 'expense' || newType === 'income') {
-      this.fromWallet = ''
-      this.toWallet = ''
-    } else {
-      this.wallet = ''
-    }
-    const config = this.walletFile.getConfig()
-    const validCategories = getCategoryOptionsFromState(config, newType)
-    if (this.category && !validCategories.some(c => c.key === this.category)) {
-      this.category = ''
-    }
-  }
-
-  protected getCategoryOptions(config: NesteggConfig): { key: string; label: string }[] {
-    return getCategoryOptionsFromState(config, this.type)
-  }
-
   protected showError(msg: string) {
     this.errorEl.textContent = msg
     this.errorEl.show()
@@ -395,77 +294,46 @@ export class TransactionModal extends Modal {
     this.errorEl.hide()
   }
 
-  protected getFormState(): TransactionFormState {
-    return {
-      date: this.date,
-      type: this.type,
-      wallet: this.wallet,
-      fromWallet: this.fromWallet,
-      toWallet: this.toWallet,
-      category: this.category,
-      note: this.note,
-      tags: this.tags,
-      amount: this.amount,
-      isRefund: this.isRefund,
-    }
-  }
-
-  private validate(): boolean {
-    this.clearError()
-    const result = validateTransactionForm(this.getFormState(), this.walletFile.getConfig())
-    if (!result.ok) {
-      this.showError(t(result.errorKey))
-      return false
-    }
-    return true
-  }
-
   protected handleDelete(): void {
-    if (this.isDeleting) return
-    if (!this.editingTx || !this.editingYearMonth) return
-    const tx = this.editingTx
-    const ym = this.editingYearMonth
-    const confirm = new ConfirmModal(this.app, t('confirm.deleteTransaction'), async () => {
-      this.isDeleting = true
-      try {
-        await this.walletFile.deleteTransaction(tx, ym)
-        this.close()
-        this.onSuccess?.()
-        new Notice(t('notice.transactionDeleted'))
-      } catch (e) {
-        this.showError(String(e))
-      } finally {
-        this.isDeleting = false
-      }
-    })
-    confirm.open()
+    const entry = this.editing
+    if (this.busy || !entry) return
+    const text = entry.fromTo ? t('confirm.deleteTransfer') : t('confirm.deleteTransaction')
+    new ConfirmModal(this.app, text, async () => {
+      await this.run(() => this.ledger.transactions.delete(entry), 'notice.transactionDeleted')
+    }).open()
   }
 
   protected async handleConfirm() {
-    if (this.isConfirming) return
-    if (!this.validate()) return
-    this.isConfirming = true
+    if (this.busy) return
+    this.clearError()
+    const pending = pendingTagProblem(this.form.tags, this.pendingTag)
+    if (pending) {
+      this.showError(t(pending))
+      return
+    }
+    const result = validateTransactionForm(this.form, this.context())
+    if (!result.ok) {
+      this.showError(t(result.errorKey))
+      return
+    }
+    const draft = buildDraft(this.form)
+    await this.run(
+      () => this.ledger.transactions.save(this.editing, draft),
+      this.editing ? 'notice.transactionUpdated' : 'notice.transactionAdded',
+    )
+  }
 
-    const newTx = buildTransactionPayload(this.getFormState())
-    const newYearMonth = dateToYearMonth(this.date)
-
+  private async run(action: () => Promise<void>, notice: 'notice.transactionDeleted' | 'notice.transactionUpdated' | 'notice.transactionAdded') {
+    this.busy = true
     try {
-      if (this.editingTx && this.editingYearMonth) {
-        await this.walletFile.updateTransaction(
-          this.editingTx, this.editingYearMonth,
-          newTx, newYearMonth,
-        )
-      } else {
-        await this.walletFile.writeTransaction(newTx, newYearMonth)
-      }
-
+      await action()
       this.close()
       this.onSuccess?.()
-      new Notice(t(this.editingTx ? 'notice.transactionUpdated' : 'notice.transactionAdded'))
+      new Notice(t(notice))
     } catch (e) {
-      this.showError(String(e))
+      this.showError(e instanceof Error ? e.message : String(e))
     } finally {
-      this.isConfirming = false
+      this.busy = false
     }
   }
 
@@ -474,11 +342,4 @@ export class TransactionModal extends Modal {
     this.contentEl.empty()
     this.onDismiss?.()
   }
-}
-
-export function todayString(): string {
-  const d = new Date()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${mm}-${dd}`
 }

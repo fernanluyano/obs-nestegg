@@ -1,77 +1,168 @@
-import type { TransactionType, NesteggConfig, Transaction, Wallet } from '../types'
-import { translateCategory } from '../labels'
-import { validateTag, dateToMonthDay } from '../utils'
-import { centsToDecimal, parseCents } from '../money'
+import type { CategoryIndex } from '../domain/categories'
+import { subcategoryOptions } from '../domain/categories'
+import { CREDIT_CARD_PAYMENT } from '../domain/defaults'
+import { transferProblem, entryProblem, type EntryProblem } from '../domain/entryRules'
+import { isIsoDate } from '../domain/dates'
+import { centsToDecimal, parseCents } from '../domain/money'
+import { normalizeTag, normalizeTags } from '../domain/names'
+import { signedAmount, splitAmount, type TransactionDraft } from '../domain/transactions'
+import type { Account, Category, LedgerEntry, TransactionModalParams, TransactionType } from '../domain/types'
+import { TAG_MAX_LENGTH, validateTag } from '../utils'
 
-/**
- * Form state shared between TransactionModal and helpers in this module.
- * Mirrors the protected fields on TransactionModal class (date, type, ...).
- */
+/** Form state shared between the desktop and mobile transaction modals. */
 export interface TransactionFormState {
   date: string         // 'yyyy-mm-dd'
   type: TransactionType
-  wallet: string
-  fromWallet: string
-  toWallet: string
-  category: string
+  account: string
+  fromAccount: string
+  toAccount: string
+  subcategory: string
+  merchant: string
   note: string
   tags: string[]
   amount: string       // raw input string (not parsed yet)
   isRefund: boolean
 }
 
-/**
- * Parse a stored Transaction.amountCents (negative for refunds)
- * back into modal form state. Mirrors initState's refund unwrap.
- */
-export function parseAmountForEdit(rawCents: number): { display: string; isRefund: boolean } {
-  if (rawCents < 0) {
-    return { display: centsToDecimal(-rawCents), isRefund: true }
-  }
-  return { display: centsToDecimal(rawCents), isRefund: false }
+export interface FormContext {
+  accounts: Account[]     // every account, for rule checks
+  index: CategoryIndex
+  categories: Category[]
+  defaultAccount: string
 }
 
-/**
- * Build category dropdown options for a given transaction type.
- * Default keys go through i18n translation; custom labels are user strings.
- */
-export function getCategoryOptions(
-  config: NesteggConfig,
-  type: TransactionType,
-): { key: string; label: string }[] {
-  const catOptions = type === 'expense'
-    ? config.options.categories.expense
-    : type === 'income'
-      ? config.options.categories.income
-      : config.options.categories.transfer
+export const activeAccounts = (accounts: Account[]): Account[] => accounts.filter(a => a.active)
 
-  const defaultKeys = catOptions.default
-  const customs = catOptions.custom
+export function initialFormState(params: TransactionModalParams, today: string, ctx: FormContext): TransactionFormState {
+  const active = activeAccounts(ctx.accounts)
+  const fallback = active.find(a => a.name === ctx.defaultAccount) ?? active[0]
+  return {
+    date: params.date ?? today,
+    type: params.type ?? 'expense',
+    account: params.account ?? fallback?.name ?? '',
+    fromAccount: params.fromAccount ?? '',
+    toAccount: params.toAccount ?? '',
+    subcategory: params.subcategory ?? '',
+    merchant: params.merchant ?? '',
+    note: params.note ?? '',
+    tags: params.tags ? [...params.tags] : [],
+    amount: params.amountCents != null ? centsToDecimal(params.amountCents) : '',
+    isRefund: false,
+  }
+}
 
-  return [
-    ...defaultKeys.map(key => ({ key, label: translateCategory(key) })),
-    ...customs.map(c => ({ key: c, label: c })),
-  ]
+// A transfer row's sign says which way the money went: negative means this account sent it.
+export function formFromEntry(entry: LedgerEntry, index: CategoryIndex): TransactionFormState {
+  const isTransfer = entry.fromTo !== ''
+  const type: TransactionType = isTransfer ? 'transfer' : (index.typeOf(entry.subcategory) ?? 'expense')
+  const { cents, isRefund } = splitAmount(type, entry.amountCents)
+  const sent = entry.amountCents < 0
+  return {
+    date: entry.date,
+    type,
+    account: isTransfer ? '' : entry.account,
+    fromAccount: isTransfer ? (sent ? entry.account : entry.fromTo) : '',
+    toAccount: isTransfer ? (sent ? entry.fromTo : entry.account) : '',
+    subcategory: entry.subcategory,
+    merchant: entry.merchant,
+    note: entry.note,
+    tags: [...entry.tags],
+    amount: centsToDecimal(cents),
+    isRefund,
+  }
+}
+
+export interface CategoryChoice {
+  key: string      // the subcategory name, which is what a transaction stores
+  label: string
+  category: string
+}
+
+// One choice per subcategory of the given type. Names are unique across categories, so the
+// subcategory alone identifies the row; the category is shown as the group.
+export function categoryChoices(categories: Category[], type: TransactionType): CategoryChoice[] {
+  return subcategoryOptions(categories, type).map(o => ({ key: o.subcategory, label: o.subcategory, category: o.category }))
+}
+
+export function accountChoices(accounts: Account[], type: TransactionType): Account[] {
+  const active = activeAccounts(accounts)
+  return type === 'income' ? active.filter(a => a.accountType !== 'creditCard') : active
+}
+
+// A card payment goes from a non-card account to a card; any other transfer allows every account.
+export function transferAccountCandidates(
+  active: Account[],
+  subcategory: string,
+): { fromCandidates: Account[]; toCandidates: Account[] } {
+  if (subcategory === CREDIT_CARD_PAYMENT) {
+    return {
+      fromCandidates: active.filter(a => a.accountType !== 'creditCard'),
+      toCandidates: active.filter(a => a.accountType === 'creditCard'),
+    }
+  }
+  return { fromCandidates: active, toCandidates: active }
+}
+
+// Clears an account choice the card-payment subcategory has made impossible.
+export function normalizeAccountsForSubcategory(state: TransactionFormState, accounts: Account[]): TransactionFormState {
+  if (state.subcategory !== CREDIT_CARD_PAYMENT) return state
+  const typeOf = (name: string) => accounts.find(a => a.name === name)?.accountType
+  return {
+    ...state,
+    fromAccount: typeOf(state.fromAccount) === 'creditCard' ? '' : state.fromAccount,
+    toAccount: state.toAccount && typeOf(state.toAccount) !== 'creditCard' ? '' : state.toAccount,
+  }
+}
+
+// Switching type clears what no longer applies: the other type's accounts and a subcategory
+// that does not belong to the new type.
+export function resetFormForType(state: TransactionFormState, type: TransactionType, ctx: FormContext): TransactionFormState {
+  const isPlain = type !== 'transfer'
+  const stillValid = categoryChoices(ctx.categories, type).some(c => c.key === state.subcategory)
+  return {
+    ...state,
+    type,
+    isRefund: type === 'expense' ? state.isRefund : false,
+    account: isPlain ? state.account : '',
+    fromAccount: isPlain ? '' : state.fromAccount,
+    toAccount: isPlain ? '' : state.toAccount,
+    subcategory: stillValid ? state.subcategory : '',
+  }
 }
 
 export type AddTagResult =
   | { kind: 'added'; next: string[] }
   | { kind: 'empty' }
+  | { kind: 'too-long' }
   | { kind: 'invalid' }
   | { kind: 'duplicate' }
   | { kind: 'max' }
 
+export const TAG_LIMIT = 3
+
 /**
- * Pure tag-list update. Modal callsite handles input.value clearing,
- * dropdown hiding, and chip rendering as side effects based on the kind.
+ * Pure tag-list update. Tags are lowercase, so "Gift" and "gift" are one tag.
+ * Modal callsite handles input clearing, dropdown hiding and chip rendering.
  */
 export function addTagToList(current: string[], raw: string): AddTagResult {
-  const normalized = raw.replace(/^#/, '').trim()
+  const normalized = normalizeTag(raw)
   if (!normalized) return { kind: 'empty' }
+  if ([...normalized].length > TAG_MAX_LENGTH) return { kind: 'too-long' }
   if (!validateTag(normalized)) return { kind: 'invalid' }
   if (current.includes(normalized)) return { kind: 'duplicate' }
-  if (current.length >= 3) return { kind: 'max' }
+  if (current.length >= TAG_LIMIT) return { kind: 'max' }
   return { kind: 'added', next: [...current, normalized] }
+}
+
+export type PendingTagProblem = 'err.tagTooLong' | 'err.tagInvalid'
+
+// Text typed into the tag box but not yet turned into a chip. If it can never become a tag, the
+// form must not save, rather than quietly leave it out.
+export function pendingTagProblem(current: string[], raw: string): PendingTagProblem | null {
+  const result = addTagToList(current, raw)
+  if (result.kind === 'too-long') return 'err.tagTooLong'
+  if (result.kind === 'invalid') return 'err.tagInvalid'
+  return null
 }
 
 export type ValidationErrorKey =
@@ -79,96 +170,87 @@ export type ValidationErrorKey =
   | 'err.amountRequired'
   | 'err.amountPositive'
   | 'err.amountInvalid'
-  | 'err.walletRequired'
-  | 'err.fromWalletRequired'
-  | 'err.toWalletRequired'
+  | 'err.accountRequired'
+  | 'err.fromAccountRequired'
+  | 'err.toAccountRequired'
+  | 'err.subcategoryRequired'
+  | 'err.subcategoryUnknown'
+  | 'err.subcategoryWrongType'
   | 'err.fromMustNotBeCreditCard'
   | 'err.toMustBeCreditCard'
-  | 'err.sameWallet'
+  | 'err.sameAccount'
 
 export type ValidationResult =
   | { ok: true }
   | { ok: false; errorKey: ValidationErrorKey }
 
-/**
- * Pure validation. Mirrors the original branching order in
- * TransactionModal.validate so error messages appear in the same priority.
- */
-export function validateTransactionForm(
-  state: TransactionFormState,
-  config: NesteggConfig,
-): ValidationResult {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(state.date)) {
-    return { ok: false, errorKey: 'err.invalidDate' }
-  }
-  if (!state.amount) {
-    return { ok: false, errorKey: 'err.amountRequired' }
-  }
-  const amountCents = parseCents(state.amount)
-  if (amountCents === null) {
-    return { ok: false, errorKey: 'err.amountInvalid' }
-  }
-  if (amountCents <= 0) {
-    return { ok: false, errorKey: 'err.amountPositive' }
-  }
+/** Checks run in the order the user fills the form, so the first message is the first thing to fix. */
+export function validateTransactionForm(state: TransactionFormState, ctx: FormContext): ValidationResult {
+  const fail = (errorKey: ValidationErrorKey): ValidationResult => ({ ok: false, errorKey })
+  if (!isIsoDate(state.date)) return fail('err.invalidDate')
+  if (!state.amount) return fail('err.amountRequired')
+  const cents = parseCents(state.amount)
+  if (cents === null) return fail('err.amountInvalid')
+  if (cents <= 0) return fail('err.amountPositive')
 
-  if (state.type === 'expense' || state.type === 'income') {
-    if (!state.wallet) return { ok: false, errorKey: 'err.walletRequired' }
-  } else {
-    if (!state.fromWallet) return { ok: false, errorKey: 'err.fromWalletRequired' }
-    if (!state.toWallet) return { ok: false, errorKey: 'err.toWalletRequired' }
-    if (state.category === 'credit_card_payment') {
-      const fromType = config.wallets.find(w => w.name === state.fromWallet)?.type
-      const toType = config.wallets.find(w => w.name === state.toWallet)?.type
-      if (fromType === 'creditCard') {
-        return { ok: false, errorKey: 'err.fromMustNotBeCreditCard' }
-      }
-      if (toType !== 'creditCard') {
-        return { ok: false, errorKey: 'err.toMustBeCreditCard' }
-      }
-    }
-    if (state.fromWallet === state.toWallet) {
-      return { ok: false, errorKey: 'err.sameWallet' }
-    }
+  if (state.type === 'transfer') {
+    if (!state.fromAccount) return fail('err.fromAccountRequired')
+    if (!state.toAccount) return fail('err.toAccountRequired')
+  } else if (!state.account) {
+    return fail('err.accountRequired')
   }
-  return { ok: true }
+  if (!state.subcategory) return fail('err.subcategoryRequired')
+
+  const problem = state.type === 'transfer'
+    ? transferProblem(buildTransferInput(state), ctx)
+    : entryProblem(buildEntry(state), ctx)
+  return problem ? fail(PROBLEM_MESSAGES[problem]) : { ok: true }
 }
 
-/**
- * Build a Transaction payload from form state. Mirrors the inline
- * object literal that used to live in handleConfirm.
- *
- * Refund handling: isRefund=true → amount stored as negative.
- */
-export function buildTransactionPayload(state: TransactionFormState): Transaction {
+const PROBLEM_MESSAGES: Record<EntryProblem, ValidationErrorKey> = {
+  invalidDate: 'err.invalidDate',
+  invalidAmount: 'err.amountInvalid',
+  amountNotPositive: 'err.amountPositive',
+  unknownAccount: 'err.accountRequired',
+  unknownSubcategory: 'err.subcategoryUnknown',
+  subcategoryIsTransfer: 'err.subcategoryWrongType',
+  subcategoryNotTransfer: 'err.subcategoryWrongType',
+  unexpectedFromTo: 'err.subcategoryWrongType',
+  sameAccount: 'err.sameAccount',
+  fromMustNotBeCreditCard: 'err.fromMustNotBeCreditCard',
+  toMustBeCreditCard: 'err.toMustBeCreditCard',
+}
+
+function buildTransferInput(state: TransactionFormState) {
+  return {
+    date: state.date,
+    merchant: state.merchant,
+    subcategory: state.subcategory,
+    cents: parseCents(state.amount) ?? 0,
+    note: state.note,
+    tags: normalizeTags(state.tags),
+    from: state.fromAccount,
+    to: state.toAccount,
+  }
+}
+
+function buildEntry(state: TransactionFormState): LedgerEntry {
   const cents = parseCents(state.amount) ?? 0
   return {
-    date: dateToMonthDay(state.date),
-    type: state.type,
-    wallet:     (state.type === 'expense' || state.type === 'income') ? state.wallet : undefined,
-    fromWallet: state.type === 'transfer' ? state.fromWallet : undefined,
-    toWallet:   state.type === 'transfer' ? state.toWallet : undefined,
-    category:   state.category || undefined,
+    account: state.account,
+    date: state.date,
+    merchant: state.merchant,
+    subcategory: state.subcategory,
+    amountCents: signedAmount(state.type === 'income' ? 'income' : 'expense', cents, state.isRefund),
     note: state.note,
-    amountCents: state.isRefund ? -cents : cents,
-    tags: state.tags.length ? state.tags : undefined,
+    tags: normalizeTags(state.tags),
+    fromTo: '',
   }
 }
 
-/**
- * Filter active wallets into from/to candidates for transfer category.
- * cc_payment: from excludes creditCard, to only creditCard.
- * Other categories: both from and to use all active wallets.
- */
-export function getTransferWalletCandidates(
-  activeWallets: Wallet[],
-  category: string,
-): { fromCandidates: Wallet[]; toCandidates: Wallet[] } {
-  if (category === 'credit_card_payment') {
-    return {
-      fromCandidates: activeWallets.filter(w => w.type !== 'creditCard'),
-      toCandidates: activeWallets.filter(w => w.type === 'creditCard'),
-    }
-  }
-  return { fromCandidates: activeWallets, toCandidates: activeWallets }
+/** Builds what the ledger saves. Assumes the state passed validateTransactionForm. */
+export function buildDraft(state: TransactionFormState): TransactionDraft {
+  return state.type === 'transfer'
+    ? { kind: 'transfer', input: buildTransferInput(state) }
+    : { kind: 'entry', entry: buildEntry(state) }
 }

@@ -1,4 +1,4 @@
-import { formatCents } from '../money'
+import { formatCents } from '../domain/money'
 
 export type MetricVariant = 'income' | 'expense' | 'positive' | 'negative' | 'neutral'
 

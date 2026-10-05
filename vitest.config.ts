@@ -11,20 +11,33 @@ export default defineConfig({
 			reporter: ["text", "html"],
 			include: [
 				"*.ts",
-				"io/WalletFile.ts",
+				"domain/*.ts",
+				"notes/*.ts",
+				"snapshot/*.ts",
+				"validation/*.ts",
+				"rename/*.ts",
+				"services/*.ts",
+				"storage/*.ts",
+				"table/*.ts",
 				"modal/transactionState.ts",
+				"modal/tagPickerState.ts",
 				"modal/mobileCalculatorState.ts",
-				"modal/TagPicker.ts",
 				"view/detailRow.ts",
+				"view/detail/filters.ts",
+				"wizard/model.ts",
 			],
-			// Files that drive the Obsidian API directly aren't unit tested per this
-			// project's convention (see CLAUDE.md) — only pure logic modules carry coverage.
-			exclude: ["main.ts", "*.config.ts", "types.ts", "labels.ts", "svg.d.ts"],
+			// Files that drive the Obsidian API directly aren't unit tested per this project's
+			// convention (see CLAUDE.md): everything else, including the services, runs against an
+			// in-memory vault. Type-only files hold no logic.
+			exclude: [
+				"main.ts", "*.config.ts", "labels.ts", "svg.d.ts",
+				"**/types.ts", "validation/issues.ts", "storage/VaultPort.ts", "storage/ObsidianVault.ts",
+			],
 			thresholds: {
-				lines: 50,
-				statements: 50,
-				functions: 50,
-				branches: 50,
+				lines: 95,
+				statements: 95,
+				functions: 95,
+				branches: 90,
 			},
 		},
 	},

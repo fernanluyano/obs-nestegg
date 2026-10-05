@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { stepMonth, isAfterCurrentMonth, validateTag, formatHeroAmount, formatMobileHeroAmount, dateToYearMonth, dateToMonthDay } from '../../utils'
+import { stepMonth, isAfterCurrentMonth, TAG_MAX_LENGTH, validateTag, formatHeroAmount, formatMobileHeroAmount, dateToMonthDay } from '../../utils'
 
 // ── stepMonth ─────────────────────────────────────────────────────────────────
 
@@ -52,22 +52,12 @@ describe('isAfterCurrentMonth', () => {
 })
 
 
-// ── dateToYearMonth / dateToMonthDay ──────────────────────────────────────────
+// ── currentYearMonth / dateToMonthDay ─────────────────────────────────────────
 
 describe('currentYearMonth', () => {
   it('returns a string in YYYY-MM format', async () => {
     const { currentYearMonth } = await import('../../utils')
     expect(currentYearMonth()).toMatch(/^\d{4}-\d{2}$/)
-  })
-})
-
-describe('dateToYearMonth', () => {
-  it('extracts yyyy-mm from a full date string', () => {
-    expect(dateToYearMonth('2026-04-03')).toBe('2026-04')
-  })
-
-  it('works for december', () => {
-    expect(dateToYearMonth('2025-12-31')).toBe('2025-12')
   })
 })
 
@@ -87,12 +77,23 @@ describe('validateTag', () => {
   it('accepts short ASCII tag', () => {
     expect(validateTag('food')).toBe(true)
   })
-  it('accepts 10-char ASCII tag', () => {
-    expect(validateTag('abcdefghij')).toBe(true)
+  it('accepts a tag of exactly 16 characters', () => {
+    expect(validateTag('abcdefghijklmnop')).toBe(true)
   })
-  it('rejects 11-char ASCII tag', () => {
-    expect(validateTag('abcdefghijk')).toBe(false)
+  it('rejects a tag of 17 characters', () => {
+    expect(validateTag('abcdefghijklmnopq')).toBe(false)
   })
+  it('accepts letters, digits and dashes', () => {
+    expect(validateTag('need')).toBe(true)
+    expect(validateTag('q3-2026')).toBe(true)
+    expect(validateTag('a-b-c')).toBe(true)
+    expect(validateTag('2026')).toBe(true)
+    expect(validateTag('-')).toBe(true)
+  })
+  it.each(['under_score', 'dot.ted', 'a/b', 'a&b', 'a!', 'a#b', 'a@b', 'a:b', 'café', 'ñ', '💸'])(
+    'rejects %s',
+    (tag) => expect(validateTag(tag)).toBe(false),
+  )
   it('rejects empty string', () => {
     expect(validateTag('')).toBe(false)
   })
@@ -104,6 +105,13 @@ describe('validateTag', () => {
   })
   it('rejects whitespace-only tag', () => {
     expect(validateTag('  ')).toBe(false)
+  })
+  it('rejects a tag with a space or tab inside it', () => {
+    expect(validateTag('two words')).toBe(false)
+    expect(validateTag('a\tb')).toBe(false)
+  })
+  it('keeps the length limit in one place', () => {
+    expect(TAG_MAX_LENGTH).toBe(16)
   })
 })
 

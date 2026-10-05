@@ -1,7 +1,8 @@
 import { Events, ItemView, WorkspaceLeaf } from 'obsidian'
-import { WalletFile } from '../io/WalletFile'
+import type { Ledger } from '../services/Ledger'
+import { accountBalances, monthSummaries, netAsset as computeNetAsset, netAssetTimeline } from '../snapshot/queries'
 import { t, formatMonthLabel, formatYearMonth } from '../labels'
-import { formatCents } from '../money'
+import { formatCents } from '../domain/money'
 import { renderSharedHeader } from './SharedHeader'
 import { Chart } from 'chart.js'
 import { MonthData, drawNetChart, drawPie, getMonthRange } from './charts'
@@ -10,7 +11,7 @@ import { renderCard } from './components'
 export const ASSET_VIEW_TYPE = 'nestegg-asset'
 
 export class AssetView extends ItemView {
-  private walletFile: WalletFile
+  private ledger: Ledger
   private range: number = 6
   private charts: Chart[] = []
 
@@ -19,9 +20,9 @@ export class AssetView extends ItemView {
     this.charts = []
   }
 
-  constructor(leaf: WorkspaceLeaf, walletFile: WalletFile) {
+  constructor(leaf: WorkspaceLeaf, ledger: Ledger) {
     super(leaf)
-    this.walletFile = walletFile
+    this.ledger = ledger
   }
 
   getViewType() { return ASSET_VIEW_TYPE }
@@ -53,17 +54,15 @@ export class AssetView extends ItemView {
 
     const months = getMonthRange(this.range)
 
-    const [walletBalances, summaries, netTimeline] = await Promise.all([
-      this.walletFile.calculateAllWalletBalances(),
-      this.walletFile.getMonthSummaries(months),
-      this.walletFile.getNetAssetTimeline(months),
-    ])
-
-    const netAsset = this.walletFile.computeNetAsset(walletBalances)
+    const { snapshot } = this.ledger
+    const balances = accountBalances(snapshot)
+    const summaries = monthSummaries(snapshot, months)
+    const netTimeline = netAssetTimeline(snapshot, months)
+    const netAsset = computeNetAsset(snapshot)
 
     renderSharedHeader(contentEl, {
       view: this,
-      walletFile: this.walletFile,
+      ledger: this.ledger,
       activeView: 'asset',
       yearMonth: null,
     })
@@ -74,21 +73,21 @@ export class AssetView extends ItemView {
     // ── Left column ─────────────────────────────────────────────────────────
     const leftCol = grid.createDiv('ne-asset-left')
 
-    // Wallet balances card
-    const walletCard = renderCard(leftCol, { title: t('dash.walletBalances') })
+    // Account balances card
+    const walletCard = renderCard(leftCol, { title: t('dash.accountBalances') })
     const walletList = walletCard.createDiv('ne-wallet-list')
 
-    for (const { wallet, balanceCents: balance } of walletBalances) {
-      if (wallet.status === 'archived') continue
+    for (const { account, balanceCents: balance } of balances) {
+      if (!account.active) continue
       const row = walletList.createDiv('ne-asset-wallet-row')
       const left = row.createDiv('ne-wallet-left')
       left.createEl('span', {
-        text: t(`label.walletType.${wallet.type}`),
-        cls: `ne-wallet-badge ne-badge-${wallet.type}`,
+        text: t(`label.accountType.${account.accountType}`),
+        cls: `ne-wallet-badge ne-badge-${account.accountType}`,
       })
-      left.createEl('span', { text: wallet.name, cls: 'ne-wallet-name' })
+      left.createEl('span', { text: account.name, cls: 'ne-wallet-name' })
 
-      const displayBalance = wallet.type === 'creditCard' ? -balance : balance
+      const displayBalance = account.accountType === 'creditCard' ? -balance : balance
       row.createEl('span', {
         text: formatCents(Math.abs(displayBalance)),
         cls: 'ne-wallet-balance' + (displayBalance < 0 ? ' is-negative' : ''),
@@ -102,12 +101,11 @@ export class AssetView extends ItemView {
       cls: 'ne-net-value' + (netAsset < 0 ? ' is-negative' : ''),
     })
 
-    // Asset allocation pie (≥2 positive-balance non-credit wallets)
+    // Asset allocation pie (≥2 positive-balance non-credit accounts)
     const assetMap = new Map<string, number>()
-    for (const { wallet, balanceCents: balance } of walletBalances) {
-      if (wallet.status === 'archived') continue
-      if (wallet.type === 'creditCard') continue
-      if (balance > 0) assetMap.set(wallet.name, balance)
+    for (const { account, balanceCents: balance } of balances) {
+      if (!account.active || account.accountType === 'creditCard') continue
+      if (balance > 0) assetMap.set(account.name, balance)
     }
     if (assetMap.size >= 2) {
       const assetCard = renderCard(leftCol, { title: t('dash.assetAllocation') })

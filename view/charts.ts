@@ -1,5 +1,5 @@
-import { formatCents } from '../money'
-import { t, translateCategory } from '../labels'
+import { formatCents } from '../domain/money'
+import { t } from '../labels'
 import {
   Chart,
   BarElement, BarController,
@@ -284,7 +284,7 @@ export function drawPie(
   for (const [key, value] of filtered) {
     segments.push({
       key,
-      label: key === '__other__' ? t('label.cat.other') : translateCategory(key),
+      label: key === '__other__' ? t('label.cat.other') : key,
       value,
     })
   }
