@@ -1,0 +1,82 @@
+import { Events, ItemView, Notice, WorkspaceLeaf } from 'obsidian'
+import { formatCents } from '../domain/money'
+import { t, tn } from '../labels'
+import { openAccountEdit, openBalanceCorrection } from '../modal/editAccountFlow'
+import type { Ledger } from '../services/Ledger'
+import { accountBalances } from '../snapshot/queries'
+import { renderCard } from './components'
+import { renderSharedHeader } from './SharedHeader'
+
+export const ACCOUNTS_VIEW_TYPE = 'nestegg-accounts'
+
+export class AccountsView extends ItemView {
+  constructor(leaf: WorkspaceLeaf, private ledger: Ledger) {
+    super(leaf)
+  }
+
+  getViewType() { return ACCOUNTS_VIEW_TYPE }
+  getDisplayText() { return t('accounts.title') }
+  getIcon() { return 'landmark' }
+
+  onOpen(): Promise<void> {
+    this.registerEvent((this.app.workspace as Events).on('nestegg:refresh', () => { this.render() }))
+    this.render()
+    return Promise.resolve()
+  }
+
+  onClose(): Promise<void> {
+    this.contentEl.empty()
+    return Promise.resolve()
+  }
+
+  private async run(action: () => Promise<void>): Promise<void> {
+    try {
+      await action()
+      this.app.workspace.trigger('nestegg:refresh')
+    } catch (e) {
+      new Notice(tn('notice.actionFailed', { reason: e instanceof Error ? e.message : String(e) }))
+    }
+  }
+
+  render() {
+    const { contentEl } = this
+    const savedScroll = contentEl.scrollTop
+    contentEl.empty()
+    contentEl.addClass('ne-asset')
+    renderSharedHeader(contentEl, { view: this, ledger: this.ledger, activeView: 'accounts', yearMonth: null })
+
+    const card = renderCard(contentEl, { title: t('accounts.title') })
+    const balances = accountBalances(this.ledger.snapshot).filter(b => b.account.active)
+    if (balances.length === 0) {
+      card.createEl('p', { text: t('settings.noActiveAccounts'), cls: 'ne-settings-empty' })
+    }
+    for (const { account, balanceCents } of balances) {
+      const isDebt = account.accountType === 'creditCard'
+      const row = card.createDiv('ne-wallet-row')
+      const info = row.createDiv('ne-wallet-row-info')
+      info.createSpan('ne-account-dot').style.background = account.color
+      info.createSpan({ text: account.name, cls: 'ne-wallet-row-name' })
+      info.createSpan({
+        text: `${t(`label.accountType.${account.accountType}`)} · ` +
+          tn('accounts.balanceAsOf', { date: account.enteredBalanceAsOf }),
+        cls: 'ne-wallet-row-desc',
+      })
+      if (account.unbalancedCents) {
+        info.createSpan({
+          text: tn('accounts.unbalanced', { diff: formatCents(Math.abs(account.unbalancedCents)) }),
+          cls: 'ne-unbalanced-tag',
+        })
+      }
+      row.createSpan({
+        text: (isDebt ? t('settings.creditDebtPrefix') : '') + formatCents(balanceCents),
+        cls: `ne-wallet-row-balance${isDebt ? ' is-debt' : ''}`,
+      })
+      const actions = row.createDiv('ne-wallet-row-actions')
+      actions.createEl('button', { text: t('accounts.correctBalance') })
+        .addEventListener('click', () => openBalanceCorrection(this.app, this.ledger, account, (a) => this.run(a)))
+      actions.createEl('button', { text: t('ui.edit') })
+        .addEventListener('click', () => openAccountEdit(this.app, this.ledger, account, (a) => this.run(a)))
+    }
+    contentEl.scrollTop = savedScroll
+  }
+}

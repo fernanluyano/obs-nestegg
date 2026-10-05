@@ -7,9 +7,10 @@ import { SetupWizard } from '../wizard/SetupWizard'
 import { stepMonth, isAfterCurrentMonth } from '../utils'
 import { DASHBOARD_VIEW_TYPE } from './DashboardView'
 import { ASSET_VIEW_TYPE } from './AssetView'
+import { ACCOUNTS_VIEW_TYPE } from './AccountsView'
 import { DETAIL_VIEW_TYPE } from './DetailView'
 
-export type ActiveView = 'dashboard' | 'asset' | 'detail'
+export type ActiveView = 'dashboard' | 'asset' | 'accounts' | 'detail'
 
 export type SharedHeaderOptions = {
   view: ItemView
@@ -49,6 +50,7 @@ export function renderSharedHeader(container: HTMLElement, opts: SharedHeaderOpt
   const tabs: { id: ActiveView; label: string; targetType: string; state?: Record<string, unknown> }[] = [
     { id: 'dashboard', label: t('ui.overview'), targetType: DASHBOARD_VIEW_TYPE },
     { id: 'asset',     label: t('ui.asset'),    targetType: ASSET_VIEW_TYPE },
+    { id: 'accounts',  label: t('ui.accounts'), targetType: ACCOUNTS_VIEW_TYPE },
     { id: 'detail',    label: t('ui.detail'),   targetType: DETAIL_VIEW_TYPE,
       state: opts.yearMonth ? { yearMonth: opts.yearMonth } : undefined },
   ]

@@ -44,6 +44,27 @@ describe("update", () => {
 		expect(findAccount(ledger.snapshot, "Cash Main")!.balanceCents).toBe(200000);
 	});
 
+	it("marks an account unbalanced with a property and a tag, and a later update clears both", async () => {
+		const { ledger, vault } = await loadedLedger();
+		const path = accountPath("Cash Main");
+		await ledger.accounts.update("Cash Main", { unbalancedCents: 4210 });
+		expect(findAccount(ledger.snapshot, "Cash Main")!.unbalancedCents).toBe(4210);
+		expect(parseProps(vault.files.get(path)!)).toMatchObject({ unbalancedCents: 4210, tags: ["nestegg/account", "nestegg/unbalanced"] });
+
+		await ledger.accounts.update("Cash Main", { color: "#112233" });
+		expect(findAccount(ledger.snapshot, "Cash Main")!.unbalancedCents).toBe(4210);
+
+		await ledger.accounts.update("Cash Main", { unbalancedCents: undefined });
+		expect(findAccount(ledger.snapshot, "Cash Main")!.unbalancedCents).toBeUndefined();
+		expect(parseProps(vault.files.get(path)!)).toMatchObject({ tags: ["nestegg/account"] });
+		expect(vault.files.get(path)).not.toContain("unbalancedCents");
+	});
+
+	it("rejects a non-integer difference", async () => {
+		const { ledger } = await loadedLedger();
+		await expect(ledger.accounts.update("Cash Main", { unbalancedCents: 1.5 })).rejects.toThrow(/difference/);
+	});
+
 	it("changes the type and the net asset flag", async () => {
 		const { ledger } = await loadedLedger();
 		await ledger.accounts.update("Cash Main", { accountType: "creditCard" });

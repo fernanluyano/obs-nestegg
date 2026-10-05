@@ -1,8 +1,8 @@
 import { DEFAULT_ACCOUNT_COLOR, isHexColor } from "../domain/colors";
 import { isIsoDate } from "../domain/dates";
 import { ACCOUNT_TYPES, type Account, type AccountType } from "../domain/types";
-import { bool, buildNote, int, str, type Props, type RawProps } from "./frontmatter";
-import { NOTE_TAGS } from "./kinds";
+import { bool, buildNote, int, list, parseProps, str, type Props, type RawProps } from "./frontmatter";
+import { NOTE_TAGS, UNBALANCED_TAG } from "./kinds";
 
 export type ParsedAccount = { ok: true; account: Account } | { ok: false; reason: string };
 
@@ -21,6 +21,7 @@ export function parseAccountProps(props: RawProps): ParsedAccount {
 	const enteredBalanceCents = int(props, "enteredBalanceCents") ?? 0;
 	const active = bool(props, "active") ?? true;
 	const color = str(props, "color");
+	const unbalancedCents = int(props, "unbalancedCents");
 	return {
 		ok: true,
 		account: {
@@ -32,6 +33,7 @@ export function parseAccountProps(props: RawProps): ParsedAccount {
 			enteredBalanceAsOf,
 			balanceCents: int(props, "balanceCents") ?? enteredBalanceCents,
 			color: color && isHexColor(color) ? color.toLowerCase() : DEFAULT_ACCOUNT_COLOR,
+			...(unbalancedCents ? { unbalancedCents } : {}),
 		},
 	};
 }
@@ -39,7 +41,7 @@ export function parseAccountProps(props: RawProps): ParsedAccount {
 // `state` is not part of the account; callers pass it when staging a copy.
 export function accountProps(account: Account, extra: Props = {}): Props {
 	return {
-		tags: [NOTE_TAGS.account],
+		tags: [NOTE_TAGS.account, ...(account.unbalancedCents ? [UNBALANCED_TAG] : [])],
 		state: "current",
 		name: account.name,
 		accountType: account.accountType,
@@ -49,8 +51,15 @@ export function accountProps(account: Account, extra: Props = {}): Props {
 		enteredBalanceAsOf: account.enteredBalanceAsOf,
 		balanceCents: account.balanceCents,
 		color: account.color,
+		...(account.unbalancedCents ? { unbalancedCents: account.unbalancedCents } : {}),
 		...extra,
 	};
+}
+
+// The `tags` patch that adds or removes the unbalanced tag while keeping every other tag the note has.
+export function unbalancedTagPatch(content: string, unbalanced: boolean): Props {
+	const others = list(parseProps(content), "tags").filter((t) => t.replace(/^#/, "") !== UNBALANCED_TAG);
+	return { tags: unbalanced ? [...others, UNBALANCED_TAG] : others };
 }
 
 export function buildAccountNote(account: Account): string {

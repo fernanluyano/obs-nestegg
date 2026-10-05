@@ -2,10 +2,10 @@ import { Notice } from 'obsidian'
 import { formatCents } from '../../domain/money'
 import type { Account, AccountType } from '../../domain/types'
 import { t, tn } from '../../labels'
-import { AccountEditModal } from '../../modal/AccountEditModal'
 import { ConfirmModal } from '../../modal/ConfirmModal'
+import { openAccountEdit } from '../../modal/editAccountFlow'
 import { accountBalances, accountHasTransactions } from '../../snapshot/queries'
-import { accountRenameImpact, canRemoveAccount } from '../model'
+import { canRemoveAccount } from '../model'
 import { runAction, type WizardContext } from '../WizardContext'
 import { renderAddAccountForm } from './addAccountForm'
 
@@ -53,23 +53,7 @@ function renderActiveRow(group: HTMLElement, ctx: WizardContext, account: Accoun
 }
 
 function editAccount(ctx: WizardContext, account: Account): void {
-  const { ledger, app } = ctx
-  new AccountEditModal(app, account, async (change) => {
-    const save = () => runAction(ctx, async () => {
-      if (change.name !== account.name) await ledger.accounts.rename(account.name, change.name)
-      await ledger.accounts.update(change.name, {
-        enteredBalanceCents: change.enteredBalanceCents,
-        enteredBalanceAsOf: change.enteredBalanceAsOf,
-        color: change.color,
-      })
-    })
-    if (change.name === account.name) { await save(); return }
-    const impact = accountRenameImpact(ledger.snapshot, account.name)
-    const message = tn('wizard.confirm.renameAccount', {
-      from: account.name, to: change.name, files: String(impact.files), transactions: String(impact.transactions),
-    })
-    new ConfirmModal(app, message, save).open()
-  }).open()
+  openAccountEdit(ctx.app, ctx.ledger, account, (action) => runAction(ctx, action))
 }
 
 function removeAccount(ctx: WizardContext, account: Account, hasRows: boolean): void {

@@ -1,12 +1,13 @@
 import type { TransactionType, LedgerEntry } from '../../domain/types'
 import { dateToMonthDay } from '../../utils'
 import { t } from '../../labels'
-import { buildAccountText, buildAmountDisplay, buildLine3Display, buildTitleText } from '../detailRow'
+import { buildAccountParts, buildAmountDisplay, buildLine3Display, buildTitleText } from '../detailRow'
 
 export function renderTxRow(
   container: HTMLElement,
   entry: LedgerEntry,
   type: TransactionType | undefined,
+  colors: Map<string, string>,
   onClick: () => void,
 ): void {
   const row = container.createDiv('ne-tx-row')
@@ -18,7 +19,13 @@ export function renderTxRow(
 
   const stack = row.createDiv('ne-tx-row-stack')
   stack.createEl('div', { text: buildTitleText(entry), cls: 'ne-tx-category' })
-  stack.createEl('div', { text: buildAccountText(entry), cls: 'ne-tx-wallet' })
+  const accountEl = stack.createEl('div', { cls: 'ne-tx-wallet' })
+  buildAccountParts(entry).forEach((name, i) => {
+    if (i > 0) accountEl.appendText(' → ')
+    const part = accountEl.createSpan({ text: name })
+    const color = colors.get(name)
+    if (color) part.style.color = color
+  })
 
   const line3 = stack.createDiv('ne-tx-row-line3')
   const display = buildLine3Display(entry)

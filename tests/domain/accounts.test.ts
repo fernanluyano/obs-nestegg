@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { balanceAt, currentBalance, netAssetCents } from "../../domain/accounts";
+import { transferEntries } from "../../domain/transactions";
 import type { Account, Transaction } from "../../domain/types";
 
 const account = (over: Partial<Account> = {}): Account => ({
@@ -27,6 +28,15 @@ describe("currentBalance", () => {
 	it("treats credit card balances as debt: spending raises it, payments lower it", () => {
 		const card = account({ accountType: "creditCard", enteredBalanceCents: 5000 });
 		expect(currentBalance(card, [row("2026-10-03", -2000), row("2026-10-04", 500)])).toBe(5000 + 2000 - 500);
+	});
+
+	it("counts each half of a transfer only in its own account", () => {
+		const [out, in_] = transferEntries({
+			date: "2026-10-05", merchant: "", subcategory: "Account transfer", cents: 5000, note: "", tags: [], from: "Cash Main", to: "Card",
+		});
+		const card = account({ name: "Card", accountType: "creditCard", enteredBalanceCents: 20000 });
+		expect(currentBalance(account(), [out])).toBe(200000 - 5000);
+		expect(currentBalance(card, [in_])).toBe(20000 - 5000);
 	});
 
 	it("is the entered balance when nothing follows it", () => {

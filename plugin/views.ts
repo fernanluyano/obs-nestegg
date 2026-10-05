@@ -1,5 +1,6 @@
 import { Plugin } from 'obsidian'
 import type { Ledger } from '../services/Ledger'
+import { AccountsView, ACCOUNTS_VIEW_TYPE } from '../view/AccountsView'
 import { AssetView, ASSET_VIEW_TYPE } from '../view/AssetView'
 import { DashboardView, DASHBOARD_VIEW_TYPE } from '../view/DashboardView'
 import { DetailView, DETAIL_VIEW_TYPE } from '../view/DetailView'
@@ -8,6 +9,7 @@ export function registerViews(plugin: Plugin, ledger: Ledger): void {
   plugin.registerView(DASHBOARD_VIEW_TYPE, (leaf) => new DashboardView(leaf, ledger))
   plugin.registerView(DETAIL_VIEW_TYPE, (leaf) => new DetailView(leaf, ledger))
   plugin.registerView(ASSET_VIEW_TYPE, (leaf) => new AssetView(leaf, ledger))
+  plugin.registerView(ACCOUNTS_VIEW_TYPE, (leaf) => new AccountsView(leaf, ledger))
 }
 
 export async function openOrRevealView(plugin: Plugin, type: string, state?: Record<string, unknown>): Promise<void> {
@@ -19,5 +21,6 @@ export async function openOrRevealView(plugin: Plugin, type: string, state?: Rec
 
 export const openDashboard = (plugin: Plugin) => openOrRevealView(plugin, DASHBOARD_VIEW_TYPE)
 export const openAssets = (plugin: Plugin) => openOrRevealView(plugin, ASSET_VIEW_TYPE)
+export const openAccounts = (plugin: Plugin) => openOrRevealView(plugin, ACCOUNTS_VIEW_TYPE)
 export const openDetail = (plugin: Plugin, yearMonth?: string) =>
   openOrRevealView(plugin, DETAIL_VIEW_TYPE, yearMonth ? { yearMonth } : undefined)

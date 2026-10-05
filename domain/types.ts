@@ -13,6 +13,7 @@ export interface Account {
 	enteredBalanceAsOf: string; // YYYY-MM-DD the entered balance applies to
 	balanceCents: number; // cache of the current balance, recomputed on every write
 	color: string; // #rrggbb, how the account is told apart in lists and legends
+	unbalancedCents?: number; // set when the user saved a correction that disagreed with their known balance: our balance minus theirs, so nonzero when present
 }
 
 export interface Category {

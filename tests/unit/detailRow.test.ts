@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LedgerEntry } from '../../domain/types'
 import {
-  buildAccountText, buildAmountDisplay, buildLine3Display, buildTitleText, isRefund,
+  buildAccountParts, buildAccountText, buildAmountDisplay, buildLine3Display, buildTitleText, isRefund,
 } from '../../view/detailRow'
 
 const entry = (over: Partial<LedgerEntry> = {}): LedgerEntry => ({
@@ -19,6 +19,14 @@ describe('isRefund', () => {
     expect(isRefund(entry({ amountCents: 1200 }), 'income')).toBe(false)
     expect(isRefund(entry({ amountCents: 1200 }), 'transfer')).toBe(false)
     expect(isRefund(entry({ amountCents: 1200 }), undefined)).toBe(false)
+  })
+})
+
+describe('buildAccountParts', () => {
+  it('lists the account alone, or both sides of a transfer in direction order', () => {
+    expect(buildAccountParts(entry())).toEqual(['Cash'])
+    expect(buildAccountParts(entry({ amountCents: -5000, fromTo: 'Savings' }))).toEqual(['Cash', 'Savings'])
+    expect(buildAccountParts(entry({ amountCents: 5000, fromTo: 'Savings' }))).toEqual(['Savings', 'Cash'])
   })
 })
 

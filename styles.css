@@ -2279,6 +2279,23 @@ select.ne-add-wallet-input {
   margin-top: -2px;
 }
 
+.ne-correction-preview {
+  margin-top: 14px;
+}
+
+.ne-correction-warn {
+  color: var(--text-warning);
+}
+
+.ne-unbalanced-tag {
+  font-size: 11px;
+  color: var(--text-warning);
+}
+
+.ne-correction-ok {
+  color: var(--text-success);
+}
+
 .ne-add-wallet-submit {
   display: flex;
   justify-content: flex-end;

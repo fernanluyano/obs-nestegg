@@ -1,5 +1,4 @@
 import { App, Modal, Notice } from 'obsidian'
-import { centsToDecimal, parseCents } from '../domain/money'
 import { nameProblem } from '../domain/names'
 import type { Account } from '../domain/types'
 import { t } from '../labels'
@@ -7,22 +6,16 @@ import { renderColorSwatches } from './ColorSwatches'
 
 export interface AccountEdit {
   name: string
-  enteredBalanceCents: number
-  enteredBalanceAsOf: string
   color: string
 }
 
 export class AccountEditModal extends Modal {
   private name: string
-  private balance: string
-  private asOf: string
   private color: string
 
   constructor(app: App, private account: Account, private onSave: (edit: AccountEdit) => Promise<void>) {
     super(app)
     this.name = account.name
-    this.balance = centsToDecimal(account.enteredBalanceCents)
-    this.asOf = account.enteredBalanceAsOf
     this.color = account.color
   }
 
@@ -34,16 +27,9 @@ export class AccountEditModal extends Modal {
 
     const form = contentEl.createDiv('ne-wallet-edit-form')
     this.field(form, t('settings.accountName'), 'text', this.name, (v) => { this.name = v.trim() })
-    this.field(form, t('settings.enteredBalance'), 'number', this.balance, (v) => { this.balance = v }, '0.01')
-    this.field(form, t('settings.enteredBalanceAsOf'), 'date', this.asOf, (v) => { this.asOf = v })
     const colorRow = form.createDiv('ne-wallet-edit-field')
     colorRow.createEl('label', { text: t('settings.accountColor'), cls: 'ne-wallet-edit-label' })
     renderColorSwatches(colorRow, this.color, (picked) => { this.color = picked })
-    form.createEl('p', {
-      text: this.account.accountType === 'creditCard' ? t('settings.creditBalanceHint') : t('settings.cashBalanceHint'),
-      cls: 'ne-balance-hint ne-wallet-edit-hint',
-    })
-    form.createEl('p', { text: t('wizard.accounts.editHint'), cls: 'ne-balance-hint ne-wallet-edit-hint' })
 
     const row = contentEl.createDiv('ne-btn-row')
     const save = row.createEl('button', { text: t('ui.save'), cls: 'mod-cta' })
@@ -68,11 +54,8 @@ export class AccountEditModal extends Modal {
   private async submit() {
     if (!this.name) { new Notice(t('err.accountNameEmpty')); return }
     if (nameProblem(this.name)) { new Notice(t('err.invalidName')); return }
-    const cents = parseCents(this.balance)
-    if (cents === null) { new Notice(t('err.amountInvalid')); return }
-    if (cents < 0) { new Notice(t('err.balanceNegative')); return }
     try {
-      await this.onSave({ name: this.name, enteredBalanceCents: cents, enteredBalanceAsOf: this.asOf, color: this.color })
+      await this.onSave({ name: this.name, color: this.color })
       this.close()
     } catch (e) {
       new Notice(e instanceof Error ? e.message : String(e))

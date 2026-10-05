@@ -147,7 +147,7 @@ export class DetailView extends ItemView {
         day = entry.date
         renderDayHeader(this.listEl, day, balances.get(day), colors)
       }
-      renderTxRow(this.listEl, entry, index.typeOf(entry.subcategory), () => this.edit(entry))
+      renderTxRow(this.listEl, entry, index.typeOf(entry.subcategory), colors, () => this.edit(entry))
     }
 
     const { incomeCents, expenseCents } = subtotals(shown, index)

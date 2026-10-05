@@ -11,10 +11,15 @@ export function isRefund(entry: LedgerEntry, type: TransactionType | undefined):
   return type === 'expense' && entry.amountCents > 0
 }
 
-// A transfer row shows the direction its sign gives: sent rows read "this → other".
+// A transfer row shows the direction its sign gives: sent rows read "this → other". The names
+// are returned separately so each can be colored by its own account.
+export function buildAccountParts(entry: LedgerEntry): string[] {
+  if (!entry.fromTo) return [entry.account || '—']
+  return entry.amountCents < 0 ? [entry.account, entry.fromTo] : [entry.fromTo, entry.account]
+}
+
 export function buildAccountText(entry: LedgerEntry): string {
-  if (!entry.fromTo) return entry.account || '—'
-  return entry.amountCents < 0 ? `${entry.account} → ${entry.fromTo}` : `${entry.fromTo} → ${entry.account}`
+  return buildAccountParts(entry).join(' → ')
 }
 
 export function buildTitleText(entry: LedgerEntry): string {

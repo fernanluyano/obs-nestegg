@@ -7,7 +7,10 @@ export const NOTE_TAGS = {
 	settings: "nestegg/settings",
 } as const;
 
-export type NoteKind = keyof typeof NOTE_TAGS;
+// Not a note kind: an extra tag on an account note so unbalanced accounts can be found with Obsidian's tag search.
+export const UNBALANCED_TAG = "nestegg/unbalanced";
+
+export type NoteKind =keyof typeof NOTE_TAGS;
 
 export const NOTE_KINDS = Object.keys(NOTE_TAGS) as NoteKind[];
 

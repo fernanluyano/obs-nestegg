@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_ACCOUNT_COLOR } from "../../domain/colors";
 import type { Account } from "../../domain/types";
-import { accountProps, buildAccountNote, parseAccountProps } from "../../notes/accountNote";
+import { accountProps, buildAccountNote, parseAccountProps, unbalancedTagPatch } from "../../notes/accountNote";
 import { parseProps } from "../../notes/frontmatter";
 
 const account: Account = {
@@ -53,6 +53,19 @@ describe("parseAccountProps", () => {
 	});
 });
 
+describe("unbalancedTagPatch", () => {
+	const note = (tags: string) => `---\ntags: ${tags}\nname: A\n---\n`;
+
+	it("adds the tag and keeps the user's other tags", () => {
+		expect(unbalancedTagPatch(note("[nestegg/account, mine]"), true)).toEqual({ tags: ["nestegg/account", "mine", "nestegg/unbalanced"] });
+	});
+
+	it("removes the tag, including a #-prefixed one, without duplicating it", () => {
+		expect(unbalancedTagPatch(note("[nestegg/account, '#nestegg/unbalanced']"), false)).toEqual({ tags: ["nestegg/account"] });
+		expect(unbalancedTagPatch(note("[nestegg/account, nestegg/unbalanced]"), true)).toEqual({ tags: ["nestegg/account", "nestegg/unbalanced"] });
+	});
+});
+
 describe("accountProps / buildAccountNote", () => {
 	it("writes the marker tag, state and every property", () => {
 		expect(accountProps(account)).toMatchObject({ tags: ["nestegg/account"], state: "current", name: "Cash Main" });
@@ -67,6 +80,13 @@ describe("accountProps / buildAccountNote", () => {
 
 	it("lets extra properties override, for staging", () => {
 		expect(accountProps(account, { state: "in_transit" }).state).toBe("in_transit");
+	});
+
+	it("writes the unbalanced property and tag only when the account is flagged, and reads it back", () => {
+		expect(accountProps(account).unbalancedCents).toBeUndefined();
+		const flagged = { ...account, unbalancedCents: -4210 };
+		expect(accountProps(flagged)).toMatchObject({ tags: ["nestegg/account", "nestegg/unbalanced"], unbalancedCents: -4210 });
+		expect(parseAccountProps(parseProps(buildAccountNote(flagged)))).toEqual({ ok: true, account: flagged });
 	});
 
 	it("round trips a name that looks like a number", () => {

@@ -19,6 +19,7 @@ export default defineConfig({
 				"services/*.ts",
 				"storage/*.ts",
 				"table/*.ts",
+				"modal/balanceCorrectionState.ts",
 				"modal/transactionState.ts",
 				"modal/tagPickerState.ts",
 				"modal/mobileCalculatorState.ts",

@@ -3,7 +3,7 @@ import { isHexColor, nextAccountColor } from "../domain/colors";
 import { isIsoDate } from "../domain/dates";
 import { nameProblem } from "../domain/names";
 import type { Account, AccountType } from "../domain/types";
-import { buildAccountNote } from "../notes/accountNote";
+import { buildAccountNote, unbalancedTagPatch } from "../notes/accountNote";
 import { patchProps } from "../notes/frontmatter";
 import { accountPath } from "../notes/paths";
 import { planAccountRename } from "../rename/accountRename";
@@ -29,6 +29,8 @@ export interface AccountPatch {
 	enteredBalanceCents?: number;
 	enteredBalanceAsOf?: string;
 	color?: string;
+	// Passing the key as undefined clears the flag; leaving it out keeps it.
+	unbalancedCents?: number;
 }
 
 export class AccountService {
@@ -63,13 +65,19 @@ export class AccountService {
 		if (patch.enteredBalanceAsOf !== undefined && !isIsoDate(patch.enteredBalanceAsOf)) throw new LedgerError("The balance date is not a valid date");
 		if (patch.enteredBalanceCents !== undefined && !Number.isSafeInteger(patch.enteredBalanceCents)) throw new LedgerError("The balance is not a valid amount");
 
+		if (patch.unbalancedCents !== undefined && !Number.isSafeInteger(patch.unbalancedCents)) throw new LedgerError("The difference is not a valid amount");
 		if (patch.color !== undefined && !isHexColor(patch.color)) throw new LedgerError("The color is not a valid #rrggbb color");
 
-		const next = { ...account, ...patch };
+		const next ={ ...account, ...patch };
 		const balanceCents = currentBalance(next, accountTransactions(this.store.snapshot, name));
 		const path = this.pathOf(name);
 		const written = patch.color === undefined ? patch : { ...patch, color: patch.color.toLowerCase() };
-		await this.store.port.modify(path, (c) => patchProps(c, { ...written, balanceCents }));
+		const touchesFlag = "unbalancedCents" in patch;
+		await this.store.port.modify(path, (c) => patchProps(c, {
+			...written,
+			balanceCents,
+			...(touchesFlag ? unbalancedTagPatch(c, Boolean(patch.unbalancedCents)) : {}),
+		}));
 		await this.store.reload();
 	}
 
