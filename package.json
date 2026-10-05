@@ -1,7 +1,7 @@
 {
 	"name": "nestegg",
 	"version": "0.1.0",
-	"description": "Track net worth and accounts over time, right inside your vault.",
+	"description": "Personal finance in your vault: budgeting, transactions, accounts and net worth, and long-term investments.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
@@ -11,7 +11,6 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@types/node": "^20.14.2",
-		"@types/tabulator-tables": "^6.3.6",
 		"@vitest/coverage-v8": "^2.1.9",
 		"esbuild": "0.21.5",
 		"obsidian": "latest",
@@ -20,7 +19,6 @@
 		"vitest": "^2.1.9"
 	},
 	"dependencies": {
-		"chart.js": "^4.5.1",
-		"tabulator-tables": "^6.5.3"
+		"chart.js": "^4.5.1"
 	}
 }

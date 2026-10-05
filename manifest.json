@@ -3,7 +3,7 @@
 	"name": "Nestegg",
 	"version": "0.1.0",
 	"minAppVersion": "1.7.2",
-	"description": "Track net worth and accounts over time, right inside your vault.",
+	"description": "Personal finance in your vault: budgeting, transactions, accounts and net worth, and long-term investments.",
 	"author": "Fernando Berlanga",
 	"authorUrl": "https://github.com/fernanluyano",
 	"isDesktopOnly": false

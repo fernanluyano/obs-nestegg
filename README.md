@@ -1,8 +1,10 @@
 # 💰 Nestegg
 
-An [Obsidian](https://obsidian.md) plugin to track net worth and accounts over time, right inside your vault.
+An [Obsidian](https://obsidian.md) plugin for personal finance, right inside your vault: budgeting and transactions first, then accounts and net worth, then long-term investments.
 
-**Status:** early scaffold — no real features yet, just the plugin skeleton (ribbon icon + a "Say hello" command) to build on.
+Data lives in plain Markdown files in your vault (tables and frontmatter), so it stays readable and diffable. USD only.
+
+**Status:** being rebuilt from a clean slate — no real features yet. See `roadmap.md` for the plan.
 
 ## 📥 Installation
 
@@ -18,4 +20,4 @@ See `CLAUDE.md` for project conventions and the `Makefile` for common commands (
 
 ## 📄 License
 
-MIT
+MIT. Portions are derived from [Penny Wallet](https://github.com/twrusstw/penny-wallet) (MIT, © twrusstw) — see `NOTICE`.
