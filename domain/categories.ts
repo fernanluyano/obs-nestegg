@@ -1,3 +1,5 @@
+import { CREDIT_CARD_PAYMENT } from "./defaults";
+import { miscName } from "./names";
 import type { Category, TransactionType } from "./types";
 
 export interface CategoryIndex {
@@ -20,6 +22,13 @@ export function buildCategoryIndex(categories: Category[]): CategoryIndex {
 	};
 }
 
+// Alphabetical, with the category's own Misc catch-all last. Only the order shown changes; the
+// category note keeps its rows as they were written.
+export function sortSubcategories(category: string, subcategories: string[]): string[] {
+	const misc = miscName(category);
+	return [...subcategories].sort((a, b) => Number(a === misc) - Number(b === misc) || a.localeCompare(b));
+}
+
 export interface SubcategoryOption {
 	category: string;
 	subcategory: string;
@@ -29,6 +38,13 @@ export function subcategoryOptions(categories: Category[], type?: TransactionTyp
 	return categories
 		.filter((c) => type === undefined || c.categoryType === type)
 		.flatMap((c) => c.subcategories.map((subcategory) => ({ category: c.name, subcategory })));
+}
+
+// Where transactions can go when their subcategory is removed: another subcategory of the same
+// type, so signs, month totals and budgets keep their meaning. Credit card payment is left out
+// because only rows between a cash account and a card are valid under it.
+export function migrationTargets(categories: Category[], type: TransactionType, removed: string[]): SubcategoryOption[] {
+	return subcategoryOptions(categories, type).filter((o) => !removed.includes(o.subcategory) && o.subcategory !== CREDIT_CARD_PAYMENT);
 }
 
 export function findDuplicateSubcategories(categories: Category[]): Map<string, string[]> {

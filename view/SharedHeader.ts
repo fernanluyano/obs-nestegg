@@ -5,12 +5,14 @@ import { MobileTransactionModal } from '../modal/MobileTransactionModal'
 import { t } from '../labels'
 import { SetupWizard } from '../wizard/SetupWizard'
 import { stepMonth, isAfterCurrentMonth } from '../utils'
+import { BUDGET_VIEW_TYPE } from './BudgetView'
 import { DASHBOARD_VIEW_TYPE } from './DashboardView'
 import { ASSET_VIEW_TYPE } from './AssetView'
 import { ACCOUNTS_VIEW_TYPE } from './AccountsView'
 import { DETAIL_VIEW_TYPE } from './DetailView'
+import { openOrRevealView } from './openView'
 
-export type ActiveView = 'dashboard' | 'asset' | 'accounts' | 'detail'
+export type ActiveView = 'dashboard' | 'asset' | 'accounts' | 'detail' | 'budget'
 
 export type SharedHeaderOptions = {
   view: ItemView
@@ -51,6 +53,8 @@ export function renderSharedHeader(container: HTMLElement, opts: SharedHeaderOpt
     { id: 'dashboard', label: t('ui.overview'), targetType: DASHBOARD_VIEW_TYPE },
     { id: 'asset',     label: t('ui.asset'),    targetType: ASSET_VIEW_TYPE },
     { id: 'accounts',  label: t('ui.accounts'), targetType: ACCOUNTS_VIEW_TYPE },
+    { id: 'budget',    label: t('ui.budget'),   targetType: BUDGET_VIEW_TYPE,
+      state: opts.yearMonth ? { yearMonth: opts.yearMonth } : undefined },
     { id: 'detail',    label: t('ui.detail'),   targetType: DETAIL_VIEW_TYPE,
       state: opts.yearMonth ? { yearMonth: opts.yearMonth } : undefined },
   ]
@@ -62,7 +66,7 @@ export function renderSharedHeader(container: HTMLElement, opts: SharedHeaderOpt
     })
     if (!isActive) {
       btn.addEventListener('click', () => {
-        void openOrRevealView(opts.view, tab.targetType, tab.state)
+        void openOrRevealView(opts.view.app, tab.targetType, tab.state)
       })
     }
   }
@@ -82,11 +86,4 @@ export function renderSharedHeader(container: HTMLElement, opts: SharedHeaderOpt
       () => { addBtn.disabled = false },
     ).open()
   })
-}
-
-async function openOrRevealView(view: ItemView, type: string, state?: Record<string, unknown>) {
-  const existing = view.app.workspace.getLeavesOfType(type)
-  const leaf = existing[0] ?? view.app.workspace.getLeaf('tab')
-  await leaf.setViewState({ type, active: true, state })
-  void view.app.workspace.revealLeaf(leaf)
 }

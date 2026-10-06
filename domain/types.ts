@@ -43,6 +43,13 @@ export interface LedgerEntry extends Transaction {
 	account: string;
 }
 
+// One planned amount in a month's budget. Expense and income subcategories only; the category
+// is found through the category index, so a category rename never touches a budget.
+export interface BudgetLine {
+	subcategory: string;
+	plannedCents: number;
+}
+
 export interface MonthSummary {
 	incomeCents: number;
 	expenseCents: number;

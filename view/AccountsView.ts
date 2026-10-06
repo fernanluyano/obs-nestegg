@@ -4,6 +4,7 @@ import { t, tn } from '../labels'
 import { openAccountEdit, openBalanceCorrection } from '../modal/editAccountFlow'
 import type { Ledger } from '../services/Ledger'
 import { accountBalances } from '../snapshot/queries'
+import { renderAddAccountForm } from './accounts/addAccountForm'
 import { renderCard } from './components'
 import { renderSharedHeader } from './SharedHeader'
 
@@ -29,9 +30,10 @@ export class AccountsView extends ItemView {
     return Promise.resolve()
   }
 
-  private async run(action: () => Promise<void>): Promise<void> {
+  private async run(action: () => Promise<void>, notice?: string): Promise<void> {
     try {
       await action()
+      if (notice) new Notice(notice)
       this.app.workspace.trigger('nestegg:refresh')
     } catch (e) {
       new Notice(tn('notice.actionFailed', { reason: e instanceof Error ? e.message : String(e) }))
@@ -77,6 +79,10 @@ export class AccountsView extends ItemView {
       actions.createEl('button', { text: t('ui.edit') })
         .addEventListener('click', () => openAccountEdit(this.app, this.ledger, account, (a) => this.run(a)))
     }
+
+    const add = contentEl.createDiv('ne-accounts-add')
+    add.createEl('h4', { text: t('settings.addAccount') })
+    renderAddAccountForm(add, { app: this.app, ledger: this.ledger, run: (action, notice) => this.run(action, notice) })
     contentEl.scrollTop = savedScroll
   }
 }

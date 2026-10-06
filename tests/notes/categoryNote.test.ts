@@ -7,6 +7,15 @@ import type { Category } from "../../domain/types";
 
 const food: Category = { name: "Food", categoryType: "expense", subcategories: ["Groceries", "Restaurants", "Food - Misc"] };
 
+describe("parseCategoryNote ordering", () => {
+	it("reads subcategories alphabetically with Misc last, leaving the note as written", () => {
+		const note = buildCategoryNote({ ...food, subcategories: ["Food - Misc", "Restaurants", "coffee", "Bakery"] });
+		const parsed = parseCategoryNote(parseProps(note), note);
+		expect(parsed).toMatchObject({ ok: true, category: { subcategories: ["Bakery", "coffee", "Restaurants", "Food - Misc"] } });
+		expect(note.indexOf("| Food - Misc |")).toBeLessThan(note.indexOf("| Restaurants |"));
+	});
+});
+
 describe("buildCategoryNote / parseCategoryNote", () => {
 	it("round trips a category", () => {
 		const note = buildCategoryNote(food);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCategoryIndex, findDuplicateSubcategories, subcategoryOptions } from "../../domain/categories";
+import { buildCategoryIndex, findDuplicateSubcategories, migrationTargets, sortSubcategories, subcategoryOptions } from "../../domain/categories";
 import type { Category } from "../../domain/types";
 
 const categories: Category[] = [
@@ -7,6 +7,35 @@ const categories: Category[] = [
 	{ name: "Income", categoryType: "income", subcategories: ["Salary", "Income - Misc"] },
 	{ name: "Transfers", categoryType: "transfer", subcategories: ["Account transfer"] },
 ];
+
+describe("sortSubcategories", () => {
+	it("sorts by name ignoring case, with the category's Misc last", () => {
+		expect(sortSubcategories("Food", ["Food - Misc", "Restaurants", "apples", "Groceries"])).toEqual(["apples", "Groceries", "Restaurants", "Food - Misc"]);
+	});
+
+	it("only treats its own category's Misc as the catch-all and does not change the input", () => {
+		const input = ["Zoo", "Other - Misc", "Food - Misc"];
+		expect(sortSubcategories("Food", input)).toEqual(["Food - Misc".replace("Food - Misc", "Other - Misc"), "Zoo", "Food - Misc"]);
+		expect(input).toEqual(["Zoo", "Other - Misc", "Food - Misc"]);
+	});
+});
+
+describe("migrationTargets", () => {
+	it("offers the other subcategories of the same type, including Misc", () => {
+		expect(migrationTargets(categories, "expense", ["Groceries"]).map((o) => o.subcategory)).toEqual(["Food - Misc"]);
+		expect(migrationTargets(categories, "income", ["Salary"]).map((o) => o.subcategory)).toEqual(["Income - Misc"]);
+	});
+
+	it("leaves out everything being removed and says which category each belongs to", () => {
+		expect(migrationTargets(categories, "expense", ["Groceries", "Food - Misc"])).toEqual([]);
+		expect(migrationTargets(categories, "income", [])[0]).toEqual({ category: "Income", subcategory: "Salary" });
+	});
+
+	it("never offers Credit card payment", () => {
+		const withCard: Category[] = [{ name: "Transfers", categoryType: "transfer", subcategories: ["Account transfer", "Credit card payment", "Other move"] }];
+		expect(migrationTargets(withCard, "transfer", ["Account transfer"]).map((o) => o.subcategory)).toEqual(["Other move"]);
+	});
+});
 
 describe("buildCategoryIndex", () => {
 	const index = buildCategoryIndex(categories);

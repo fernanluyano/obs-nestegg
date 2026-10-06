@@ -1,4 +1,5 @@
 import { nameProblem, miscName } from "../domain/names";
+import { renameBudgetSubcategory } from "../notes/budgetNote";
 import { patchProps } from "../notes/frontmatter";
 import { renameSubcategoryRow } from "../notes/categoryNote";
 import { categoryPath } from "../notes/paths";
@@ -13,6 +14,15 @@ async function renameSubcategoryInMonths(ctx: PlanContext, from: string, to: str
 		if (!month.transactions.some((tx) => tx.subcategory === from)) continue;
 		const content = mapColumn(await ctx.read(month.path), "Date", SUBCATEGORY, (v) => (v === from ? to : v));
 		changes.push({ fromPath: month.path, toPath: month.path, content });
+	}
+	return changes;
+}
+
+async function renameSubcategoryInBudgets(ctx: PlanContext, from: string, to: string): Promise<FileChange[]> {
+	const changes: FileChange[] = [];
+	for (const budget of ctx.snapshot.budgets) {
+		if (!budget.lines.some((l) => l.subcategory === from)) continue;
+		changes.push({ fromPath: budget.path, toPath: budget.path, content: renameBudgetSubcategory(await ctx.read(budget.path), from, to) });
 	}
 	return changes;
 }
@@ -33,7 +43,11 @@ export async function planSubcategoryRename(ctx: PlanContext, oldName: string, n
 
 	const content = renameSubcategoryRow(await ctx.read(owner.path), oldName, newName);
 	return {
-		changes: [{ fromPath: owner.path, toPath: owner.path, content }, ...(await renameSubcategoryInMonths(ctx, oldName, newName))],
+		changes: [
+			{ fromPath: owner.path, toPath: owner.path, content },
+			...(await renameSubcategoryInMonths(ctx, oldName, newName)),
+			...(await renameSubcategoryInBudgets(ctx, oldName, newName)),
+		],
 	};
 }
 
@@ -55,6 +69,9 @@ export async function planCategoryRename(ctx: PlanContext, oldName: string, newN
 	if (hasMisc) content = renameSubcategoryRow(content, oldMisc, newMisc);
 
 	const changes: FileChange[] = [{ fromPath: record.path, toPath: categoryPath(newName), content }];
-	if (hasMisc) changes.push(...(await renameSubcategoryInMonths(ctx, oldMisc, newMisc)));
+	if (hasMisc) {
+		changes.push(...(await renameSubcategoryInMonths(ctx, oldMisc, newMisc)));
+		changes.push(...(await renameSubcategoryInBudgets(ctx, oldMisc, newMisc)));
+	}
 	return { changes };
 }

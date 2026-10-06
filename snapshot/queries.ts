@@ -1,6 +1,6 @@
 import { balanceAt, currentBalance, netAssetCents } from "../domain/accounts";
 import { monthEndKey } from "../domain/dates";
-import { DEFAULT_TAGS } from "../domain/defaults";
+import { CREDIT_CARD_PAYMENT, DEFAULT_TAGS } from "../domain/defaults";
 import { summarize } from "../domain/transactions";
 import type { CategoryIndex } from "../domain/categories";
 import type { Account, AccountBalance, LedgerEntry, MonthSummary, TransactionType } from "../domain/types";
@@ -96,6 +96,17 @@ export function knownMerchants(snapshot: Snapshot): string[] {
 
 export function accountHasTransactions(snapshot: Snapshot, name: string): boolean {
 	return snapshot.months.some((m) => m.account === name && m.transactions.length > 0);
+}
+
+export type CategoryTypeProblem = "used" | "cardPayment";
+
+// A used category keeps its type, or past income and expense totals would silently change
+// meaning; Credit card payment only works under a transfer, so its category stays one.
+export function categoryTypeChangeProblem(snapshot: Snapshot, categoryName: string): CategoryTypeProblem | null {
+	const category = snapshot.categories.find((c) => c.category.name === categoryName)?.category;
+	if (!category) return null;
+	if (category.subcategories.includes(CREDIT_CARD_PAYMENT)) return "cardPayment";
+	return category.subcategories.some((s) => subcategoryUsage(snapshot, s) > 0) ? "used" : null;
 }
 
 export function subcategoryUsage(snapshot: Snapshot, subcategory: string): number {

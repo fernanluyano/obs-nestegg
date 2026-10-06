@@ -2709,6 +2709,7 @@ select.ne-add-wallet-input {
 .ne-category-block { margin: 12px 0; }
 .ne-category-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .ne-category-head strong { flex: 1; }
+.ne-category-head .ne-category-type { flex: 0 0 auto; }
 
 /* Setup wizard */
 .ne-wizard-container .modal { width: min(720px, 94vw); }
@@ -2720,3 +2721,53 @@ select.ne-add-wallet-input {
 /* Tag input: why the typed text can't become a tag */
 .ne-tag-error { color: var(--text-error); font-size: var(--font-ui-smaller); margin-top: 4px; }
 .ne-tag-input.is-invalid { border-color: var(--text-error); }
+
+.ne-accounts-add { padding: 0 20px 20px; max-width: 960px; }
+.ne-wizard-note { padding: 8px 12px; background: var(--background-secondary); border-radius: 4px; }
+
+/* Transactions: select mode and the bulk action bar */
+.ne-detail-select-btn { margin-top: 8px; }
+.ne-tx-row.is-selecting .ne-tx-check { flex-shrink: 0; pointer-events: none; }
+.ne-tx-row.is-selected { background: var(--background-modifier-hover); }
+.ne-bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+.ne-bulk-count { flex: 1; font-weight: var(--font-semibold); min-width: 90px; }
+
+/* Budget view: a row is name | planned | spent | progress bar */
+.ne-budget .ne-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 960px; }
+.ne-budget-muted { color: var(--text-muted); }
+.ne-budget-plan-line { padding: 0 20px 12px; font-size: var(--font-ui-smaller); }
+.ne-budget-empty { margin: 16px 20px; max-width: 480px; }
+.ne-budget-section { margin: 0 20px 12px; max-width: 960px; padding: 0; overflow: hidden; }
+.ne-budget-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px 110px 90px;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 16px;
+}
+.ne-budget-body .ne-budget-row { border-top: 1px solid var(--background-modifier-border); }
+.ne-budget-head { padding: 12px 16px; font-weight: var(--font-semibold); cursor: pointer; }
+.ne-budget-head:hover { background: var(--background-modifier-hover); }
+.ne-budget-section.is-collapsed .ne-budget-body { display: none; }
+.ne-budget-cols { border-top: none !important; font-size: var(--font-ui-smaller); color: var(--text-muted); text-transform: uppercase; }
+.ne-budget-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ne-budget-amount { text-align: right; font-variant-numeric: tabular-nums; }
+.ne-budget-input { width: 100%; text-align: right; font-variant-numeric: tabular-nums; }
+.ne-budget-bar { height: 4px; border-radius: 2px; background: var(--background-modifier-border); overflow: hidden; }
+.ne-budget-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.ne-budget-fill.is-under { background: var(--color-green); }
+.ne-budget-fill.is-at { background: var(--color-yellow); }
+.ne-budget-fill.is-over { background: var(--color-red); }
+@media (max-width: 600px) {
+  .ne-budget .ne-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ne-budget-row { grid-template-columns: minmax(0, 1fr) 84px 72px 48px; padding: 6px 10px; }
+  .ne-budget-section, .ne-budget-plan-line { margin-left: 12px; margin-right: 12px; }
+}

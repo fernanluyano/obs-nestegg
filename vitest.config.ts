@@ -24,7 +24,9 @@ export default defineConfig({
 				"modal/tagPickerState.ts",
 				"modal/mobileCalculatorState.ts",
 				"view/detailRow.ts",
+				"view/budgetRow.ts",
 				"view/detail/filters.ts",
+				"view/detail/selection.ts",
 				"wizard/model.ts",
 			],
 			// Files that drive the Obsidian API directly aren't unit tested per this project's

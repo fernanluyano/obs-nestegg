@@ -5,16 +5,28 @@ import { t, tn } from '../../labels'
 import { ConfirmModal } from '../../modal/ConfirmModal'
 import { openAccountEdit } from '../../modal/editAccountFlow'
 import { accountBalances, accountHasTransactions } from '../../snapshot/queries'
-import { canRemoveAccount } from '../model'
+import { ACCOUNTS_VIEW_TYPE } from '../../view/AccountsView'
+import { openOrRevealView } from '../../view/openView'
+import { canAdvance, canRemoveAccount } from '../model'
 import { runAction, type WizardContext } from '../WizardContext'
-import { renderAddAccountForm } from './addAccountForm'
 
 export function renderAccounts(container: HTMLElement, ctx: WizardContext): void {
   container.createEl('p', { text: t('wizard.accounts.intro') })
   renderActive(container, ctx)
   renderArchived(container, ctx)
-  container.createEl('h4', { text: t('settings.addAccount') })
-  renderAddAccountForm(container, ctx)
+  renderAddPointer(container, ctx)
+}
+
+// Accounts are added in the Accounts tab; the wizard only points there, closing itself so the
+// tab is not hidden behind it.
+function renderAddPointer(container: HTMLElement, ctx: WizardContext): void {
+  const needed = canAdvance('accounts', ctx.ledger.snapshot).ok === false
+  const box = container.createDiv(needed ? 'ne-wizard-callout' : 'ne-wizard-note')
+  box.createEl('p', { text: t(needed ? 'wizard.accounts.addHereNeeded' : 'wizard.accounts.addHere') })
+  box.createEl('button', { text: t('wizard.accounts.openTab'), cls: 'mod-cta' }).addEventListener('click', () => {
+    ctx.close()
+    void openOrRevealView(ctx.app, ACCOUNTS_VIEW_TYPE)
+  })
 }
 
 function badge(parent: HTMLElement, type: AccountType) {

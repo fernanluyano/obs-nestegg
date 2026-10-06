@@ -1,3 +1,4 @@
+import { sortSubcategories } from "../domain/categories";
 import type { Category, TransactionType } from "../domain/types";
 import { TRANSACTION_TYPES } from "../domain/types";
 import { addRow, removeRow } from "../table/edit";
@@ -31,7 +32,7 @@ export function parseCategoryNote(props: RawProps, content: string): ParsedCateg
 		.filter((cell) => cell !== "");
 	return {
 		ok: true,
-		category: { name, categoryType: categoryType as TransactionType, subcategories },
+		category: { name, categoryType: categoryType as TransactionType, subcategories: sortSubcategories(name, subcategories) },
 		tableIssues: table?.issues ?? [],
 	};
 }

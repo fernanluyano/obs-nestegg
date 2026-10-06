@@ -1,3 +1,4 @@
+import { bulkReassignProblem, type BulkProblem } from "../domain/bulkEdit";
 import { monthOf } from "../domain/dates";
 import { entryProblem, transferProblem, type EntryProblem } from "../domain/entryRules";
 import { normalizeTags } from "../domain/names";
@@ -8,11 +9,21 @@ import {
 import type { LedgerEntry, Transaction } from "../domain/types";
 import { buildMonthNote, editMonthNote, type MonthEdit } from "../notes/monthNote";
 import { monthPath } from "../notes/paths";
+import { executePlan } from "../rename/execute";
+import type { FileChange } from "../rename/types";
 import { LedgerError } from "./errors";
 import type { LedgerStore } from "./LedgerStore";
 import { syncBalances } from "./balances";
 
-const toTransaction = (e: LedgerEntry): Transaction => ({
+const BULK_PROBLEMS: Record<BulkProblem, string> = {
+	empty: "nothing is selected",
+	transfer: "transfers keep their own subcategories",
+	unknown: "a selected transaction uses a subcategory that no longer exists",
+	mixed: "the selected transactions are of different types",
+	badTarget: "that subcategory is not of the same type as the selected transactions",
+};
+
+const toTransaction =(e: LedgerEntry): Transaction => ({
 	date: e.date, merchant: e.merchant, subcategory: e.subcategory, amountCents: e.amountCents,
 	note: e.note, tags: e.tags, fromTo: e.fromTo,
 });
@@ -147,6 +158,68 @@ export class TransactionService {
 			throw e;
 		}
 		await this.finish([...removed.map((e) => e.account), ...rows.map((r) => r.account)]);
+	}
+
+	// Edits grouped by file and applied in one write each. A change that spans several files goes
+	// through the stage, validate and swap step, so a failure leaves every file as it was.
+	private async applyBulk(edits: { account: string; month: string; edit: MonthEdit }[]): Promise<void> {
+		const { port, snapshot, index } = this.store;
+		const byPath = new Map<string, MonthEdit[]>();
+		for (const { account, month, edit } of edits) {
+			const path = snapshot.months.find((m) => m.account === account && m.month === month)?.path;
+			if (!path) throw new LedgerError("That transaction is no longer in the file");
+			this.touchedMonths.add(month);
+			byPath.set(path, [...(byPath.get(path) ?? []), edit]);
+		}
+		const fold = (list: MonthEdit[]) => (content: string) => list.reduce((text, edit) => editMonthNote(text, edit, index), content);
+
+		if (byPath.size === 1) {
+			const [[path, list]] = byPath;
+			await port.modify(path, fold(list));
+			return;
+		}
+		const changes: FileChange[] = [];
+		for (const [path, list] of byPath) changes.push({ fromPath: path, toPath: path, content: fold(list)((await port.read(path)) ?? "") });
+		await executePlan(port, { changes });
+	}
+
+	// A selected transfer row takes its partner in the other account with it, unless that row is
+	// selected too.
+	private withPartners(entries: LedgerEntry[]): LedgerEntry[] {
+		const rows = [...entries];
+		const paired = new Set<number>();
+		entries.forEach((entry, i) => {
+			if (entry.fromTo === "" || paired.has(i)) return;
+			const partner = this.findPartner(entry);
+			if (!partner) return;
+			paired.add(i);
+			const at = rows.findIndex((r, k) => k !== i && !paired.has(k) && r.account === partner.account && sameTransaction(r, partner));
+			if (at >= 0) paired.add(at);
+			else paired.add(rows.push(partner) - 1);
+		});
+		return rows;
+	}
+
+	async deleteMany(entries: LedgerEntry[]): Promise<void> {
+		if (entries.length === 0) return;
+		const rows = this.withPartners(entries);
+		await this.applyBulk(rows.map((e) => ({ account: e.account, month: monthOf(e.date), edit: { kind: "remove", tx: toTransaction(e) } })));
+		await this.finish(rows.map((e) => e.account));
+	}
+
+	// Points the rows at another subcategory of their own type; amounts and dates stay as they are.
+	async reassignMany(entries: LedgerEntry[], subcategory: string): Promise<void> {
+		const categories = this.store.snapshot.categories.map((c) => c.category);
+		const problem = bulkReassignProblem(entries, subcategory, categories, this.store.index);
+		if (problem) throw new LedgerError(`Cannot change the subcategory: ${BULK_PROBLEMS[problem]}`);
+
+		const changing = entries.filter((e) => e.subcategory !== subcategory);
+		await this.applyBulk(changing.map((e) => ({
+			account: e.account,
+			month: monthOf(e.date),
+			edit: { kind: "replace", old: toTransaction(e), next: { ...toTransaction(e), subcategory } },
+		})));
+		await this.finish(changing.map((e) => e.account));
 	}
 
 	async delete(entry: LedgerEntry): Promise<void> {

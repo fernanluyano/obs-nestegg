@@ -31,7 +31,7 @@ export class SetupWizard extends Modal {
   }
 
   private context(): WizardContext {
-    return { app: this.app, ledger: this.ledger, rerender: () => this.render() }
+    return { app: this.app, ledger: this.ledger, rerender: () => this.render(), close: () => this.close() }
   }
 
   private render() {

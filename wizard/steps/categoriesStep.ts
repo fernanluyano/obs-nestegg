@@ -19,8 +19,15 @@ export function renderCategories(container: HTMLElement, ctx: WizardContext): vo
     if (i > 0) card.createEl('hr', { cls: 'ne-category-divider' })
     card.createEl('div', { text: title(), cls: 'ne-setting-input-subtitle' })
     for (const category of all.filter(c => c.categoryType === type)) renderCategoryBlock(card, ctx, category)
-    renderAddRow(card, t('settings.categoryPlaceholder'), t('settings.addCategory'), (name) => {
-      void runAction(ctx, () => ctx.ledger.categories.createCategory(name, type), tn('notice.categoryAdded', { name }))
-    })
+  })
+
+  card.createEl('hr', { cls: 'ne-category-divider' })
+  let newType: TransactionType = 'expense'
+  renderAddRow(card, t('settings.categoryPlaceholder'), t('settings.addCategory'), (name) => {
+    void runAction(ctx, () => ctx.ledger.categories.createCategory(name, newType), tn('notice.categoryAdded', { name }))
+  }, (row) => {
+    const select = row.createEl('select', { cls: 'dropdown' })
+    for (const { type } of SECTIONS) select.createEl('option', { value: type, text: t(`label.type.${type}`) })
+    select.addEventListener('change', () => { newType = select.value as TransactionType })
   })
 }

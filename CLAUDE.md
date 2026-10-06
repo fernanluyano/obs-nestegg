@@ -51,7 +51,7 @@ Layers, from pure to Obsidian-bound; each folder mirrors a spec folder under `te
 - `.github/workflows/release.yml` — on tag push, builds, tests, verifies the tag matches `manifest.json` version, and drafts a GitHub release with `main.js`/`manifest.json`/`styles.css`
 - `scripts/release.sh` — driven by `make release`
 
-Vault layout (all under a fixed `Nestegg/` folder): `Settings.md`, `Accounts/<Name>/<Name>.md`, `Accounts/<Name>/Transactions/YYYY-MM.md`, `Categories/<Category>.md`. Properties win over paths; every note has `state: current | in_transit`.
+Vault layout (all under a fixed `Nestegg/` folder): `Settings.md`, `Accounts/<Name>/<Name>.md`, `Accounts/<Name>/Transactions/YYYY-MM.md`, `Categories/<Category>.md`, `Budgets/YYYY-MM.md` (one table of `Subcategory | PlannedCents` per calendar month, planned per subcategory only; a new month copies the previous plan and nothing else carries over). Properties win over paths; every note has `state: current | in_transit`.
 
 Coverage is enforced over every logic layer (see `vitest.config.ts`); only files that call the Obsidian API directly are excluded.
 

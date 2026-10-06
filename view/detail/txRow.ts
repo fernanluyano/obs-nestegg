@@ -9,9 +9,17 @@ export function renderTxRow(
   type: TransactionType | undefined,
   colors: Map<string, string>,
   onClick: () => void,
+  selection?: { selected: boolean },
 ): void {
   const row = container.createDiv('ne-tx-row')
   row.dataset['testid'] = 'tx-row'
+  if (selection) {
+    row.addClass('is-selecting')
+    row.toggleClass('is-selected', selection.selected)
+    const box = row.createEl('input', { type: 'checkbox', cls: 'ne-tx-check' })
+    box.checked = selection.selected
+    box.tabIndex = -1 // the row itself is the click target; the box only shows the state
+  }
 
   row.createEl('span', { text: dateToMonthDay(entry.date), cls: 'ne-tx-date' })
   if (type) row.createEl('span', { text: t(`label.type.${type}`), cls: `ne-type-badge ne-type-${type}` })

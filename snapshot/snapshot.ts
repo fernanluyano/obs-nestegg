@@ -1,6 +1,7 @@
 import { buildCategoryIndex, type CategoryIndex } from "../domain/categories";
-import type { Account, Category, LedgerEntry, MonthSummary, Settings, Transaction } from "../domain/types";
+import type { Account, BudgetLine, Category, LedgerEntry, MonthSummary, Settings, Transaction } from "../domain/types";
 import { parseAccountProps } from "../notes/accountNote";
+import { parseBudgetNote } from "../notes/budgetNote";
 import { parseCategoryNote } from "../notes/categoryNote";
 import type { RawProps } from "../notes/frontmatter";
 import { kindOf, stateOf, transitForOf, type NoteKind } from "../notes/kinds";
@@ -36,6 +37,13 @@ export interface MonthRecord {
 	rowIssues: RowIssue[];
 }
 
+export interface BudgetRecord {
+	path: string;
+	month: string;
+	lines: BudgetLine[];
+	rowIssues: RowIssue[];
+}
+
 export interface SettingsRecord {
 	path: string;
 	settings: Settings;
@@ -58,12 +66,13 @@ export interface Snapshot {
 	accounts: AccountRecord[];
 	categories: CategoryRecord[];
 	months: MonthRecord[];
+	budgets: BudgetRecord[];
 	transit: TransitRecord[];
 	invalid: InvalidNote[];
 }
 
 export function emptySnapshot(): Snapshot {
-	return { settings: null, accounts: [], categories: [], months: [], transit: [], invalid: [] };
+	return { settings: null, accounts: [], categories: [], months: [], budgets: [], transit: [], invalid: [] };
 }
 
 // Only `current` notes count toward data; staged copies are set aside for recovery. Paths are
@@ -94,6 +103,12 @@ export function buildSnapshot(inputs: NoteInput[]): Snapshot {
 			case "category": {
 				const parsed = parseCategoryNote(props, content);
 				if (parsed.ok) snapshot.categories.push({ path, category: parsed.category, tableIssues: parsed.tableIssues });
+				else snapshot.invalid.push({ path, kind, reason: parsed.reason });
+				break;
+			}
+			case "budget": {
+				const parsed = parseBudgetNote(props, content);
+				if (parsed.ok) snapshot.budgets.push({ path, month: parsed.month, lines: parsed.lines, rowIssues: parsed.rowIssues });
 				else snapshot.invalid.push({ path, kind, reason: parsed.reason });
 				break;
 			}

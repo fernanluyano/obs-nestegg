@@ -7,6 +7,7 @@ export interface WizardContext {
   ledger: Ledger
   // Rebuilds the current step from the latest snapshot.
   rerender(): void
+  close(): void
 }
 
 // Runs a ledger change, then refreshes the open views and the step; a failure becomes a notice

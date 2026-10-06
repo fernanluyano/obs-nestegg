@@ -1,13 +1,21 @@
 import { nameProblem, miscName } from "../domain/names";
-import type { TransactionType } from "../domain/types";
+import { TRANSACTION_TYPES, type TransactionType } from "../domain/types";
 import { addSubcategory, buildCategoryNote, removeSubcategoryRow } from "../notes/categoryNote";
 import { categoryPath } from "../notes/paths";
 import { planCategoryRename, planSubcategoryRename } from "../rename/categoryRename";
 import { executePlan } from "../rename/execute";
-import { subcategoryUsage } from "../snapshot/queries";
+import { planSubcategoryMigration } from "../rename/subcategoryMigration";
+import { patchProps } from "../notes/frontmatter";
+import { categoryTypeChangeProblem, subcategoryUsage, type CategoryTypeProblem } from "../snapshot/queries";
 import { withMisc } from "../domain/defaults";
+import { dropBudgetLines } from "./budgetLines";
 import { LedgerError } from "./errors";
 import type { LedgerStore } from "./LedgerStore";
+
+const TYPE_CHANGE_PROBLEMS: Record<CategoryTypeProblem, string> = {
+	used: "Transactions still use this category, so its type cannot change. Move them to another subcategory first.",
+	cardPayment: "This category holds Credit card payment, which only works under a transfer.",
+};
 
 export class CategoryService {
 	constructor(private store: LedgerStore) {}
@@ -33,6 +41,21 @@ export class CategoryService {
 		await this.store.reload();
 	}
 
+	// Only a category nothing uses can change type. Transfers are not budgeted, so a category that
+	// becomes one loses its planned lines.
+	async setCategoryType(name: string, categoryType: TransactionType): Promise<void> {
+		const record = this.categories().find((c) => c.category.name === name);
+		if (!record) throw new LedgerError(`No category named "${name}"`);
+		if (!TRANSACTION_TYPES.includes(categoryType)) throw new LedgerError(`"${categoryType}" is not a category type`);
+		if (record.category.categoryType === categoryType) return;
+		const problem = categoryTypeChangeProblem(this.store.snapshot, name);
+		if (problem) throw new LedgerError(TYPE_CHANGE_PROBLEMS[problem]);
+
+		await this.store.port.modify(record.path, (c) => patchProps(c, { categoryType }));
+		if (categoryType === "transfer") await dropBudgetLines(this.store, record.category.subcategories);
+		await this.store.reload();
+	}
+
 	async addSubcategory(category: string, name: string): Promise<void> {
 		const record = this.categories().find((c) => c.category.name === category);
 		if (!record) throw new LedgerError(`No category named "${category}"`);
@@ -51,23 +74,32 @@ export class CategoryService {
 		await this.runPlan(planCategoryRename(this.planContext(), oldName, newName));
 	}
 
-	async removeSubcategory(name: string): Promise<void> {
+	// Transactions that still use what is being removed must be pointed somewhere first: pass the
+	// subcategory they should move to, or the removal is refused.
+	private async migrateUsage(removed: string[], what: string, migrateTo?: string): Promise<void> {
+		if (!removed.some((s) => subcategoryUsage(this.store.snapshot, s) > 0)) return;
+		if (!migrateTo) throw new LedgerError(`Transactions still use this ${what}`);
+		await this.runPlan(planSubcategoryMigration(this.planContext(), removed, migrateTo));
+	}
+
+	async removeSubcategory(name: string, migrateTo?: string): Promise<void> {
 		const record = this.categories().find((c) => c.category.subcategories.includes(name));
 		if (!record) throw new LedgerError(`No subcategory named "${name}"`);
 		if (name === miscName(record.category.name)) throw new LedgerError("A category's Misc subcategory cannot be removed");
-		if (subcategoryUsage(this.store.snapshot, name) > 0) throw new LedgerError("Transactions still use this subcategory");
+		await this.migrateUsage([name], "subcategory", migrateTo);
 
 		await this.store.port.modify(record.path, (c) => removeSubcategoryRow(c, name));
+		await dropBudgetLines(this.store, [name]);
 		await this.store.reload();
 	}
 
-	async removeCategory(name: string): Promise<void> {
+	async removeCategory(name: string, migrateTo?: string): Promise<void> {
 		const record = this.categories().find((c) => c.category.name === name);
 		if (!record) throw new LedgerError(`No category named "${name}"`);
-		const used = record.category.subcategories.some((s) => subcategoryUsage(this.store.snapshot, s) > 0);
-		if (used) throw new LedgerError("Transactions still use this category");
+		await this.migrateUsage(record.category.subcategories, "category", migrateTo);
 
 		await this.store.port.trash(record.path);
+		await dropBudgetLines(this.store, record.category.subcategories);
 		await this.store.reload();
 	}
 

@@ -20,7 +20,10 @@ export function detectMalformedRows(snapshot: Snapshot): MalformedRowIssue[] {
 	const fromCategories = snapshot.categories.flatMap((c) =>
 		c.tableIssues.map((i): MalformedRowIssue => ({ type: "malformedRow", path: c.path, ...i })),
 	);
-	return [...fromMonths, ...fromCategories];
+	const fromBudgets = snapshot.budgets.flatMap((b) =>
+		b.rowIssues.map((i): MalformedRowIssue => ({ type: "malformedRow", path: b.path, ...i })),
+	);
+	return [...fromMonths, ...fromCategories, ...fromBudgets];
 }
 
 export function detectDuplicateMonths(snapshot: Snapshot): DuplicateMonthIssue[] {

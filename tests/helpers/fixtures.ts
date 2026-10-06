@@ -1,11 +1,12 @@
 import { buildCategoryIndex } from "../../domain/categories";
 import { DEFAULT_SETTINGS, defaultCategories } from "../../domain/defaults";
-import type { Account, Category, Settings, Transaction } from "../../domain/types";
+import type { Account, BudgetLine, Category, Settings, Transaction } from "../../domain/types";
 import { buildAccountNote } from "../../notes/accountNote";
+import { buildBudgetNote } from "../../notes/budgetNote";
 import { buildCategoryNote } from "../../notes/categoryNote";
 import { parseProps } from "../../notes/frontmatter";
 import { buildMonthNote } from "../../notes/monthNote";
-import { accountPath, categoryPath, monthPath, SETTINGS_PATH } from "../../notes/paths";
+import { accountPath, budgetPath, categoryPath, monthPath, SETTINGS_PATH } from "../../notes/paths";
 import { buildSettingsNote } from "../../notes/settingsNote";
 import { buildSnapshot, type NoteInput } from "../../snapshot/snapshot";
 
@@ -43,6 +44,8 @@ export const categoryInput = (c: Category) => inputOf(categoryPath(c.name), buil
 export const settingsInput = (s: Settings = DEFAULT_SETTINGS) => inputOf(SETTINGS_PATH, buildSettingsNote(s));
 export const monthInput = (acct: string, month: string, rows: Transaction[]) =>
 	inputOf(monthPath(acct, month), buildMonthNote({ account: acct, month }, rows, index));
+
+export const budgetInput = (month: string, lines: BudgetLine[]) => inputOf(budgetPath(month), buildBudgetNote(month, lines));
 
 // A consistent little vault: one cash account, the default categories, one expense in October.
 export function vaultInputs(extra: { accounts?: Account[]; months?: NoteInput[]; settings?: Settings } = {}): NoteInput[] {

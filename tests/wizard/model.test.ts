@@ -2,14 +2,37 @@ import { describe, expect, it } from 'vitest'
 import type { Category } from '../../domain/types'
 import { buildSnapshot, emptySnapshot } from '../../snapshot/snapshot'
 import {
-  accountRenameImpact, canAdvance, canRemoveAccount, categoryRenameImpact, checkBalance, needsSetup, nextStep,
+  accountRenameImpact, canAdvance, canRemoveAccount, categoryRenameImpact, checkBalance, migrationImpact, needsSetup, nextStep,
   prevStep, subcategoryRenameImpact, WIZARD_STEPS,
 } from '../../wizard/model'
-import { account, categoryInput, monthInput, settingsInput, tx, vaultInputs } from '../helpers/fixtures'
+import { account, budgetInput, categoryInput, monthInput, settingsInput, tx, vaultInputs } from '../helpers/fixtures'
 import { accountInput } from '../helpers/fixtures'
 
 const card = account({ name: 'Card', accountType: 'creditCard' })
 const food: Category = { name: 'Food', categoryType: 'expense', subcategories: ['Groceries', 'Food - Misc'] }
+
+describe('migrationImpact', () => {
+  const snap = buildSnapshot([
+    ...vaultInputs({
+      months: [
+        monthInput('Cash Main', '2026-10', [tx(), tx({ subcategory: 'Restaurants' })]),
+        monthInput('Cash Main', '2026-09', [tx({ date: '2026-09-02', subcategory: 'Restaurants' })]),
+        monthInput('Cash Main', '2026-08', [tx({ date: '2026-08-02', subcategory: 'Rent' })]),
+      ],
+    }),
+    budgetInput('2026-10', [{ subcategory: 'Groceries', plannedCents: 1 }]),
+    budgetInput('2026-09', [{ subcategory: 'Rent', plannedCents: 1 }]),
+  ])
+
+  it('counts the month files and budgets that change and the transactions that move', () => {
+    expect(migrationImpact(snap, ['Groceries'])).toEqual({ files: 2, transactions: 1 })
+    expect(migrationImpact(snap, ['Groceries', 'Restaurants'])).toEqual({ files: 3, transactions: 3 })
+  })
+
+  it('is zero when nothing uses the subcategories', () => {
+    expect(migrationImpact(snap, ['Tolls'])).toEqual({ files: 0, transactions: 0 })
+  })
+})
 
 describe('step navigation', () => {
   it('walks the steps in order and stops at both ends', () => {

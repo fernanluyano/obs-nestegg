@@ -6,8 +6,10 @@ import { t } from '../labels'
 export class ConfirmModal extends Modal {
   private message: string
   private onConfirm: () => void | Promise<void>
+  private confirmed = false
 
-  constructor(app: App, message: string, onConfirm: () => void | Promise<void>) {
+  // `onDecline` runs when the modal closes without being confirmed (Cancel or Escape).
+  constructor(app: App, message: string, onConfirm: () => void | Promise<void>, private onDecline?: () => void) {
     super(app)
     this.message = message
     this.onConfirm = onConfirm
@@ -19,11 +21,14 @@ export class ConfirmModal extends Modal {
     const row = contentEl.createDiv('ne-btn-row')
     const confirmBtn = row.createEl('button', { text: t('ui.confirm'), cls: 'mod-warning' })
     confirmBtn.dataset['action'] = 'confirm'
-    confirmBtn.addEventListener('click', () => { this.close(); void this.onConfirm() })
+    confirmBtn.addEventListener('click', () => { this.confirmed = true; this.close(); void this.onConfirm() })
     const cancelBtn = row.createEl('button', { text: t('ui.cancel') })
     cancelBtn.dataset['action'] = 'cancel'
     cancelBtn.addEventListener('click', () => this.close())
   }
 
-  onClose() { this.contentEl.empty() }
+  onClose() {
+    this.contentEl.empty()
+    if (!this.confirmed) this.onDecline?.()
+  }
 }

@@ -79,6 +79,20 @@ function subcategoryImpact(snapshot: Snapshot, subcategory: string, extraFiles: 
   return { files, transactions }
 }
 
+// Moving transactions off removed subcategories rewrites the month files that hold them and the
+// budgets that plan them; the category note changes by the removal itself, not by the move.
+export function migrationImpact(snapshot: Snapshot, subcategories: string[]): RenameImpact {
+  const impact = { files: 0, transactions: 0 }
+  for (const month of snapshot.months) {
+    const used = month.transactions.filter(tx => subcategories.includes(tx.subcategory)).length
+    if (used === 0) continue
+    impact.files++
+    impact.transactions += used
+  }
+  impact.files += snapshot.budgets.filter(b => b.lines.some(l => subcategories.includes(l.subcategory))).length
+  return impact
+}
+
 // The category note itself is rewritten too, hence one extra file.
 export function subcategoryRenameImpact(snapshot: Snapshot, subcategory: string): RenameImpact {
   return subcategoryImpact(snapshot, subcategory, 1)
