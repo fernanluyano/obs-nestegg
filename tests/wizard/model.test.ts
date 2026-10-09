@@ -1,15 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import type { Category } from '../../domain/types'
 import { buildSnapshot, emptySnapshot } from '../../snapshot/snapshot'
 import {
   accountRenameImpact, canAdvance, canRemoveAccount, categoryRenameImpact, checkBalance, migrationImpact, needsSetup, nextStep,
   prevStep, subcategoryRenameImpact, WIZARD_STEPS,
 } from '../../wizard/model'
-import { account, budgetInput, categoryInput, monthInput, settingsInput, tx, vaultInputs } from '../helpers/fixtures'
+import { account, budgetInput, category, categoryInput, monthInput, settingsInput, tx, vaultInputs } from '../helpers/fixtures'
 import { accountInput } from '../helpers/fixtures'
 
 const card = account({ name: 'Card', accountType: 'creditCard' })
-const food: Category = { name: 'Food', categoryType: 'expense', subcategories: ['Groceries', 'Food - Misc'] }
+const food = category('Food', 'expense', ['Groceries', 'Food - Misc'])
 
 describe('migrationImpact', () => {
   const snap = buildSnapshot([
@@ -71,13 +70,13 @@ describe('canAdvance', () => {
   })
 
   it('names the first category that has no subcategory', () => {
-    const empty: Category = { name: 'Hollow', categoryType: 'expense', subcategories: [] }
+    const empty = category('Hollow', 'expense', [])
     const snapshot = buildSnapshot([categoryInput(food), categoryInput(empty)])
     expect(canAdvance('categories', snapshot)).toEqual({ ok: false, reason: 'wizard.emptyCategory', vars: { name: 'Hollow' } })
   })
 
   it('counts Misc as a subcategory', () => {
-    const miscOnly: Category = { name: 'Lifestyle', categoryType: 'expense', subcategories: ['Lifestyle - Misc'] }
+    const miscOnly = category('Lifestyle', 'expense', ['Lifestyle - Misc'])
     expect(canAdvance('categories', buildSnapshot([categoryInput(miscOnly)]))).toEqual({ ok: true })
   })
 
@@ -120,21 +119,28 @@ describe('canRemoveAccount', () => {
 
 describe('checkBalance', () => {
   it('requires the balance to be entered, but accepts zero', () => {
-    expect(checkBalance('')).toEqual({ ok: false, message: 'err.balanceRequired' })
-    expect(checkBalance('   ')).toEqual({ ok: false, message: 'err.balanceRequired' })
-    expect(checkBalance('0')).toEqual({ ok: true, cents: 0 })
-    expect(checkBalance('0.00')).toEqual({ ok: true, cents: 0 })
+    expect(checkBalance('', 'cash')).toEqual({ ok: false, message: 'err.balanceRequired' })
+    expect(checkBalance('   ', 'cash')).toEqual({ ok: false, message: 'err.balanceRequired' })
+    expect(checkBalance('0', 'cash')).toEqual({ ok: true, cents: 0 })
+    expect(checkBalance('0.00', 'loan')).toEqual({ ok: true, cents: 0 })
   })
 
   it('parses to cents from the digits', () => {
-    expect(checkBalance('1234.50')).toEqual({ ok: true, cents: 123450 })
-    expect(checkBalance('1.15')).toEqual({ ok: true, cents: 115 })
+    expect(checkBalance('1234.50', 'cash')).toEqual({ ok: true, cents: 123450 })
+    expect(checkBalance('1.15', 'cash')).toEqual({ ok: true, cents: 115 })
   })
 
-  it('rejects text, too many decimals and negatives', () => {
-    expect(checkBalance('abc')).toEqual({ ok: false, message: 'err.amountInvalid' })
-    expect(checkBalance('1.234')).toEqual({ ok: false, message: 'err.amountInvalid' })
-    expect(checkBalance('-5')).toEqual({ ok: false, message: 'err.balanceNegative' })
+  it('rejects text, too many decimals and a negative cash balance', () => {
+    expect(checkBalance('abc', 'cash')).toEqual({ ok: false, message: 'err.amountInvalid' })
+    expect(checkBalance('1.234', 'cash')).toEqual({ ok: false, message: 'err.amountInvalid' })
+    expect(checkBalance('-5', 'cash')).toEqual({ ok: false, message: 'err.balanceNegative' })
+  })
+
+  it('takes a debt as typed, negative, and rejects it positive', () => {
+    for (const type of ['creditCard', 'loan'] as const) {
+      expect(checkBalance('-3000', type)).toEqual({ ok: true, cents: -300000 })
+      expect(checkBalance('3000', type)).toEqual({ ok: false, message: 'err.debtBalancePositive' })
+    }
   })
 })
 

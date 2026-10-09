@@ -53,6 +53,72 @@ describe("parseAccountProps", () => {
 	});
 });
 
+describe("loan accounts", () => {
+	const loan: Account = {
+		...account, name: "Mortgage", accountType: "loan", enteredBalanceCents: -20000000, balanceCents: -20000000,
+		loanKind: "mortgage", termMonths: 360, startDate: "2024-03-01", interest: 6.25, paymentSubcategory: "Mortgage payment",
+	};
+	const base = { name: "Loan", accountType: "loan", enteredBalanceAsOf: "2026-10-02", loanKind: "car" };
+
+	it("round trips the kind, plan fields and payment category", () => {
+		expect(parseAccountProps(parseProps(buildAccountNote(loan)))).toEqual({ ok: true, account: loan });
+	});
+
+	it("reads Obsidian's already-parsed numbers the same way", () => {
+		expect(parseAccountProps({ ...base, termMonths: 60, interest: 4.5 })).toMatchObject({ ok: true, account: { termMonths: 60, interest: 4.5 } });
+	});
+
+	it("loads with just a kind, leaving the plan fields unset", () => {
+		const parsed = parseAccountProps(base);
+		expect(parsed).toMatchObject({ ok: true, account: { loanKind: "car" } });
+		if (parsed.ok) for (const key of ["termMonths", "startDate", "interest", "paymentSubcategory"]) expect(parsed.account).not.toHaveProperty(key);
+	});
+
+	it("treats blank plan fields as not set", () => {
+		expect(parseAccountProps({ ...base, termMonths: "", startDate: "", interest: "" })).toMatchObject({ ok: true });
+	});
+
+	it("is invalid with a missing or unknown loan kind", () => {
+		expect(parseAccountProps({ ...base, loanKind: undefined })).toMatchObject({ ok: false });
+		expect(parseAccountProps({ ...base, loanKind: "boat" })).toMatchObject({ ok: false });
+	});
+
+	it.each([
+		["termMonths", 0],
+		["termMonths", -12],
+		["termMonths", 12.5],
+		["termMonths", "soon"],
+		["startDate", "2024-13-01"],
+		["startDate", "march"],
+		["interest", -1],
+		["interest", "6.2555"],
+		["interest", "high"],
+	])("is invalid with %s of %j", (key, value) => {
+		expect(parseAccountProps({ ...base, [key]: value })).toMatchObject({ ok: false });
+	});
+
+	it("ignores the plan fields on cash and credit card accounts", () => {
+		const plan = { loanKind: "car", termMonths: 12, startDate: "2024-01-01", interest: 5 };
+		for (const accountType of ["cash", "creditCard"]) {
+			const parsed = parseAccountProps({ name: "A", accountType, enteredBalanceAsOf: "2026-10-02", ...plan });
+			expect(parsed).toMatchObject({ ok: true });
+			if (parsed.ok) for (const key of Object.keys(plan)) expect(parsed.account).not.toHaveProperty(key);
+		}
+	});
+
+	it("keeps the payment category on a credit card and drops it on cash", () => {
+		const props = { name: "A", enteredBalanceAsOf: "2026-10-02", paymentSubcategory: "Credit card payment" };
+		expect(parseAccountProps({ ...props, accountType: "creditCard" })).toMatchObject({ account: { paymentSubcategory: "Credit card payment" } });
+		const cash = parseAccountProps({ ...props, accountType: "cash" });
+		if (cash.ok) expect(cash.account).not.toHaveProperty("paymentSubcategory");
+	});
+
+	it("writes the loan properties only for a loan", () => {
+		expect(buildAccountNote(loan)).toContain("loanKind: mortgage\ntermMonths: 360\nstartDate: 2024-03-01\ninterest: 6.25");
+		expect(buildAccountNote(account)).not.toMatch(/loanKind|termMonths|startDate|interest|paymentSubcategory/);
+	});
+});
+
 describe("unbalancedTagPatch", () => {
 	const note = (tags: string) => `---\ntags: ${tags}\nname: A\n---\n`;
 

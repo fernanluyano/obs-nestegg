@@ -35,6 +35,21 @@ describe("typeOf", () => {
 	});
 });
 
+describe("summarize with debt payments", () => {
+	it("counts a debt payment as spending once, through its outgoing row", () => {
+		const out = tx({ subcategory: "Loan payment", amountCents: -185453, fromTo: "House" });
+		const landing = tx({ subcategory: "Loan payment", amountCents: 185453, fromTo: "Cash Main" });
+		expect(summarize([out], index)).toEqual({ incomeCents: 0, expenseCents: 185453 });
+		expect(summarize([landing], index)).toEqual({ incomeCents: 0, expenseCents: 0 });
+		expect(summarize([out, landing, tx({ amountCents: -1000 })], index)).toEqual({ incomeCents: 0, expenseCents: 186453 });
+	});
+
+	it("still leaves plain transfers out", () => {
+		const rows = [tx({ subcategory: "Account transfer", amountCents: -5000, fromTo: "Savings" }), tx({ subcategory: "Credit card payment", amountCents: -4000, fromTo: "Card" })];
+		expect(summarize(rows, index)).toEqual({ incomeCents: 0, expenseCents: 0 });
+	});
+});
+
 describe("summarize", () => {
 	it("sums income and negates expenses, netting refunds", () => {
 		const rows = [

@@ -6,15 +6,16 @@ export function typeOf(tx: Transaction, index: CategoryIndex): TransactionType |
 }
 
 // Income is the sum of income-category amounts; expense is the negated sum of expense-category
-// amounts, so a refund (positive, under an expense subcategory) nets the total down.
-// Transfers and unknown subcategories count in neither.
+// amounts, so a refund (positive, under an expense subcategory) nets the total down. A debt payment
+// is spending too, counted once: only its outgoing row (negative, in the cash account) counts, never
+// the matching positive row that lands on the loan. Transfers and unknown subcategories count in neither.
 export function summarize(transactions: Transaction[], index: CategoryIndex): MonthSummary {
 	let incomeCents = 0;
 	let expenseCents = 0;
 	for (const tx of transactions) {
 		const type = index.typeOf(tx.subcategory);
 		if (type === "income") incomeCents += tx.amountCents;
-		else if (type === "expense") expenseCents -= tx.amountCents;
+		else if (type === "expense" || (type === "debt" && tx.amountCents < 0)) expenseCents -= tx.amountCents;
 	}
 	return { incomeCents, expenseCents };
 }

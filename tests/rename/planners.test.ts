@@ -125,7 +125,7 @@ describe("planCategoryRename", () => {
 
 	it("rejects a rename whose Misc name is already taken by a subcategory", async () => {
 		const clash = { ...ctx, snapshot: buildSnapshot(vaultInputs()) };
-		clash.snapshot.categories.find((c) => c.category.name === "Housing")!.category.subcategories.push("Eats - Misc");
+		clash.snapshot.categories.find((c) => c.category.name === "Housing")!.category.subcategories.push({ name: "Eats - Misc", type: "expense" });
 		await expect(planCategoryRename(clash, "Food", "Eats")).rejects.toThrow(/Eats - Misc/);
 	});
 });

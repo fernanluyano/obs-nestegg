@@ -6,7 +6,7 @@ import { validateSnapshot } from "../../validation/validate";
 import { LedgerError } from "../../services/errors";
 import type { LedgerEntry } from "../../domain/types";
 import { monthInput, tx } from "../helpers/fixtures";
-import { loadedLedger } from "../helpers/ledgerFixture";
+import { addMortgage, loadedLedger } from "../helpers/ledgerFixture";
 
 const entry = (over: Partial<LedgerEntry> = {}): LedgerEntry => ({
 	account: "Cash Main", date: "2026-10-03", merchant: " Publix ", subcategory: "Groceries",
@@ -94,7 +94,42 @@ describe("addTransfer", () => {
 		const { ledger } = await loadedLedger();
 		await ledger.transactions.add(entry({ account: "Card", amountCents: -3000 }));
 		await ledger.transactions.addTransfer(transfer({ subcategory: "Credit card payment", to: "Card", cents: 1000 }));
-		expect(balance(ledger, "Card")).toBe(2000);
+		expect(balance(ledger, "Card")).toBe(-2000);
+	});
+
+	it("refuses a transfer out of a debt account, and a plain row on a loan", async () => {
+		const { ledger } = await loadedLedger();
+		await ledger.accounts.create({ name: "Mortgage", accountType: "loan", loanKind: "mortgage", enteredBalanceCents: -20000000, enteredBalanceAsOf: "2026-10-01" });
+		await expect(ledger.transactions.addTransfer(transfer({ from: "Card", to: "Savings" }))).rejects.toThrow(LedgerError);
+		await expect(ledger.transactions.addTransfer(transfer({ from: "Mortgage", to: "Savings" }))).rejects.toThrow(LedgerError);
+		await expect(ledger.transactions.add(entry({ account: "Mortgage" }))).rejects.toThrow(LedgerError);
+	});
+
+	it("pays a loan down by debt payment", async () => {
+		const { ledger } = await loadedLedger();
+		await addMortgage(ledger);
+		await ledger.transactions.addTransfer(transfer({ subcategory: "Loan payment", to: "Mortgage", cents: 50000 }));
+		expect(balance(ledger, "Mortgage")).toBe(-20000000 + 50000);
+		expect(balance(ledger, "Cash Main")).toBe(200000 - 50000);
+	});
+
+	it("keeps transfers and debt payments apart", async () => {
+		const { ledger } = await loadedLedger();
+		await addMortgage(ledger);
+		await expect(ledger.transactions.addTransfer(transfer({ to: "Mortgage" }))).rejects.toThrow(LedgerError);
+		await expect(ledger.transactions.addTransfer(transfer({ subcategory: "Credit card payment", to: "Mortgage" }))).rejects.toThrow(LedgerError);
+		await expect(ledger.transactions.addTransfer(transfer({ subcategory: "Loan payment", to: "Savings" }))).rejects.toThrow(LedgerError);
+		await expect(ledger.transactions.addTransfer(transfer({ subcategory: "Loan payment", to: "Card" }))).rejects.toThrow(LedgerError);
+	});
+
+	it("keeps a debt payment on the loan its subcategory is linked to", async () => {
+		const { ledger } = await loadedLedger();
+		await addMortgage(ledger);
+		await addMortgage(ledger, "Car");
+		await ledger.accounts.update("Car", { paymentSubcategory: "Loan payment" });
+		await expect(ledger.transactions.addTransfer(transfer({ subcategory: "Loan payment", to: "Mortgage" }))).rejects.toThrow(LedgerError);
+		await ledger.transactions.addTransfer(transfer({ subcategory: "Loan payment", to: "Car" }));
+		expect(balance(ledger, "Car")).toBe(-20000000 + 5000);
 	});
 });
 

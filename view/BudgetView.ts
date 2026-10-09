@@ -1,11 +1,12 @@
 import { Events, ItemView, Notice, ViewStateResult, WorkspaceLeaf } from 'obsidian'
-import { parsePlanned, type BudgetProgress, type BudgetSection } from '../domain/budget'
+import { categoryTotals, parsePlanned, sectionsByCategory, type BudgetProgress, type BudgetSection } from '../domain/budget'
 import { centsToDecimal, formatCents } from '../domain/money'
 import { t, tn } from '../labels'
 import type { Ledger } from '../services/Ledger'
 import { budgetSheetOf, findBudget } from '../snapshot/budgetQueries'
 import { currentYearMonth } from '../utils'
 import { barWidth, leftText } from './budgetRow'
+import { NESTEGG_ICON } from '../plugin/icon'
 import { createMetric, renderCard } from './components'
 import { renderSharedHeader } from './SharedHeader'
 
@@ -21,7 +22,7 @@ export class BudgetView extends ItemView {
 
   getViewType() { return BUDGET_VIEW_TYPE }
   getDisplayText() { return t('budget.title') }
-  getIcon() { return 'wallet' }
+  getIcon() { return NESTEGG_ICON }
 
   async setState(state: Record<string, unknown>, result: ViewStateResult) {
     if (state?.yearMonth) this.yearMonth = state.yearMonth as string
@@ -70,7 +71,7 @@ export class BudgetView extends ItemView {
   }
 
   private renderSheet(parent: HTMLElement) {
-    const { income, expense, summary } = budgetSheetOf(this.ledger.snapshot, this.yearMonth)
+    const { income, expense, payments, summary } = budgetSheetOf(this.ledger.snapshot, this.yearMonth)
 
     const metrics = parent.createDiv('ne-metrics')
     createMetric(metrics, t('budget.income'), summary.incomeActualCents, 'income')
@@ -83,20 +84,23 @@ export class BudgetView extends ItemView {
       text: `${t('budget.planned')}: ${t('budget.income')} ${formatCents(summary.incomePlannedCents)} · ${t('budget.expenses')} ${formatCents(summary.expensePlannedCents)}`,
     })
 
-    for (const section of [...income, ...expense]) this.renderSection(parent, section)
+    for (const group of sectionsByCategory([...income, ...expense, ...payments])) this.renderCategory(parent, group)
   }
 
-  private renderSection(parent: HTMLElement, section: BudgetSection) {
+  // One card per category. Its header totals the expense and debt payment rows together; a category
+  // that also holds income rows lists them under their own heading, outside that total.
+  private renderCategory(parent: HTMLElement, group: BudgetSection[]) {
+    const [main] = group
+    const totals = categoryTotals(group)
     const card = renderCard(parent, { className: 'ne-budget-section' })
-    const key = `${section.type}:${section.category}`
-    const collapsed = this.collapsed.has(key)
-    if (collapsed) card.addClass('is-collapsed')
+    const key = main.category
+    if (this.collapsed.has(key)) card.addClass('is-collapsed')
 
     const head = card.createDiv('ne-budget-row ne-budget-head')
-    head.createSpan({ text: section.category, cls: 'ne-budget-name' })
-    head.createSpan({ text: formatCents(section.plannedCents), cls: 'ne-budget-amount ne-budget-muted' })
-    head.createSpan({ text: formatCents(section.actualCents), cls: 'ne-budget-amount' })
-    this.renderBar(head, section.progress)
+    head.createSpan({ text: main.category, cls: 'ne-budget-name' })
+    head.createSpan({ text: formatCents(totals.plannedCents), cls: 'ne-budget-amount ne-budget-muted' })
+    head.createSpan({ text: formatCents(totals.actualCents), cls: 'ne-budget-amount' })
+    this.renderBar(head, totals.progress)
     head.addEventListener('click', () => {
       if (this.collapsed.has(key)) this.collapsed.delete(key)
       else this.collapsed.add(key)
@@ -104,10 +108,18 @@ export class BudgetView extends ItemView {
     })
 
     const body = card.createDiv('ne-budget-body')
+    for (const [i, section] of group.entries()) {
+      if (group.length > 1 && i > 0) body.createDiv({ text: t(`label.type.${section.type}`), cls: 'ne-budget-subhead' })
+      this.renderRows(body, section)
+    }
+  }
+
+  private renderRows(body: HTMLElement, section: BudgetSection) {
     const cols = body.createDiv('ne-budget-row ne-budget-cols')
     cols.createSpan()
     cols.createSpan({ text: t('budget.planned'), cls: 'ne-budget-amount' })
-    cols.createSpan({ text: section.type === 'income' ? t('budget.received') : t('budget.spent'), cls: 'ne-budget-amount' })
+    const actualLabel = { income: 'budget.received', expense: 'budget.spent', debt: 'budget.paid' } as const
+    cols.createSpan({ text: t(actualLabel[section.type]), cls: 'ne-budget-amount' })
     cols.createSpan()
 
     for (const row of section.rows) {

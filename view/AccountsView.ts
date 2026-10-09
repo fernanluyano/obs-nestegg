@@ -1,10 +1,13 @@
 import { Events, ItemView, Notice, WorkspaceLeaf } from 'obsidian'
+import { todayString } from '../domain/dates'
 import { formatCents } from '../domain/money'
+import { isLiability } from '../domain/types'
 import { t, tn } from '../labels'
+import { AddAccountModal } from '../modal/AddAccountModal'
 import { openAccountEdit, openBalanceCorrection } from '../modal/editAccountFlow'
 import type { Ledger } from '../services/Ledger'
 import { accountBalances } from '../snapshot/queries'
-import { renderAddAccountForm } from './accounts/addAccountForm'
+import { loanScheduleText } from './accounts/loanScheduleText'
 import { renderCard } from './components'
 import { renderSharedHeader } from './SharedHeader'
 
@@ -31,12 +34,19 @@ export class AccountsView extends ItemView {
   }
 
   private async run(action: () => Promise<void>, notice?: string): Promise<void> {
+    await this.runChecked(action, notice)
+  }
+
+  // Same as `run`, telling the caller whether the action went through.
+  private async runChecked(action: () => Promise<void>, notice?: string): Promise<boolean> {
     try {
       await action()
       if (notice) new Notice(notice)
       this.app.workspace.trigger('nestegg:refresh')
+      return true
     } catch (e) {
       new Notice(tn('notice.actionFailed', { reason: e instanceof Error ? e.message : String(e) }))
+      return false
     }
   }
 
@@ -53,7 +63,7 @@ export class AccountsView extends ItemView {
       card.createEl('p', { text: t('settings.noActiveAccounts'), cls: 'ne-settings-empty' })
     }
     for (const { account, balanceCents } of balances) {
-      const isDebt = account.accountType === 'creditCard'
+      const isDebt = isLiability(account.accountType)
       const row = card.createDiv('ne-wallet-row')
       const info = row.createDiv('ne-wallet-row-info')
       info.createSpan('ne-account-dot').style.background = account.color
@@ -63,6 +73,8 @@ export class AccountsView extends ItemView {
           tn('accounts.balanceAsOf', { date: account.enteredBalanceAsOf }),
         cls: 'ne-wallet-row-desc',
       })
+      const schedule = loanScheduleText(account, todayString())
+      if (schedule) info.createSpan({ text: schedule, cls: 'ne-wallet-row-desc' })
       if (account.unbalancedCents) {
         info.createSpan({
           text: tn('accounts.unbalanced', { diff: formatCents(Math.abs(account.unbalancedCents)) }),
@@ -70,7 +82,7 @@ export class AccountsView extends ItemView {
         })
       }
       row.createSpan({
-        text: (isDebt ? t('settings.creditDebtPrefix') : '') + formatCents(balanceCents),
+        text: isDebt ? t('settings.creditDebtPrefix') + formatCents(-balanceCents) : formatCents(balanceCents),
         cls: `ne-wallet-row-balance${isDebt ? ' is-debt' : ''}`,
       })
       const actions = row.createDiv('ne-wallet-row-actions')
@@ -80,9 +92,8 @@ export class AccountsView extends ItemView {
         .addEventListener('click', () => openAccountEdit(this.app, this.ledger, account, (a) => this.run(a)))
     }
 
-    const add = contentEl.createDiv('ne-accounts-add')
-    add.createEl('h4', { text: t('settings.addAccount') })
-    renderAddAccountForm(add, { app: this.app, ledger: this.ledger, run: (action, notice) => this.run(action, notice) })
+    contentEl.createDiv('ne-accounts-add').createEl('button', { text: t('settings.addAccount'), cls: 'mod-cta' })
+      .addEventListener('click', () => new AddAccountModal(this.app, this.ledger, (action, notice) => this.runChecked(action, notice)).open())
     contentEl.scrollTop = savedScroll
   }
 }

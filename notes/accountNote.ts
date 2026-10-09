@@ -1,10 +1,40 @@
+import { loanFieldProblem } from "../domain/accounts";
 import { DEFAULT_ACCOUNT_COLOR, isHexColor } from "../domain/colors";
 import { isIsoDate } from "../domain/dates";
-import { ACCOUNT_TYPES, type Account, type AccountType } from "../domain/types";
+import { ACCOUNT_TYPES, isLiability, LOAN_KINDS, type Account, type AccountType, type LoanKind } from "../domain/types";
 import { bool, buildNote, int, list, parseProps, str, type Props, type RawProps } from "./frontmatter";
 import { NOTE_TAGS, UNBALANCED_TAG } from "./kinds";
 
 export type ParsedAccount = { ok: true; account: Account } | { ok: false; reason: string };
+
+type Fields<T> = { ok: true; fields: T } | { ok: false; reason: string };
+type LoanFields = Pick<Account, "loanKind" | "termMonths" | "startDate" | "interest">;
+
+const isSet = (props: RawProps, key: string) => props[key] !== undefined && props[key] !== "";
+
+// A loan's kind is required; the plan fields are optional but must be valid when present.
+function parseLoanFields(props: RawProps): Fields<LoanFields> {
+	const loanKind = str(props, "loanKind");
+	if (!loanKind || !LOAN_KINDS.includes(loanKind as LoanKind)) return { ok: false, reason: `loanKind must be one of ${LOAN_KINDS.join(", ")}` };
+	const fields: LoanFields = { loanKind: loanKind as LoanKind };
+
+	if (isSet(props, "termMonths")) {
+		const termMonths = int(props, "termMonths");
+		if (termMonths === undefined || termMonths < 1) return { ok: false, reason: "termMonths must be a whole number of at least 1" };
+		fields.termMonths = termMonths;
+	}
+	if (isSet(props, "startDate")) {
+		const startDate = str(props, "startDate");
+		if (!startDate || !isIsoDate(startDate)) return { ok: false, reason: "startDate must be a YYYY-MM-DD date" };
+		fields.startDate = startDate;
+	}
+	if (isSet(props, "interest")) {
+		const interest = Number(str(props, "interest")?.trim());
+		if (Number.isNaN(interest) || loanFieldProblem({ interest })) return { ok: false, reason: "interest must be a percent of zero or more with up to three decimals" };
+		fields.interest = interest;
+	}
+	return { ok: true, fields };
+}
 
 export function parseAccountProps(props: RawProps): ParsedAccount {
 	const name = str(props, "name")?.trim();
@@ -22,6 +52,14 @@ export function parseAccountProps(props: RawProps): ParsedAccount {
 	const active = bool(props, "active") ?? true;
 	const color = str(props, "color");
 	const unbalancedCents = int(props, "unbalancedCents");
+
+	let loan: LoanFields = {};
+	if (accountType === "loan") {
+		const parsed = parseLoanFields(props);
+		if (!parsed.ok) return parsed;
+		loan = parsed.fields;
+	}
+	const paymentSubcategory = isLiability(accountType as AccountType) ? str(props, "paymentSubcategory")?.trim() : undefined;
 	return {
 		ok: true,
 		account: {
@@ -33,6 +71,8 @@ export function parseAccountProps(props: RawProps): ParsedAccount {
 			enteredBalanceAsOf,
 			balanceCents: int(props, "balanceCents") ?? enteredBalanceCents,
 			color: color && isHexColor(color) ? color.toLowerCase() : DEFAULT_ACCOUNT_COLOR,
+				...loan,
+				...(paymentSubcategory ? { paymentSubcategory } : {}),
 			...(unbalancedCents ? { unbalancedCents } : {}),
 		},
 	};
@@ -52,6 +92,11 @@ export function accountProps(account: Account, extra: Props = {}): Props {
 		balanceCents: account.balanceCents,
 		color: account.color,
 		...(account.unbalancedCents ? { unbalancedCents: account.unbalancedCents } : {}),
+		loanKind: account.loanKind,
+		termMonths: account.termMonths,
+		startDate: account.startDate,
+		interest: account.interest,
+		paymentSubcategory: account.paymentSubcategory,
 		...extra,
 	};
 }

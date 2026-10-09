@@ -1,10 +1,12 @@
 import { Notice } from 'obsidian'
+import { todayString } from '../../domain/dates'
 import { formatCents } from '../../domain/money'
-import type { Account, AccountType } from '../../domain/types'
+import { isLiability, type Account, type AccountType } from '../../domain/types'
 import { t, tn } from '../../labels'
 import { ConfirmModal } from '../../modal/ConfirmModal'
 import { openAccountEdit } from '../../modal/editAccountFlow'
 import { accountBalances, accountHasTransactions } from '../../snapshot/queries'
+import { loanScheduleText } from '../../view/accounts/loanScheduleText'
 import { ACCOUNTS_VIEW_TYPE } from '../../view/AccountsView'
 import { openOrRevealView } from '../../view/openView'
 import { canAdvance, canRemoveAccount } from '../model'
@@ -45,14 +47,16 @@ function renderActive(container: HTMLElement, ctx: WizardContext): void {
 }
 
 function renderActiveRow(group: HTMLElement, ctx: WizardContext, account: Account, balanceCents: number): void {
-  const isDebt = account.accountType === 'creditCard'
+  const isDebt = isLiability(account.accountType)
   const row = group.createDiv('ne-wallet-row')
   const info = row.createDiv('ne-wallet-row-info')
   info.createSpan('ne-account-dot').style.background = account.color
   info.createSpan({ text: account.name, cls: 'ne-wallet-row-name' })
   badge(info, account.accountType)
+  const schedule = loanScheduleText(account, todayString())
+  if (schedule) info.createSpan({ text: schedule, cls: 'ne-wallet-row-desc' })
   row.createSpan({
-    text: (isDebt ? t('settings.creditDebtPrefix') : '') + formatCents(balanceCents),
+    text: isDebt ? t('settings.creditDebtPrefix') + formatCents(-balanceCents) : formatCents(balanceCents),
     cls: `ne-wallet-row-balance${isDebt ? ' is-debt' : ''}`,
   })
 

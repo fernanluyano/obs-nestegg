@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { buildCategoryIndex } from "../../domain/categories";
-import { CREDIT_CARD_PAYMENT, defaultCategories } from "../../domain/defaults";
+import { CREDIT_CARD_PAYMENT, defaultCategories, LOAN_PAYMENT } from "../../domain/defaults";
 import { entryProblem, transferProblem } from "../../domain/entryRules";
 import type { LedgerEntry } from "../../domain/types";
 import type { TransferInput } from "../../domain/transactions";
 import { account } from "../helpers/fixtures";
 
 const ctx = {
-	accounts: [account(), account({ name: "Savings" }), account({ name: "Card", accountType: "creditCard" })],
+	accounts: [
+		account(),
+		account({ name: "Savings" }),
+		account({ name: "Card", accountType: "creditCard" }),
+		account({ name: "Mortgage", accountType: "loan", loanKind: "mortgage" }),
+	],
 	index: buildCategoryIndex(defaultCategories()),
 };
 
@@ -34,16 +39,54 @@ describe("entryProblem", () => {
 		[{ account: "Nope" }, "unknownAccount"],
 		[{ subcategory: "Nope" }, "unknownSubcategory"],
 		[{ subcategory: "Account transfer" }, "subcategoryIsTransfer"],
+		[{ subcategory: LOAN_PAYMENT }, "subcategoryIsTransfer"],
 		[{ fromTo: "Savings" }, "unexpectedFromTo"],
+		[{ account: "Mortgage", amountCents: -500 }, "loanTransfersOnly"],
+		[{ account: "Mortgage", subcategory: "Salary", amountCents: 500 }, "loanTransfersOnly"],
 	] as const)("rejects %j as %s", (over, problem) => {
 		expect(entryProblem(entry(over), ctx)).toBe(problem);
+	});
+
+	it("still accepts spending on a credit card", () => {
+		expect(entryProblem(entry({ account: "Card" }), ctx)).toBeNull();
 	});
 });
 
 describe("transferProblem", () => {
-	it("accepts a plain transfer and a card payment", () => {
-		expect(transferProblem(transfer(), ctx)).toBeNull();
-		expect(transferProblem(transfer({ subcategory: CREDIT_CARD_PAYMENT, to: "Card" }), ctx)).toBeNull();
+	it.each([
+		["a transfer from cash to cash", { to: "Savings" }],
+		["a transfer from cash to a credit card", { to: "Card" }],
+		["a card payment from cash to a card", { subcategory: CREDIT_CARD_PAYMENT, to: "Card" }],
+		["a debt payment from cash to a loan", { subcategory: LOAN_PAYMENT, to: "Mortgage" }],
+	])("accepts %s", (_, over) => {
+		expect(transferProblem(transfer(over), ctx)).toBeNull();
+	});
+
+	it("keeps a transfer off a loan and a debt payment off everything but a loan", () => {
+		expect(transferProblem(transfer({ to: "Mortgage" }), ctx)).toBe("transferToLoan");
+		expect(transferProblem(transfer({ subcategory: CREDIT_CARD_PAYMENT, to: "Mortgage" }), ctx)).toBe("transferToLoan");
+		expect(transferProblem(transfer({ subcategory: LOAN_PAYMENT, to: "Savings" }), ctx)).toBe("debtToNonLoan");
+		expect(transferProblem(transfer({ subcategory: LOAN_PAYMENT, to: "Card" }), ctx)).toBe("debtToNonLoan");
+	});
+
+	it("keeps a debt payment on the loan its subcategory is linked to", () => {
+		const accounts = [...ctx.accounts, account({ name: "Car", accountType: "loan", loanKind: "car", paymentSubcategory: LOAN_PAYMENT })];
+		const linked = { ...ctx, accounts };
+		expect(transferProblem(transfer({ subcategory: LOAN_PAYMENT, to: "Car" }), linked)).toBeNull();
+		expect(transferProblem(transfer({ subcategory: LOAN_PAYMENT, to: "Mortgage" }), linked)).toBe("wrongDebtAccount");
+	});
+
+	it.each([
+		["card to cash", "Card", "Savings"],
+		["card to card", "Card", "Card2"],
+		["card to loan", "Card", "Mortgage"],
+		["loan to cash", "Mortgage", "Savings"],
+		["loan to card", "Mortgage", "Card"],
+	])("rejects %s whatever the subcategory", (_, from, to) => {
+		const accounts = [...ctx.accounts, account({ name: "Card2", accountType: "creditCard" })];
+		for (const subcategory of ["Account transfer", CREDIT_CARD_PAYMENT, LOAN_PAYMENT]) {
+			expect(transferProblem(transfer({ from, to, subcategory }), { ...ctx, accounts })).toBe("fromMustBeCash");
+		}
 	});
 
 	it.each([
@@ -56,8 +99,6 @@ describe("transferProblem", () => {
 		[{ subcategory: "Nope" }, "unknownSubcategory"],
 		[{ subcategory: "Groceries" }, "subcategoryNotTransfer"],
 		[{ to: "Cash Main" }, "sameAccount"],
-		[{ subcategory: CREDIT_CARD_PAYMENT, from: "Card", to: "Savings" }, "fromMustNotBeCreditCard"],
-		[{ subcategory: CREDIT_CARD_PAYMENT, to: "Savings" }, "toMustBeCreditCard"],
 	] as const)("rejects %j as %s", (over, problem) => {
 		expect(transferProblem(transfer(over), ctx)).toBe(problem);
 	});

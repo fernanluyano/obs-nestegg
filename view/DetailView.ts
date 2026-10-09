@@ -18,6 +18,7 @@ import { applyFilters, countActiveFilters, emptyFilters, sortForDisplay, subtota
 import { renderBulkBar } from './detail/bulkBar'
 import { renderBalanceLegend, renderDayHeader } from './detail/dayHeader'
 import { BULK_PROBLEM_LABELS, entryKeys, pickEntries, pruneSelection, toggleAll, toggleKey } from './detail/selection'
+import { NESTEGG_ICON } from '../plugin/icon'
 import { renderTxRow } from './detail/txRow'
 import { renderSharedHeader } from './SharedHeader'
 
@@ -45,7 +46,7 @@ export class DetailView extends ItemView {
 
   getViewType() { return DETAIL_VIEW_TYPE }
   getDisplayText() { return t('detail.title') }
-  getIcon() { return 'wallet' }
+  getIcon() { return NESTEGG_ICON }
 
   async setState(state: Record<string, unknown>, result: ViewStateResult) {
     if (state?.resetFilters) this.filters = emptyFilters()

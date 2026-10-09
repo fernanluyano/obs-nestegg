@@ -1,13 +1,7 @@
-import type { TransactionType } from '../../domain/types'
+import { TRANSACTION_TYPES, type TransactionType } from '../../domain/types'
 import { t, tn } from '../../labels'
 import { runAction, type WizardContext } from '../WizardContext'
 import { renderAddRow, renderCategoryBlock } from './categoryBlock'
-
-const SECTIONS: { type: TransactionType; title: () => string }[] = [
-  { type: 'expense', title: () => t('settings.expenseCategories') },
-  { type: 'income', title: () => t('settings.incomeCategories') },
-  { type: 'transfer', title: () => t('settings.transferCategories') },
-]
 
 export function renderCategories(container: HTMLElement, ctx: WizardContext): void {
   container.createEl('p', { text: t('wizard.categories.intro') })
@@ -15,19 +9,18 @@ export function renderCategories(container: HTMLElement, ctx: WizardContext): vo
 
   const card = container.createDiv('ne-card ne-category-card')
   const all = ctx.ledger.snapshot.categories.map(c => c.category)
-  SECTIONS.forEach(({ type, title }, i) => {
+  all.forEach((category, i) => {
     if (i > 0) card.createEl('hr', { cls: 'ne-category-divider' })
-    card.createEl('div', { text: title(), cls: 'ne-setting-input-subtitle' })
-    for (const category of all.filter(c => c.categoryType === type)) renderCategoryBlock(card, ctx, category)
+    renderCategoryBlock(card, ctx, category)
   })
 
-  card.createEl('hr', { cls: 'ne-category-divider' })
-  let newType: TransactionType = 'expense'
+  if (all.length > 0) card.createEl('hr', { cls: 'ne-category-divider' })
+  let miscType: TransactionType = 'expense'
   renderAddRow(card, t('settings.categoryPlaceholder'), t('settings.addCategory'), (name) => {
-    void runAction(ctx, () => ctx.ledger.categories.createCategory(name, newType), tn('notice.categoryAdded', { name }))
+    void runAction(ctx, () => ctx.ledger.categories.createCategory(name, miscType), tn('notice.categoryAdded', { name }))
   }, (row) => {
     const select = row.createEl('select', { cls: 'dropdown' })
-    for (const { type } of SECTIONS) select.createEl('option', { value: type, text: t(`label.type.${type}`) })
-    select.addEventListener('change', () => { newType = select.value as TransactionType })
+    for (const type of TRANSACTION_TYPES) select.createEl('option', { value: type, text: t(`label.type.${type}`) })
+    select.addEventListener('change', () => { miscType = select.value as TransactionType })
   })
 }

@@ -8,6 +8,7 @@ import type { TransactionType } from '../domain/types'
 import { DETAIL_VIEW_TYPE } from './DetailView'
 import { renderSharedHeader } from './SharedHeader'
 import { Chart } from 'chart.js'
+import { NESTEGG_ICON } from '../plugin/icon'
 import { MonthData, drawIncExpChart, drawPie, getMonthRangeEndingAt } from './charts'
 
 export const DASHBOARD_VIEW_TYPE = 'nestegg-dashboard'
@@ -30,7 +31,7 @@ export class DashboardView extends ItemView {
 
   getViewType() { return DASHBOARD_VIEW_TYPE }
   getDisplayText() { return t('dashboard.title') }
-  getIcon() { return 'wallet' }
+  getIcon() { return NESTEGG_ICON }
 
   async onOpen() {
     this.registerEvent(

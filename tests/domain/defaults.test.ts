@@ -8,8 +8,12 @@ import { validateTag } from "../../utils";
 describe("withMisc", () => {
 	it("appends the category's own Misc subcategory", () => {
 		expect(withMisc("Food", "expense", ["Groceries"])).toEqual({
-			name: "Food", categoryType: "expense", subcategories: ["Groceries", "Food - Misc"],
+			name: "Food", subcategories: [{ name: "Groceries", type: "expense" }, { name: "Food - Misc", type: "expense" }],
 		});
+	});
+
+	it("gives the subcategories and the Misc the type it is given", () => {
+		for (const s of withMisc("Pay", "income", ["Salary"]).subcategories) expect(s.type).toBe("income");
 	});
 });
 
@@ -17,19 +21,19 @@ describe("defaultCategories", () => {
 	const categories = defaultCategories();
 
 	it("gives every category a Misc subcategory", () => {
-		for (const c of categories) expect(c.subcategories).toContain(miscName(c.name));
+		for (const c of categories) expect(c.subcategories.map((s) => s.name)).toContain(miscName(c.name));
 	});
 
 	it("keeps subcategory names unique across categories", () => {
 		expect(findDuplicateSubcategories(categories).size).toBe(0);
 	});
 
-	it("uses only valid names and covers all three types", () => {
+	it("uses only valid names and covers all four types", () => {
 		for (const c of categories) {
 			expect(nameProblem(c.name)).toBeNull();
-			for (const s of c.subcategories) expect(nameProblem(s)).toBeNull();
+			for (const s of c.subcategories) expect(nameProblem(s.name)).toBeNull();
 		}
-		expect(new Set(categories.map((c) => c.categoryType))).toEqual(new Set(["expense", "income", "transfer"]));
+		expect(new Set(categories.flatMap((c) => c.subcategories.map((s) => s.type)))).toEqual(new Set(["expense", "income", "transfer", "debt"]));
 	});
 });
 

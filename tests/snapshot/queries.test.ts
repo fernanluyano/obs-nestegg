@@ -7,7 +7,7 @@ import {
 import { buildSnapshot, categoryIndexOf } from "../../snapshot/snapshot";
 import { account, monthInput, tx, vaultInputs } from "../helpers/fixtures";
 
-const card = account({ name: "Card", accountType: "creditCard", enteredBalanceCents: 5000, enteredBalanceAsOf: "2026-09-30", balanceCents: 5000 });
+const card = account({ name: "Card", accountType: "creditCard", enteredBalanceCents: -5000, enteredBalanceAsOf: "2026-09-30", balanceCents: -5000 });
 const savings = account({ name: "Savings", active: false, includeInNetAsset: false, enteredBalanceCents: 99999 });
 
 const snap = buildSnapshot(
@@ -42,10 +42,10 @@ describe("account lookups", () => {
 });
 
 describe("balances", () => {
-	it("recomputes each balance from its rows, with cards as debt", () => {
+	it("recomputes each balance from its rows, with cards as negative debt", () => {
 		const b = new Map(accountBalances(snap).map((x) => [x.account.name, x.balanceCents]));
 		expect(b.get("Cash Main")).toBe(200000 - 8450 + 250000 + 1200);
-		expect(b.get("Card")).toBe(5000 + 2000);
+		expect(b.get("Card")).toBe(-5000 - 2000);
 		expect(b.get("Savings")).toBe(99999);
 	});
 
@@ -86,6 +86,14 @@ describe("month queries", () => {
 		expect([...groupByCategory(entries, index, "expense")]).toEqual([["Food", 8450 - 1200 + 2000]]);
 		expect([...groupByCategory(entries, index, "income")]).toEqual([["Income", 250000]]);
 		expect(groupByCategory([{ ...entries[0], subcategory: "Nope" }], index, "expense").size).toBe(0);
+	});
+
+	it("counts a debt payment under its category as spending, once", () => {
+		const base = { ...monthEntries(snap, "2026-10")[0], subcategory: "Loan payment", fromTo: "House" };
+		const out = { ...base, account: "Cash Main", amountCents: -185453 };
+		const landing = { ...base, account: "House", amountCents: 185453, fromTo: "Cash Main" };
+		expect([...groupByCategory([out, landing], index, "expense")]).toEqual([["Transfers", 185453]]);
+		expect(groupByCategory([out, landing], index, "income").size).toBe(0);
 	});
 });
 

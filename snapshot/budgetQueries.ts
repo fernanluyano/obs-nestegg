@@ -15,5 +15,6 @@ export function previousBudget(snapshot: Snapshot, month: string): BudgetRecord 
 
 export function budgetSheetOf(snapshot: Snapshot, month: string): BudgetSheet {
 	const lines = findBudget(snapshot, month)?.lines ?? [];
-	return buildBudgetSheet(snapshot.categories.map((c) => c.category), lines, monthEntries(snapshot, month), categoryIndexOf(snapshot));
+	const accounts = snapshot.accounts.map((a) => a.account);
+	return buildBudgetSheet(snapshot.categories.map((c) => c.category), lines, monthEntries(snapshot, month), categoryIndexOf(snapshot), accounts);
 }

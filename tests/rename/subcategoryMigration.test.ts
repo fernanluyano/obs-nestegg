@@ -54,11 +54,14 @@ describe("planSubcategoryMigration", () => {
 		await expect(planSubcategoryMigration(context(), ["Nope"], "Groceries")).rejects.toThrow(RenameError);
 	});
 
-	it("refuses a target of another type, the removed one itself, a removed sibling and Credit card payment", async () => {
+	it("refuses a target of another type, the removed one itself, a removed sibling and an unknown name", async () => {
 		await expect(planSubcategoryMigration(context(), ["Restaurants"], "Salary")).rejects.toThrow(/cannot take over/);
 		await expect(planSubcategoryMigration(context(), ["Restaurants"], "Restaurants")).rejects.toThrow(/cannot take over/);
 		await expect(planSubcategoryMigration(context(), ["Restaurants", "Groceries"], "Groceries")).rejects.toThrow(/cannot take over/);
-		await expect(planSubcategoryMigration(context(), ["Account transfer"], "Credit card payment")).rejects.toThrow(/cannot take over/);
 		await expect(planSubcategoryMigration(context(), ["Restaurants"], "Nope")).rejects.toThrow(/cannot take over/);
+	});
+
+	it("takes Credit card payment as a target like any other transfer subcategory", async () => {
+		await expect(planSubcategoryMigration(context(), ["Account transfer"], "Credit card payment")).resolves.toBeDefined();
 	});
 });

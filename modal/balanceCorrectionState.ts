@@ -1,8 +1,9 @@
-import { currentBalance } from '../domain/accounts'
+import { balanceSignProblem, currentBalance } from '../domain/accounts'
 import { isIsoDate } from '../domain/dates'
 import { parseCents } from '../domain/money'
-import type { Account, Transaction } from '../domain/types'
+import type { Account, AccountType, Transaction } from '../domain/types'
 import type { LabelKey } from '../labels'
+import { BALANCE_SIGN_MESSAGES } from '../wizard/model'
 
 export interface CorrectionForm {
   balance: string
@@ -49,16 +50,19 @@ export function correctionPatch(input: ParsedCorrection, preview: CorrectionPrev
   }
 }
 
-export function parseCorrectionForm(form: CorrectionForm): CorrectionParse {
+// Amounts are stored as typed, so a debt is entered negative.
+export function parseCorrectionForm(form: CorrectionForm, type: AccountType): CorrectionParse {
   if (form.balance.trim() === '') return { ok: false, reason: 'err.balanceRequired' }
   const balanceCents = parseCents(form.balance)
   if (balanceCents === null) return { ok: false, reason: 'err.amountInvalid' }
-  if (balanceCents < 0) return { ok: false, reason: 'err.balanceNegative' }
+  const balanceProblem = balanceSignProblem(type, balanceCents)
+  if (balanceProblem) return { ok: false, reason: BALANCE_SIGN_MESSAGES[balanceProblem] }
   if (!isIsoDate(form.asOf)) return { ok: false, reason: 'err.invalidDate' }
   if (form.knownToday.trim() === '') return { ok: true, value: { balanceCents, asOf: form.asOf, knownTodayCents: null } }
   const knownTodayCents = parseCents(form.knownToday)
   if (knownTodayCents === null) return { ok: false, reason: 'err.amountInvalid' }
-  if (knownTodayCents < 0) return { ok: false, reason: 'err.balanceNegative' }
+  const knownProblem = balanceSignProblem(type, knownTodayCents)
+  if (knownProblem) return { ok: false, reason: BALANCE_SIGN_MESSAGES[knownProblem] }
   return { ok: true, value: { balanceCents, asOf: form.asOf, knownTodayCents } }
 }
 

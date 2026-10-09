@@ -129,7 +129,7 @@ describe("executePlan", () => {
 	it("replaces a note in place when only its content changes", async () => {
 		const { vault } = setup();
 		const path = "Nestegg/Categories/Food.md";
-		const content = vault.files.get(path)!.replace("| Groceries |", "| Groceries |\n| Coffee |");
+		const content = vault.files.get(path)!.replace("| Groceries | expense |", "| Groceries | expense |\n| Coffee | expense |");
 		await executePlan(vault, { changes: [{ fromPath: path, toPath: path, content }] });
 		expect(vault.files.get(path)).toContain("| Coffee |");
 		expect(parseProps(vault.files.get(path)!).state).toBe("current");

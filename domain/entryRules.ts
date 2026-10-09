@@ -1,7 +1,6 @@
 import type { CategoryIndex } from "./categories";
 import { isIsoDate } from "./dates";
-import { CREDIT_CARD_PAYMENT } from "./defaults";
-import type { Account, LedgerEntry, TransactionType } from "./types";
+import { isLiability, isTransferLike, type Account, type LedgerEntry, type TransactionType } from "./types";
 import type { TransferInput } from "./transactions";
 
 export type EntryProblem =
@@ -13,8 +12,11 @@ export type EntryProblem =
 	| "subcategoryIsTransfer"
 	| "subcategoryNotTransfer"
 	| "sameAccount"
-	| "fromMustNotBeCreditCard"
-	| "toMustBeCreditCard"
+	| "fromMustBeCash"
+	| "transferToLoan"
+	| "debtToNonLoan"
+	| "wrongDebtAccount"
+	| "loanTransfersOnly"
 	| "unexpectedFromTo";
 
 export interface RuleContext {
@@ -30,31 +32,40 @@ function dateAndAmount(date: string, cents: number): EntryProblem | null {
 	return null;
 }
 
-// A plain (non-transfer) row: expense or income, signed amount, no FromTo.
+// A plain row: expense or income, signed amount, no FromTo.
 export function entryProblem(entry: LedgerEntry, ctx: RuleContext): EntryProblem | null {
 	const basic = dateAndAmount(entry.date, entry.amountCents);
 	if (basic) return basic;
-	if (!accountType(ctx, entry.account)) return "unknownAccount";
+	const owner = accountType(ctx, entry.account);
+	if (!owner) return "unknownAccount";
 	const type: TransactionType | undefined = ctx.index.typeOf(entry.subcategory);
 	if (!type) return "unknownSubcategory";
-	if (type === "transfer") return "subcategoryIsTransfer";
+	if (isTransferLike(type)) return "subcategoryIsTransfer";
+	if (owner === "loan") return "loanTransfersOnly";
 	if (entry.fromTo !== "") return "unexpectedFromTo";
 	return null;
 }
 
-// A transfer: positive cents leave `from` and arrive in `to`. Credit card payments go from a
-// non-card account to a card, so the card's debt can only go down.
+// A transfer or a debt payment: positive cents leave `from` and arrive in `to`. Money only leaves
+// a cash account. A transfer goes to another cash account or pays a credit card; a debt payment
+// pays a loan, the one its subcategory is linked to when it is linked to any, so a debt only goes down.
 export function transferProblem(input: TransferInput, ctx: RuleContext): EntryProblem | null {
 	const basic = dateAndAmount(input.date, input.cents);
 	if (basic) return basic;
 	if (input.cents <= 0) return "amountNotPositive";
-	if (!accountType(ctx, input.from) || !accountType(ctx, input.to)) return "unknownAccount";
+	const from = accountType(ctx, input.from);
+	const to = accountType(ctx, input.to);
+	if (!from || !to) return "unknownAccount";
 	const type = ctx.index.typeOf(input.subcategory);
 	if (!type) return "unknownSubcategory";
-	if (type !== "transfer") return "subcategoryNotTransfer";
-	if (input.subcategory === CREDIT_CARD_PAYMENT) {
-		if (accountType(ctx, input.from) === "creditCard") return "fromMustNotBeCreditCard";
-		if (accountType(ctx, input.to) !== "creditCard") return "toMustBeCreditCard";
+	if (!isTransferLike(type)) return "subcategoryNotTransfer";
+	if (isLiability(from)) return "fromMustBeCash";
+	if (type === "transfer") {
+		if (to === "loan") return "transferToLoan";
+	} else {
+		if (to !== "loan") return "debtToNonLoan";
+		const linked = ctx.accounts.find((a) => a.paymentSubcategory === input.subcategory);
+		if (linked && linked.name !== input.to) return "wrongDebtAccount";
 	}
 	if (input.from === input.to) return "sameAccount";
 	return null;

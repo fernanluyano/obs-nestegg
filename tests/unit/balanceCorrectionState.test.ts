@@ -6,27 +6,42 @@ const form = (over = {}) => ({ balance: '1000.00', asOf: '2026-10-02', knownToda
 
 describe('parseCorrectionForm', () => {
   it('parses the balance to cents and leaves the optional known balance empty', () => {
-    expect(parseCorrectionForm(form())).toEqual({ ok: true, value: { balanceCents: 100000, asOf: '2026-10-02', knownTodayCents: null } })
+    expect(parseCorrectionForm(form(), 'cash')).toEqual({ ok: true, value: { balanceCents: 100000, asOf: '2026-10-02', knownTodayCents: null } })
   })
 
   it('parses the known balance when given', () => {
-    expect(parseCorrectionForm(form({ knownToday: '950.5' }))).toMatchObject({ ok: true, value: { knownTodayCents: 95050 } })
+    expect(parseCorrectionForm(form({ knownToday: '950.5' }), 'cash')).toMatchObject({ ok: true, value: { knownTodayCents: 95050 } })
   })
 
-  it('rejects a blank, malformed or negative balance', () => {
-    expect(parseCorrectionForm(form({ balance: ' ' }))).toEqual({ ok: false, reason: 'err.balanceRequired' })
-    expect(parseCorrectionForm(form({ balance: 'abc' }))).toEqual({ ok: false, reason: 'err.amountInvalid' })
-    expect(parseCorrectionForm(form({ balance: '-5' }))).toEqual({ ok: false, reason: 'err.balanceNegative' })
+  it('stores a debt as typed, negative', () => {
+    for (const type of ['creditCard', 'loan'] as const) {
+      expect(parseCorrectionForm(form({ balance: '-3000', knownToday: '-2950.5' }), type)).toEqual({
+        ok: true, value: { balanceCents: -300000, asOf: '2026-10-02', knownTodayCents: -295050 },
+      })
+    }
+  })
+
+  it('rejects a debt typed as a positive amount, balance or known balance', () => {
+    for (const type of ['creditCard', 'loan'] as const) {
+      expect(parseCorrectionForm(form({ balance: '3000' }), type)).toEqual({ ok: false, reason: 'err.debtBalancePositive' })
+      expect(parseCorrectionForm(form({ balance: '-3000', knownToday: '2950' }), type)).toEqual({ ok: false, reason: 'err.debtBalancePositive' })
+    }
+  })
+
+  it('rejects a blank, malformed or negative cash balance', () => {
+    expect(parseCorrectionForm(form({ balance: ' ' }), 'cash')).toEqual({ ok: false, reason: 'err.balanceRequired' })
+    expect(parseCorrectionForm(form({ balance: 'abc' }), 'cash')).toEqual({ ok: false, reason: 'err.amountInvalid' })
+    expect(parseCorrectionForm(form({ balance: '-5' }), 'cash')).toEqual({ ok: false, reason: 'err.balanceNegative' })
   })
 
   it('rejects a bad date', () => {
-    expect(parseCorrectionForm(form({ asOf: '10/02' }))).toEqual({ ok: false, reason: 'err.invalidDate' })
-    expect(parseCorrectionForm(form({ asOf: '' }))).toEqual({ ok: false, reason: 'err.invalidDate' })
+    expect(parseCorrectionForm(form({ asOf: '10/02' }), 'cash')).toEqual({ ok: false, reason: 'err.invalidDate' })
+    expect(parseCorrectionForm(form({ asOf: '' }), 'cash')).toEqual({ ok: false, reason: 'err.invalidDate' })
   })
 
   it('rejects a malformed or negative known balance', () => {
-    expect(parseCorrectionForm(form({ knownToday: 'x' }))).toEqual({ ok: false, reason: 'err.amountInvalid' })
-    expect(parseCorrectionForm(form({ knownToday: '-1' }))).toEqual({ ok: false, reason: 'err.balanceNegative' })
+    expect(parseCorrectionForm(form({ knownToday: 'x' }), 'cash')).toEqual({ ok: false, reason: 'err.amountInvalid' })
+    expect(parseCorrectionForm(form({ knownToday: '-1' }), 'cash')).toEqual({ ok: false, reason: 'err.balanceNegative' })
   })
 })
 
@@ -76,9 +91,9 @@ describe('previewCorrection', () => {
     expect(preview).toMatchObject({ rowsAfter: 1, rowsCovered: 3 })
   })
 
-  it('flips the direction for credit cards', () => {
+  it('adds the later rows to a negative debt balance like any other', () => {
     const card = account({ accountType: 'creditCard' })
-    expect(previewCorrection(card, rows, input({ balanceCents: 5000 }), '2026-10-31').projectedCents).toBe(5000 - 400)
+    expect(previewCorrection(card, rows, input({ balanceCents: -5000 }), '2026-10-31').projectedCents).toBe(-5000 + 400)
   })
 
   it('warns when a past date has later rows, not when the date is today or nothing follows', () => {

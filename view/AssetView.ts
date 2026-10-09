@@ -3,9 +3,11 @@ import type { Ledger } from '../services/Ledger'
 import { accountBalances, monthSummaries, netAsset as computeNetAsset, netAssetTimeline } from '../snapshot/queries'
 import { t, formatMonthLabel, formatYearMonth } from '../labels'
 import { formatCents } from '../domain/money'
+import { isLiability } from '../domain/types'
 import { renderSharedHeader } from './SharedHeader'
 import { Chart } from 'chart.js'
 import { MonthData, drawNetChart, drawPie, getMonthRange } from './charts'
+import { NESTEGG_ICON } from '../plugin/icon'
 import { renderCard } from './components'
 
 export const ASSET_VIEW_TYPE = 'nestegg-asset'
@@ -27,7 +29,7 @@ export class AssetView extends ItemView {
 
   getViewType() { return ASSET_VIEW_TYPE }
   getDisplayText() { return t('asset.title') }
-  getIcon() { return 'wallet' }
+  getIcon() { return NESTEGG_ICON }
 
   async onOpen() {
     this.registerEvent(
@@ -87,10 +89,9 @@ export class AssetView extends ItemView {
       })
       left.createEl('span', { text: account.name, cls: 'ne-wallet-name' })
 
-      const displayBalance = account.accountType === 'creditCard' ? -balance : balance
       row.createEl('span', {
-        text: formatCents(Math.abs(displayBalance)),
-        cls: 'ne-wallet-balance' + (displayBalance < 0 ? ' is-negative' : ''),
+        text: formatCents(Math.abs(balance)),
+        cls: 'ne-wallet-balance' + (balance < 0 ? ' is-negative' : ''),
       })
     }
 
@@ -101,10 +102,10 @@ export class AssetView extends ItemView {
       cls: 'ne-net-value' + (netAsset < 0 ? ' is-negative' : ''),
     })
 
-    // Asset allocation pie (≥2 positive-balance non-credit accounts)
+    // Asset allocation pie (≥2 positive-balance cash accounts)
     const assetMap = new Map<string, number>()
     for (const { account, balanceCents: balance } of balances) {
-      if (!account.active || account.accountType === 'creditCard') continue
+      if (!account.active || isLiability(account.accountType)) continue
       if (balance > 0) assetMap.set(account.name, balance)
     }
     if (assetMap.size >= 2) {

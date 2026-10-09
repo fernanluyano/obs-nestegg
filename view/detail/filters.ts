@@ -51,7 +51,8 @@ export function availableCategories(entries: LedgerEntry[], f: DetailFilters, in
   for (const entry of entries) {
     const category = index.categoryOf(entry.subcategory)
     if (!category) continue
-    if (f.types.size > 0 && !f.types.has(category.categoryType)) continue
+    const type = index.typeOf(entry.subcategory)
+    if (f.types.size > 0 && (!type || !f.types.has(type))) continue
     names.add(category.name)
   }
   return [...names]

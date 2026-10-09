@@ -10,6 +10,7 @@ export const TYPE_OPTIONS = (): PillOption[] => [
   { value: 'expense', label: t('detail.filterExpense'), colorKey: 'expense' },
   { value: 'income', label: t('detail.filterIncome'), colorKey: 'income' },
   { value: 'transfer', label: t('detail.filterTransfer'), colorKey: 'transfer' },
+  { value: 'debt', label: t('detail.filterDebt'), colorKey: 'credit' },
 ]
 
 export function typePills(container: HTMLElement, host: FilterHost): void {

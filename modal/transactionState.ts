@@ -1,12 +1,11 @@
 import type { CategoryIndex } from '../domain/categories'
 import { subcategoryOptions } from '../domain/categories'
-import { CREDIT_CARD_PAYMENT } from '../domain/defaults'
 import { transferProblem, entryProblem, type EntryProblem } from '../domain/entryRules'
 import { isIsoDate } from '../domain/dates'
 import { centsToDecimal, parseCents } from '../domain/money'
 import { normalizeTag, normalizeTags } from '../domain/names'
 import { signedAmount, splitAmount, type TransactionDraft } from '../domain/transactions'
-import type { Account, Category, LedgerEntry, TransactionModalParams, TransactionType } from '../domain/types'
+import { isLiability, isTransferLike, type Account, type Category, type LedgerEntry, type TransactionModalParams, type TransactionType } from '../domain/types'
 import { TAG_MAX_LENGTH, validateTag } from '../utils'
 
 /** Form state shared between the desktop and mobile transaction modals. */
@@ -54,7 +53,8 @@ export function initialFormState(params: TransactionModalParams, today: string, 
 // A transfer row's sign says which way the money went: negative means this account sent it.
 export function formFromEntry(entry: LedgerEntry, index: CategoryIndex): TransactionFormState {
   const isTransfer = entry.fromTo !== ''
-  const type: TransactionType = isTransfer ? 'transfer' : (index.typeOf(entry.subcategory) ?? 'expense')
+  const known = index.typeOf(entry.subcategory)
+  const type: TransactionType = isTransfer ? (known === 'debt' ? 'debt' : 'transfer') : (known ?? 'expense')
   const { cents, isRefund } = splitAmount(type, entry.amountCents)
   const sent = entry.amountCents < 0
   return {
@@ -84,40 +84,46 @@ export function categoryChoices(categories: Category[], type: TransactionType): 
   return subcategoryOptions(categories, type).map(o => ({ key: o.subcategory, label: o.subcategory, category: o.category }))
 }
 
+// A loan takes transfers only, and a card cannot receive income.
 export function accountChoices(accounts: Account[], type: TransactionType): Account[] {
-  const active = activeAccounts(accounts)
-  return type === 'income' ? active.filter(a => a.accountType !== 'creditCard') : active
+  return activeAccounts(accounts).filter(a => a.accountType !== 'loan' && !(type === 'income' && a.accountType === 'creditCard'))
 }
 
-// A card payment goes from a non-card account to a card; any other transfer allows every account.
+// The account a debt payment subcategory is tied to, or '' when it is not tied to any (or the
+// form is not a debt payment).
+export function debtTargetAccount(state: TransactionFormState, accounts: Account[]): string {
+  if (state.type !== 'debt' || !state.subcategory) return ''
+  return accounts.find(a => a.active && a.paymentSubcategory === state.subcategory)?.name ?? ''
+}
+
+// Money only leaves a cash account. A transfer lands on another cash account or pays a credit card;
+// a debt payment lands on a loan, only the one its subcategory is tied to when it is tied to one.
 export function transferAccountCandidates(
-  active: Account[],
-  subcategory: string,
+  active: Account[], state: TransactionFormState,
 ): { fromCandidates: Account[]; toCandidates: Account[] } {
-  if (subcategory === CREDIT_CARD_PAYMENT) {
-    return {
-      fromCandidates: active.filter(a => a.accountType !== 'creditCard'),
-      toCandidates: active.filter(a => a.accountType === 'creditCard'),
-    }
-  }
-  return { fromCandidates: active, toCandidates: active }
+  const cash = active.filter(a => !isLiability(a.accountType))
+  if (state.type !== 'debt') return { fromCandidates: cash, toCandidates: active.filter(a => a.accountType !== 'loan') }
+  const tied = debtTargetAccount(state, active)
+  return { fromCandidates: cash, toCandidates: active.filter(a => a.accountType === 'loan' && (!tied || a.name === tied)) }
 }
 
-// Clears an account choice the card-payment subcategory has made impossible.
-export function normalizeAccountsForSubcategory(state: TransactionFormState, accounts: Account[]): TransactionFormState {
-  if (state.subcategory !== CREDIT_CARD_PAYMENT) return state
-  const typeOf = (name: string) => accounts.find(a => a.name === name)?.accountType
+// Drops an account choice the type or subcategory has made impossible, and fills in the one
+// account a debt payment subcategory is tied to.
+export function normalizeTransferForm(state: TransactionFormState, accounts: Account[]): TransactionFormState {
+  const { fromCandidates, toCandidates } = transferAccountCandidates(activeAccounts(accounts), state)
+  const tied = debtTargetAccount(state, accounts)
+  const keep = (name: string, allowed: Account[]) => (allowed.some(a => a.name === name) ? name : '')
   return {
     ...state,
-    fromAccount: typeOf(state.fromAccount) === 'creditCard' ? '' : state.fromAccount,
-    toAccount: state.toAccount && typeOf(state.toAccount) !== 'creditCard' ? '' : state.toAccount,
+    fromAccount: keep(state.fromAccount, fromCandidates),
+    toAccount: tied || keep(state.toAccount, toCandidates),
   }
 }
 
 // Switching type clears what no longer applies: the other type's accounts and a subcategory
 // that does not belong to the new type.
 export function resetFormForType(state: TransactionFormState, type: TransactionType, ctx: FormContext): TransactionFormState {
-  const isPlain = type !== 'transfer'
+  const isPlain = !isTransferLike(type)
   const stillValid = categoryChoices(ctx.categories, type).some(c => c.key === state.subcategory)
   return {
     ...state,
@@ -176,8 +182,11 @@ export type ValidationErrorKey =
   | 'err.subcategoryRequired'
   | 'err.subcategoryUnknown'
   | 'err.subcategoryWrongType'
-  | 'err.fromMustNotBeCreditCard'
-  | 'err.toMustBeCreditCard'
+  | 'err.fromMustBeCash'
+  | 'err.transferToLoan'
+  | 'err.debtToNonLoan'
+  | 'err.wrongDebtAccount'
+  | 'err.loanTransfersOnly'
   | 'err.sameAccount'
 
 export type ValidationResult =
@@ -193,7 +202,7 @@ export function validateTransactionForm(state: TransactionFormState, ctx: FormCo
   if (cents === null) return fail('err.amountInvalid')
   if (cents <= 0) return fail('err.amountPositive')
 
-  if (state.type === 'transfer') {
+  if (isTransferLike(state.type)) {
     if (!state.fromAccount) return fail('err.fromAccountRequired')
     if (!state.toAccount) return fail('err.toAccountRequired')
   } else if (!state.account) {
@@ -201,7 +210,7 @@ export function validateTransactionForm(state: TransactionFormState, ctx: FormCo
   }
   if (!state.subcategory) return fail('err.subcategoryRequired')
 
-  const problem = state.type === 'transfer'
+  const problem = isTransferLike(state.type)
     ? transferProblem(buildTransferInput(state), ctx)
     : entryProblem(buildEntry(state), ctx)
   return problem ? fail(PROBLEM_MESSAGES[problem]) : { ok: true }
@@ -217,8 +226,11 @@ const PROBLEM_MESSAGES: Record<EntryProblem, ValidationErrorKey> = {
   subcategoryNotTransfer: 'err.subcategoryWrongType',
   unexpectedFromTo: 'err.subcategoryWrongType',
   sameAccount: 'err.sameAccount',
-  fromMustNotBeCreditCard: 'err.fromMustNotBeCreditCard',
-  toMustBeCreditCard: 'err.toMustBeCreditCard',
+  fromMustBeCash: 'err.fromMustBeCash',
+  transferToLoan: 'err.transferToLoan',
+  debtToNonLoan: 'err.debtToNonLoan',
+  wrongDebtAccount: 'err.wrongDebtAccount',
+  loanTransfersOnly: 'err.loanTransfersOnly',
 }
 
 function buildTransferInput(state: TransactionFormState) {
@@ -250,7 +262,7 @@ function buildEntry(state: TransactionFormState): LedgerEntry {
 
 /** Builds what the ledger saves. Assumes the state passed validateTransactionForm. */
 export function buildDraft(state: TransactionFormState): TransactionDraft {
-  return state.type === 'transfer'
+  return isTransferLike(state.type)
     ? { kind: 'transfer', input: buildTransferInput(state) }
     : { kind: 'entry', entry: buildEntry(state) }
 }

@@ -10,7 +10,7 @@ import { detectInTransit, detectInvalidNotes, detectPathMismatches } from "../..
 import { detectTransferIssues } from "../../validation/transferIssues";
 import { categoryIndexOf } from "../../snapshot/snapshot";
 import {
-	account, accountInput, categoryInput, inputOf, monthInput, settingsInput, tx, vaultInputs,
+	account, accountInput, category, categoryInput, inputOf, monthInput, settingsInput, tx, vaultInputs,
 } from "../helpers/fixtures";
 
 const snap = (inputs = vaultInputs()) => buildSnapshot(inputs);
@@ -78,7 +78,7 @@ describe("account issues", () => {
 });
 
 describe("category issues", () => {
-	const food = { name: "Food", categoryType: "expense" as const, subcategories: ["Groceries", "Food - Misc"] };
+	const food = category("Food", "expense", ["Groceries", "Food - Misc"]);
 
 	it("flags duplicate category names", () => {
 		const dup = { ...categoryInput(food), path: "Other/Food.md" };
@@ -87,7 +87,7 @@ describe("category issues", () => {
 	});
 
 	it("flags a subcategory name shared by two categories", () => {
-		const clash = { name: "Home", categoryType: "expense" as const, subcategories: ["Groceries"] };
+		const clash = category("Home", "expense", ["Groceries"]);
 		expect(detectDuplicateSubcategories(snap([categoryInput(food), categoryInput(clash)]))).toEqual([
 			{ type: "duplicateSubcategory", subcategory: "Groceries", categories: ["Food", "Home"] },
 		]);
@@ -121,9 +121,9 @@ describe("month issues", () => {
 	it("surfaces unreadable rows from month files and category tables", () => {
 		const month = monthInput("Cash Main", "2026-10", [tx()]);
 		const broken = { ...month, content: month.content + "| 2026-10-09 | too few |\n" };
-		const badCategory = inputOf("Nestegg/Categories/Bad.md", "---\ntags: [nestegg/category]\nname: Bad\ncategoryType: expense\n---\n| Subcategory |\n|---|\n| a | b |\n");
+		const badCategory = inputOf("Nestegg/Categories/Bad.md", "---\ntags: [nestegg/category]\nname: Bad\n---\n| Subcategory | Type |\n|---|---|\n| a | expense | extra |\n| b | spending |\n");
 		const issues = detectMalformedRows(snap(vaultInputs({ months: [broken] }).concat(badCategory)));
-		expect(issues.map((i) => [i.path, i.line])).toEqual([[month.path, 13], [badCategory.path, 8]]);
+		expect(issues.map((i) => [i.path, i.line])).toEqual([[month.path, 13], [badCategory.path, 7], [badCategory.path, 8]]);
 	});
 
 	it("flags two files for the same account and month", () => {
@@ -180,7 +180,7 @@ describe("transfer issues", () => {
 describe("note issues", () => {
 	it("flags files that are not where their properties say, trusting the property", () => {
 		const moved = { ...accountInput(account()), path: "Somewhere/Cash Main.md" };
-		const s = snap([moved, { ...settingsInput(), path: "S.md" }, { ...categoryInput({ name: "Food", categoryType: "expense", subcategories: [] }), path: "F.md" }, { ...monthInput("Cash Main", "2026-10", []), path: "M.md" }]);
+		const s = snap([moved, { ...settingsInput(), path: "S.md" }, { ...categoryInput(category("Food", "expense", [])), path: "F.md" }, { ...monthInput("Cash Main", "2026-10", []), path: "M.md" }]);
 		expect(s.accounts[0].account.name).toBe("Cash Main");
 		expect(detectPathMismatches(s).map((i) => [i.kind, i.path, i.expectedPath])).toEqual([
 			["settings", "S.md", "Nestegg/Settings.md"],

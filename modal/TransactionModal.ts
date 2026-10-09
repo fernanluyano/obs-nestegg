@@ -1,13 +1,13 @@
 import { App, Modal, Notice, setIcon } from 'obsidian'
 import { todayString } from '../domain/dates'
-import type { LedgerEntry, TransactionModalParams, TransactionType } from '../domain/types'
+import { isTransferLike, type LedgerEntry, type TransactionModalParams, type TransactionType } from '../domain/types'
 import { t } from '../labels'
 import type { Ledger } from '../services/Ledger'
 import { knownMerchants, suggestedTags } from '../snapshot/queries'
 import { ConfirmModal } from './ConfirmModal'
 import { buildTagInput } from './TagInput'
 import {
-  accountChoices, buildDraft, categoryChoices, formFromEntry, initialFormState, normalizeAccountsForSubcategory,
+  accountChoices, buildDraft, categoryChoices, formFromEntry, initialFormState, normalizeTransferForm,
   pendingTagProblem, resetFormForType, transferAccountCandidates, validateTransactionForm, activeAccounts,
   type FormContext, type TransactionFormState,
 } from './transactionState'
@@ -53,7 +53,7 @@ export class TransactionModal extends Modal {
   }
 
   protected normalizeAccounts() {
-    this.form = normalizeAccountsForSubcategory(this.form, this.context().accounts)
+    this.form = normalizeTransferForm(this.form, this.context().accounts)
   }
 
   onOpen() {
@@ -116,7 +116,7 @@ export class TransactionModal extends Modal {
 
   private renderTypeTabs() {
     this.typeTabsEl.empty()
-    const types: TransactionType[] = ['expense', 'income', 'transfer']
+    const types: TransactionType[] = ['expense', 'income', 'transfer', 'debt']
     for (const type of types) {
       const tab = this.typeTabsEl.createEl('button', {
         text: t(`label.type.${type}`),
@@ -153,8 +153,8 @@ export class TransactionModal extends Modal {
 
     this.addField(t('modal.subcategory'), () => this.buildCategorySelect(ctx), true)
 
-    if (form.type === 'transfer') {
-      const { fromCandidates, toCandidates } = transferAccountCandidates(activeAccounts(ctx.accounts), form.subcategory)
+    if (isTransferLike(form.type)) {
+      const { fromCandidates, toCandidates } = transferAccountCandidates(activeAccounts(ctx.accounts), form)
       this.addField(t('modal.fromAccount'), () => this.buildSelect(fromCandidates.map(a => ({ value: a.name, label: a.name })), form.fromAccount, v => this.update({ fromAccount: v })), true)
       this.addField(t('modal.toAccount'), () => this.buildSelect(toCandidates.map(a => ({ value: a.name, label: a.name })), form.toAccount, v => this.update({ toAccount: v })), true)
     } else {
@@ -194,7 +194,7 @@ export class TransactionModal extends Modal {
     }
     sel.addEventListener('change', () => {
       this.update({ subcategory: sel.value })
-      if (this.form.type === 'transfer') {
+      if (isTransferLike(this.form.type)) {
         this.normalizeAccounts()
         this.renderFields(false)
       }

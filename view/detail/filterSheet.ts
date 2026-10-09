@@ -32,7 +32,7 @@ function buildBody(sheet: HTMLElement, host: FilterHost, rerender: () => void): 
 
   const accounts = host.accounts.filter(a => a.active)
   if (accounts.length > 0) {
-    const options = accounts.map((a): PillOption => ({ value: a.name, label: a.name, colorKey: a.accountType === 'creditCard' ? 'credit' : a.accountType }))
+    const options = accounts.map((a): PillOption => ({ value: a.name, label: a.name, colorKey: a.accountType === 'cash' ? 'cash' : 'credit' }))
     renderPills(section(sheet, t('detail.filterAccount')).createDiv('ne-pill-group'), options, filters.accounts, {
       onToggle: (v) => change(() => toggle(filters.accounts, v))(),
       onClear: change(() => filters.accounts.clear()),

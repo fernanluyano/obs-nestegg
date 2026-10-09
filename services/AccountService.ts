@@ -1,8 +1,8 @@
-import { currentBalance } from "../domain/accounts";
+import { currentBalance, loanFieldProblem } from "../domain/accounts";
 import { isHexColor, nextAccountColor } from "../domain/colors";
 import { isIsoDate } from "../domain/dates";
 import { nameProblem } from "../domain/names";
-import type { Account, AccountType } from "../domain/types";
+import type { Account, AccountType, LoanKind } from "../domain/types";
 import { buildAccountNote, unbalancedTagPatch } from "../notes/accountNote";
 import { patchProps } from "../notes/frontmatter";
 import { accountPath } from "../notes/paths";
@@ -20,6 +20,11 @@ export interface NewAccount {
 	enteredBalanceCents: number;
 	enteredBalanceAsOf: string;
 	color?: string; // defaults to the next palette color no account uses
+	loanKind?: LoanKind; // required for a loan, refused on any other type
+	termMonths?: number;
+	startDate?: string;
+	interest?: number;
+	paymentSubcategory?: string; // debt accounts only
 }
 
 // The user's own settings for an account; the cached balance is derived and never passed in.
@@ -31,7 +36,15 @@ export interface AccountPatch {
 	color?: string;
 	// Passing the key as undefined clears the flag; leaving it out keeps it.
 	unbalancedCents?: number;
+	// Loan fields and the payment category follow the same rule: undefined clears, left out keeps.
+	loanKind?: LoanKind;
+	termMonths?: number;
+	startDate?: string;
+	interest?: number;
+	paymentSubcategory?: string;
 }
+
+const LOAN_FIELDS = ["loanKind", "termMonths", "startDate", "interest"] as const;
 
 export class AccountService {
 	constructor(private store: LedgerStore) {}
@@ -42,6 +55,21 @@ export class AccountService {
 		return account;
 	}
 
+	// Loan fields belong to loans only, a loan always has its kind, and the payment category must be
+	// an existing debt payment subcategory on a loan.
+	private checkDebtFields(type: AccountType, fields: Partial<Pick<Account, (typeof LOAN_FIELDS)[number] | "paymentSubcategory">>): void {
+		if (type === "loan") {
+			if (fields.loanKind === undefined) throw new LedgerError("A loan needs a kind");
+			const problem = loanFieldProblem(fields);
+			if (problem) throw new LedgerError(problem);
+		} else if (LOAN_FIELDS.some((key) => fields[key] !== undefined)) {
+			throw new LedgerError("Only a loan has a kind, term, start date or interest");
+		}
+		if (fields.paymentSubcategory === undefined) return;
+		if (type !== "loan") throw new LedgerError("Only a loan has a payment category; a credit card is paid with a transfer");
+		if (this.store.index.typeOf(fields.paymentSubcategory) !== "debt") throw new LedgerError(`"${fields.paymentSubcategory}" is not a debt payment subcategory`);
+	}
+
 	async create(input: NewAccount): Promise<void> {
 		const problem = nameProblem(input.name);
 		if (problem) throw new LedgerError(`"${input.name}" is not a valid account name`);
@@ -50,6 +78,7 @@ export class AccountService {
 		if (!Number.isSafeInteger(input.enteredBalanceCents)) throw new LedgerError("The balance is not a valid amount");
 
 		if (input.color !== undefined && !isHexColor(input.color)) throw new LedgerError("The color is not a valid #rrggbb color");
+		this.checkDebtFields(input.accountType, input);
 
 		const account: Account = {
 			...input,
@@ -68,7 +97,8 @@ export class AccountService {
 		if (patch.unbalancedCents !== undefined && !Number.isSafeInteger(patch.unbalancedCents)) throw new LedgerError("The difference is not a valid amount");
 		if (patch.color !== undefined && !isHexColor(patch.color)) throw new LedgerError("The color is not a valid #rrggbb color");
 
-		const next ={ ...account, ...patch };
+		const next = { ...account, ...patch };
+		this.checkDebtFields(next.accountType, next);
 		const balanceCents = currentBalance(next, accountTransactions(this.store.snapshot, name));
 		const path = this.pathOf(name);
 		const written = patch.color === undefined ? patch : { ...patch, color: patch.color.toLowerCase() };
@@ -79,6 +109,21 @@ export class AccountService {
 			...(touchesFlag ? unbalancedTagPatch(c, Boolean(patch.unbalancedCents)) : {}),
 		}));
 		await this.store.reload();
+	}
+
+	// Wires a debt payment subcategory to the one loan its payments go to, or to none. A
+	// subcategory belongs to a single loan, so any other account holding it lets go.
+	async setPaymentAccount(subcategory: string, accountName: string | undefined): Promise<void> {
+		if (this.store.index.typeOf(subcategory) !== "debt") throw new LedgerError(`"${subcategory}" is not a debt payment subcategory`);
+		const target = accountName === undefined ? undefined : this.require(accountName);
+		if (target && target.accountType !== "loan") throw new LedgerError("Only a loan has a payment category; a credit card is paid with a transfer");
+
+		for (const record of this.store.snapshot.accounts) {
+			if (record.account.paymentSubcategory !== subcategory || record.account.name === accountName) continue;
+			await this.store.port.modify(record.path, (c) => patchProps(c, { paymentSubcategory: undefined }));
+		}
+		if (accountName !== undefined) await this.update(accountName, { paymentSubcategory: subcategory });
+		else await this.store.reload();
 	}
 
 	// Archiving takes an account out of the active lists; active accounts always count in net asset.

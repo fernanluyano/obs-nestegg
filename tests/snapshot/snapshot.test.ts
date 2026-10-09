@@ -89,8 +89,10 @@ describe("snapshot helpers", () => {
 
 describe("category notes in the snapshot", () => {
 	it("carries table issues through", () => {
-		const bad = inputOf("Nestegg/Categories/Food.md", "---\ntags: [nestegg/category]\nname: Food\ncategoryType: expense\n---\n| Subcategory |\n|---|\n| a | b |\n");
+		const bad = inputOf("Nestegg/Categories/Food.md", "---\ntags: [nestegg/category]\nname: Food\n---\n| Subcategory | Type |\n|---|---|\n| a | expense | extra |\n");
 		expect(buildSnapshot([bad]).categories[0].tableIssues).toHaveLength(1);
+		const badType = inputOf("Nestegg/Categories/Food.md", "---\ntags: [nestegg/category]\nname: Food\n---\n| Subcategory | Type |\n|---|---|\n| a | spending |\n");
+		expect(buildSnapshot([badType]).categories[0].tableIssues).toHaveLength(1);
 		expect(buildSnapshot([categoryInput(defaultCategories()[0])]).categories[0].tableIssues).toEqual([]);
 	});
 });

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { buildCategoryIndex } from '../../domain/categories'
-import { CREDIT_CARD_PAYMENT, defaultCategories } from '../../domain/defaults'
+import { CREDIT_CARD_PAYMENT, defaultCategories, LOAN_PAYMENT } from '../../domain/defaults'
 import type { Account, LedgerEntry } from '../../domain/types'
 import {
   accountChoices, activeAccounts, addTagToList, buildDraft, categoryChoices, formFromEntry, initialFormState,
-  normalizeAccountsForSubcategory, pendingTagProblem, resetFormForType, transferAccountCandidates, validateTransactionForm,
+  debtTargetAccount, normalizeTransferForm, pendingTagProblem, resetFormForType, transferAccountCandidates, validateTransactionForm,
   type FormContext, type TransactionFormState,
 } from '../../modal/transactionState'
 import { account } from '../helpers/fixtures'
@@ -13,6 +13,7 @@ const accounts: Account[] = [
   account(),
   account({ name: 'Savings' }),
   account({ name: 'Card', accountType: 'creditCard' }),
+  account({ name: 'Mortgage', accountType: 'loan', loanKind: 'mortgage' }),
   account({ name: 'Old', active: false }),
 ]
 const categories = defaultCategories()
@@ -98,38 +99,66 @@ describe('choices', () => {
     expect(categoryChoices(categories, 'income').every(c => c.category === 'Income')).toBe(true)
   })
 
-  it('offers active accounts, and no cards for income', () => {
-    expect(activeAccounts(accounts).map(a => a.name)).toEqual(['Cash Main', 'Savings', 'Card'])
+  it('offers active accounts, no cards for income and no loans for anything but a transfer', () => {
+    expect(activeAccounts(accounts).map(a => a.name)).toEqual(['Cash Main', 'Savings', 'Card', 'Mortgage'])
     expect(accountChoices(accounts, 'expense').map(a => a.name)).toEqual(['Cash Main', 'Savings', 'Card'])
     expect(accountChoices(accounts, 'income').map(a => a.name)).toEqual(['Cash Main', 'Savings'])
   })
 
-  it('splits transfer candidates for a credit card payment only', () => {
+  it('moves money from cash only: a transfer lands on cash or a card, never a loan', () => {
     const active = activeAccounts(accounts)
-    expect(transferAccountCandidates(active, CREDIT_CARD_PAYMENT)).toEqual({
-      fromCandidates: active.filter(a => a.accountType === 'cash'),
-      toCandidates: active.filter(a => a.accountType === 'creditCard'),
-    })
-    expect(transferAccountCandidates(active, 'Account transfer')).toEqual({ fromCandidates: active, toCandidates: active })
+    const { fromCandidates, toCandidates } = transferAccountCandidates(active, transferForm())
+    expect(fromCandidates.map(a => a.name)).toEqual(['Cash Main', 'Savings'])
+    expect(toCandidates.map(a => a.name)).toEqual(['Cash Main', 'Savings', 'Card'])
+  })
+
+  it('lands a debt payment on a loan only', () => {
+    const { fromCandidates, toCandidates } = transferAccountCandidates(activeAccounts(accounts), debtForm())
+    expect(fromCandidates.map(a => a.name)).toEqual(['Cash Main', 'Savings'])
+    expect(toCandidates.map(a => a.name)).toEqual(['Mortgage'])
   })
 })
 
-describe('normalizeAccountsForSubcategory', () => {
-  it('clears a card source and a non-card target for a card payment', () => {
-    const state = transferForm({ subcategory: CREDIT_CARD_PAYMENT, fromAccount: 'Card', toAccount: 'Savings' })
-    expect(normalizeAccountsForSubcategory(state, accounts)).toMatchObject({ fromAccount: '', toAccount: '' })
+const debtForm = (over: Partial<TransactionFormState> = {}) =>
+  transferForm({ type: 'debt', subcategory: LOAN_PAYMENT, toAccount: '', ...over })
+
+describe('debtTargetAccount / normalizeTransferForm', () => {
+  const linked: Account[] = [
+    ...accounts,
+    account({ name: 'Car', accountType: 'loan', loanKind: 'car', paymentSubcategory: LOAN_PAYMENT }),
+  ]
+
+  it('ties a debt payment to the loan its subcategory is linked to', () => {
+    expect(debtTargetAccount(debtForm(), linked)).toBe('Car')
   })
 
-  it('keeps a valid pair and an empty target', () => {
-    const ok = transferForm({ subcategory: CREDIT_CARD_PAYMENT, fromAccount: 'Cash Main', toAccount: 'Card' })
-    expect(normalizeAccountsForSubcategory(ok, accounts)).toEqual(ok)
-    const emptyTarget = transferForm({ subcategory: CREDIT_CARD_PAYMENT, toAccount: '' })
-    expect(normalizeAccountsForSubcategory(emptyTarget, accounts).toAccount).toBe('')
+  it('ties nothing for a transfer, an unlinked subcategory, or no subcategory', () => {
+    expect(debtTargetAccount(transferForm(), linked)).toBe('')
+    expect(debtTargetAccount(debtForm({ subcategory: 'Other payment' }), linked)).toBe('')
+    expect(debtTargetAccount(debtForm({ subcategory: '' }), linked)).toBe('')
+    expect(debtTargetAccount(debtForm(), accounts)).toBe('')
   })
 
-  it('leaves other subcategories alone', () => {
-    const state = transferForm({ fromAccount: 'Card' })
-    expect(normalizeAccountsForSubcategory(state, accounts)).toBe(state)
+  it('offers only the linked loan for that debt payment', () => {
+    const both = [...linked, account({ name: 'Boat', accountType: 'loan', loanKind: 'other' })]
+    expect(transferAccountCandidates(activeAccounts(both), debtForm()).toCandidates.map(a => a.name)).toEqual(['Car'])
+  })
+
+  it('fills in the linked loan as the target', () => {
+    expect(normalizeTransferForm(debtForm({ toAccount: '' }), linked).toAccount).toBe('Car')
+  })
+
+  it('clears a target the type has made impossible', () => {
+    expect(normalizeTransferForm(transferForm({ toAccount: 'Mortgage' }), linked).toAccount).toBe('')
+    expect(normalizeTransferForm(debtForm({ subcategory: 'Other payment', toAccount: 'Savings' }), linked).toAccount).toBe('')
+    expect(normalizeTransferForm(transferForm({ toAccount: 'Card' }), linked).toAccount).toBe('Card')
+  })
+
+  it('clears a debt account chosen as the source', () => {
+    for (const name of ['Card', 'Mortgage']) {
+      expect(normalizeTransferForm(transferForm({ fromAccount: name, toAccount: 'Savings' }), linked).fromAccount).toBe('')
+    }
+    expect(normalizeTransferForm(transferForm({ fromAccount: 'Cash Main' }), linked).fromAccount).toBe('Cash Main')
   })
 })
 
@@ -264,8 +293,22 @@ describe('validateTransactionForm', () => {
 
   it('applies the transfer rules', () => {
     expect(error(transferForm({ toAccount: 'Cash Main' }))).toBe('err.sameAccount')
-    expect(error(transferForm({ subcategory: CREDIT_CARD_PAYMENT, fromAccount: 'Card', toAccount: 'Savings' }))).toBe('err.fromMustNotBeCreditCard')
-    expect(error(transferForm({ subcategory: CREDIT_CARD_PAYMENT, toAccount: 'Savings' }))).toBe('err.toMustBeCreditCard')
+    expect(error(transferForm({ fromAccount: 'Card', toAccount: 'Savings' }))).toBe('err.fromMustBeCash')
+    expect(error(transferForm({ subcategory: CREDIT_CARD_PAYMENT, fromAccount: 'Mortgage', toAccount: 'Card' }))).toBe('err.fromMustBeCash')
+    expect(error(transferForm({ toAccount: 'Card' }))).toBeNull()
+  })
+
+  it('keeps transfers and debt payments apart', () => {
+    expect(error(transferForm({ toAccount: 'Mortgage' }))).toBe('err.transferToLoan')
+    expect(error(debtForm({ toAccount: 'Mortgage' }))).toBeNull()
+    expect(error(debtForm({ toAccount: 'Savings' }))).toBe('err.debtToNonLoan')
+    expect(error(debtForm({ toAccount: 'Card' }))).toBe('err.debtToNonLoan')
+    expect(error(debtForm({ toAccount: 'Mortgage', fromAccount: 'Card' }))).toBe('err.fromMustBeCash')
+  })
+
+  it('refuses a plain expense or income on a loan', () => {
+    expect(error(form({ account: 'Mortgage' }))).toBe('err.loanTransfersOnly')
+    expect(error(form({ type: 'income', subcategory: 'Salary', account: 'Mortgage' }))).toBe('err.loanTransfersOnly')
   })
 })
 

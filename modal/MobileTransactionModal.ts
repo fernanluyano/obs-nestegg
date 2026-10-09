@@ -1,5 +1,5 @@
 import { setIcon } from 'obsidian'
-import type { TransactionType } from '../domain/types'
+import { isTransferLike, type TransactionType } from '../domain/types'
 import { t } from '../labels'
 import { knownMerchants, suggestedTags } from '../snapshot/queries'
 import { TransactionModal } from './TransactionModal'
@@ -125,7 +125,7 @@ export class MobileTransactionModal extends TransactionModal {
 
   private renderMobileTabs() {
     this.mobileTabsEl.empty()
-    const types: TransactionType[] = ['expense', 'income', 'transfer']
+    const types: TransactionType[] = ['expense', 'income', 'transfer', 'debt']
     for (const tp of types) {
       const tab = this.mobileTabsEl.createEl('button', {
         text: t(`label.type.${tp}`),
@@ -143,7 +143,7 @@ export class MobileTransactionModal extends TransactionModal {
     this.mobileRowsEl.empty()
     const ctx = this.context()
     const { form } = this
-    const isTransfer = form.type === 'transfer'
+    const isTransfer = isTransferLike(form.type)
 
     // Refund toggle first (expense only) — sub-option of the type tab, visually adjacent.
     if (form.type === 'expense') {
@@ -196,7 +196,7 @@ export class MobileTransactionModal extends TransactionModal {
     )
 
     if (isTransfer) {
-      const { fromCandidates, toCandidates } = transferAccountCandidates(activeAccounts(ctx.accounts), form.subcategory)
+      const { fromCandidates, toCandidates } = transferAccountCandidates(activeAccounts(ctx.accounts), form)
       this.addMobileBottomSheetRow(
         this.mobileRowsEl, t('modal.fromAccount'), form.fromAccount || '—',
         this.withEmptyOption(fromCandidates.map(a => ({ key: a.name, label: a.name }))),

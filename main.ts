@@ -1,5 +1,6 @@
 import { Plugin } from 'obsidian'
 import { registerCommands } from './plugin/commands'
+import { registerIcon } from './plugin/icon'
 import { startup } from './plugin/startup'
 import { registerViews } from './plugin/views'
 import { Ledger } from './services/Ledger'
@@ -12,6 +13,7 @@ export default class NesteggPlugin extends Plugin {
     this.ledger = new Ledger(new ObsidianVault(this.app))
 
     // Registrations stay synchronous so the ribbon and commands survive a slow vault load.
+    registerIcon()
     registerViews(this, this.ledger)
     registerCommands(this, this.ledger)
 

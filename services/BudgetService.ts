@@ -1,5 +1,5 @@
 import { isYearMonth } from "../domain/dates";
-import { seedBudgetLines } from "../domain/budget";
+import { paymentSubcategories, seedBudgetLines } from "../domain/budget";
 import { buildBudgetNote, setPlanned } from "../notes/budgetNote";
 import { budgetPath } from "../notes/paths";
 import { findBudget, previousBudget } from "../snapshot/budgetQueries";
@@ -17,7 +17,8 @@ export class BudgetService {
 		if (findBudget(snapshot, month)) return;
 
 		const categories = snapshot.categories.map((c) => c.category);
-		const lines = seedBudgetLines(categories, previousBudget(snapshot, month)?.lines ?? []);
+		const linked = paymentSubcategories(snapshot.accounts.map((a) => a.account));
+		const lines = seedBudgetLines(categories, previousBudget(snapshot, month)?.lines ?? [], linked);
 		await port.create(budgetPath(month), buildBudgetNote(month, lines));
 		await this.store.reload();
 	}
@@ -27,7 +28,9 @@ export class BudgetService {
 		if (!record) throw new LedgerError(`There is no budget for ${month}`);
 		const type = this.store.index.typeOf(subcategory);
 		if (!type) throw new LedgerError(`No subcategory named "${subcategory}"`);
-		if (type === "transfer") throw new LedgerError("Transfers are not budgeted");
+		const linked = paymentSubcategories(this.store.snapshot.accounts.map((a) => a.account));
+		if (type === "transfer") throw new LedgerError("A transfer is not budgeted");
+		if (type === "debt" && !linked.has(subcategory)) throw new LedgerError("A debt payment is only budgeted once a loan's payment category is set to it");
 
 		await this.store.port.modify(record.path, (content) => setPlanned(content, subcategory, plannedCents));
 		await this.store.reload();

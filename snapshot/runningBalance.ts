@@ -65,10 +65,9 @@ function sumBetween(snapshot: Snapshot, cache: MonthDeltaCache, account: string,
 	return sum;
 }
 
-// Balance on the same scale as net asset (a credit card counts as negative), at the end of `date`,
-// replaying forward or backward from the entered checkpoint.
+// Balance at the end of `date`, replaying forward or backward from the entered checkpoint.
 function balanceThrough(snapshot: Snapshot, cache: MonthDeltaCache, account: Account, date: string): number {
-	const base = account.accountType === "creditCard" ? -account.enteredBalanceCents : account.enteredBalanceCents;
+	const base = account.enteredBalanceCents;
 	const asOf = account.enteredBalanceAsOf;
 	if (date >= asOf) return base + sumBetween(snapshot, cache, account.name, asOf, date);
 	return base - sumBetween(snapshot, cache, account.name, date, asOf);

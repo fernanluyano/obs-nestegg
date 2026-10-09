@@ -1,25 +1,45 @@
-export type TransactionType = "expense" | "income" | "transfer";
-export type AccountType = "cash" | "creditCard";
+// A transfer moves money between two cash accounts; a debt payment moves it from a cash account
+// to a credit card or loan. Both are written as two linked rows.
+export type TransactionType = "expense" | "income" | "transfer" | "debt";
+export type AccountType = "cash" | "creditCard" | "loan";
+export type LoanKind = "student" | "mortgage" | "car" | "personal" | "other";
 
-export const TRANSACTION_TYPES: readonly TransactionType[] = ["expense", "income", "transfer"];
-export const ACCOUNT_TYPES: readonly AccountType[] = ["cash", "creditCard"];
+export const TRANSACTION_TYPES: readonly TransactionType[] = ["expense", "income", "transfer", "debt"];
+
+// Types written as two rows, one in each account.
+export const isTransferLike = (type: TransactionType | undefined): boolean => type === "transfer" || type === "debt";
+export const ACCOUNT_TYPES: readonly AccountType[] = ["cash", "creditCard", "loan"];
+export const LOAN_KINDS: readonly LoanKind[] = ["student", "mortgage", "car", "personal", "other"];
+
+// Credit cards and loans: money owed, stored as a negative balance.
+export const isLiability = (type: AccountType): boolean => type !== "cash";
 
 export interface Account {
 	name: string;
 	accountType: AccountType;
 	active: boolean;
 	includeInNetAsset: boolean; // active accounts always count; an inactive one can be toggled
-	enteredBalanceCents: number; // checkpoint only the user changes; creditCard: positive = debt owed
+	enteredBalanceCents: number; // checkpoint only the user changes; debt accounts hold it negative
 	enteredBalanceAsOf: string; // YYYY-MM-DD the entered balance applies to
 	balanceCents: number; // cache of the current balance, recomputed on every write
 	color: string; // #rrggbb, how the account is told apart in lists and legends
 	unbalancedCents?: number; // set when the user saved a correction that disagreed with their known balance: our balance minus theirs, so nonzero when present
+	loanKind?: LoanKind; // loan only, always present there
+	termMonths?: number; // loan only: original term, whole months >= 1
+	startDate?: string; // loan only: YYYY-MM-DD the loan began
+	interest?: number; // loan only: percent, up to two decimals, not negative
+	paymentSubcategory?: string; // debt accounts: the debt-payment subcategory its payments use
+}
+
+// A category is only a container; each subcategory carries its own type.
+export interface Subcategory {
+	name: string;
+	type: TransactionType;
 }
 
 export interface Category {
 	name: string;
-	categoryType: TransactionType;
-	subcategories: string[];
+	subcategories: Subcategory[];
 }
 
 export interface Settings {
@@ -57,7 +77,7 @@ export interface MonthSummary {
 
 export interface AccountBalance {
 	account: Account;
-	balanceCents: number; // creditCard: positive = debt owed (shown negative in net asset)
+	balanceCents: number; // debt accounts: negative
 }
 
 export interface TransactionModalParams {

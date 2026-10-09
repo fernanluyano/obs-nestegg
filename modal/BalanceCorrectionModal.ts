@@ -2,7 +2,7 @@ import { App, Modal, Notice } from 'obsidian'
 import { balanceAt } from '../domain/accounts'
 import { todayString } from '../domain/dates'
 import { centsToDecimal, formatCents } from '../domain/money'
-import type { Account, Transaction } from '../domain/types'
+import { isLiability, type Account, type Transaction } from '../domain/types'
 import { t, tn } from '../labels'
 import {
   correctionPatch, parseCorrectionForm, previewCorrection, type BalanceCorrection, type CorrectionForm,
@@ -36,10 +36,11 @@ export class BalanceCorrectionModal extends Modal {
     contentEl.createEl('h2', { text: tn('correction.title', { name: this.account.name }) })
 
     const form = contentEl.createDiv('ne-wallet-edit-form')
+    if (isLiability(this.account.accountType)) form.createDiv({ text: t('settings.debtNegativeWarning'), cls: 'ne-debt-warning' })
     this.field(form, t('settings.enteredBalance'), 'number', this.form.balance, (v) => { this.form.balance = v }, '0.01')
     this.field(form, t('settings.enteredBalanceAsOf'), 'date', this.form.asOf, (v) => { this.form.asOf = v })
     form.createEl('p', {
-      text: this.account.accountType === 'creditCard' ? t('settings.creditBalanceHint') : t('settings.cashBalanceHint'),
+      text: t('settings.cashBalanceHint'),
       cls: 'ne-balance-hint ne-wallet-edit-hint',
     })
     this.field(form, t('correction.knownToday'), 'number', this.form.knownToday, (v) => { this.form.knownToday = v }, '0.01')
@@ -70,7 +71,7 @@ export class BalanceCorrectionModal extends Modal {
 
   private renderPreview() {
     this.previewEl.empty()
-    const parsed = parseCorrectionForm(this.form)
+    const parsed = parseCorrectionForm(this.form, this.account.accountType)
     if (!parsed.ok) return
     const { asOf } = parsed.value
     const p = previewCorrection(this.account, this.transactions, parsed.value, this.today)
@@ -91,7 +92,7 @@ export class BalanceCorrectionModal extends Modal {
   }
 
   private submit() {
-    const parsed = parseCorrectionForm(this.form)
+    const parsed = parseCorrectionForm(this.form, this.account.accountType)
     if (!parsed.ok) { new Notice(t(parsed.reason)); return }
     const { value } = parsed
     const p = previewCorrection(this.account, this.transactions, value, this.today)

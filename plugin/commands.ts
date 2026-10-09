@@ -6,6 +6,7 @@ import { TransactionModal } from '../modal/TransactionModal'
 import { ValidationModal } from '../modal/ValidationModal'
 import type { Ledger } from '../services/Ledger'
 import { SetupWizard } from '../wizard/SetupWizard'
+import { NESTEGG_ICON } from './icon'
 import { openAccounts, openAssets, openBudget, openDashboard, openDetail } from './views'
 
 export function openSetupWizard(plugin: Plugin, ledger: Ledger): void {
@@ -31,7 +32,7 @@ export async function runValidation(plugin: Plugin, ledger: Ledger, showNoticeIf
 }
 
 export function registerCommands(plugin: Plugin, ledger: Ledger): void {
-  plugin.addRibbonIcon('wallet', 'Nestegg', () => { void openDashboard(plugin) })
+  plugin.addRibbonIcon(NESTEGG_ICON, 'Nestegg', () => { void openDashboard(plugin) })
   plugin.addCommand({ id: 'open-dashboard', name: 'Open finance overview', callback: () => { void openDashboard(plugin) } })
   plugin.addCommand({ id: 'open-asset', name: 'Open assets', callback: () => { void openAssets(plugin) } })
   plugin.addCommand({ id: 'open-accounts', name: 'Open accounts', callback: () => { void openAccounts(plugin) } })

@@ -1,6 +1,6 @@
 import { buildCategoryIndex } from "../../domain/categories";
 import { DEFAULT_SETTINGS, defaultCategories } from "../../domain/defaults";
-import type { Account, BudgetLine, Category, Settings, Transaction } from "../../domain/types";
+import type { Account, BudgetLine, Category, Settings, Transaction, TransactionType } from "../../domain/types";
 import { buildAccountNote } from "../../notes/accountNote";
 import { buildBudgetNote } from "../../notes/budgetNote";
 import { buildCategoryNote } from "../../notes/categoryNote";
@@ -11,6 +11,12 @@ import { buildSettingsNote } from "../../notes/settingsNote";
 import { buildSnapshot, type NoteInput } from "../../snapshot/snapshot";
 
 export const index = buildCategoryIndex(defaultCategories());
+
+// A category whose subcategories all take `type`; pass [name, type] pairs to mix types.
+export const category = (name: string, type: TransactionType, subcategories: (string | [string, TransactionType])[]): Category => ({
+	name,
+	subcategories: subcategories.map((s) => (typeof s === "string" ? { name: s, type } : { name: s[0], type: s[1] })),
+});
 
 export const account = (over: Partial<Account> = {}): Account => ({
 	name: "Cash Main",

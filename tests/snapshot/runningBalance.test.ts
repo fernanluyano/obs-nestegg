@@ -5,7 +5,7 @@ import { accountTransactions, buildSnapshot } from "../../snapshot/snapshot";
 import { account, monthInput, tx, vaultInputs } from "../helpers/fixtures";
 
 const cash = (over = {}) => account({ enteredBalanceCents: 100000, enteredBalanceAsOf: "2026-09-30", ...over });
-const card = account({ name: "Card", accountType: "creditCard", enteredBalanceCents: 5000, enteredBalanceAsOf: "2026-09-30" });
+const card = account({ name: "Card", accountType: "creditCard", enteredBalanceCents: -5000, enteredBalanceAsOf: "2026-09-30" });
 
 const snapshot = (accounts = [cash(), card]) =>
 	buildSnapshot(
@@ -39,7 +39,7 @@ describe("dailyBalances", () => {
 		expect(balances.get("2026-11-02")?.get("Cash Main")).toBe(100000 - 8450 - 550 + 250000 - 2000);
 	});
 
-	it("keeps each account's own balance, with a credit card counted as debt", () => {
+	it("keeps each account's own balance, with a credit card held negative", () => {
 		const balances = dailyBalances(snapshot(), new MonthDeltaCache(), "2026-10", ["Cash Main", "Card"]);
 		expect([...balances.keys()]).toEqual(["2026-10-03", "2026-10-04", "2026-10-05"]);
 		expect([...balances.get("2026-10-03")!]).toEqual([["Card", -5000], ["Cash Main", 91000]]);
@@ -97,10 +97,9 @@ describe("dailyBalances", () => {
 		const accounts = [cash({ enteredBalanceAsOf: asOf }), { ...card, enteredBalanceAsOf: asOf }];
 		const snap = snapshot(accounts);
 		for (const a of accounts) {
-			const sign = a.accountType === "creditCard" ? -1 : 1;
 			const balances = dailyBalances(snap, new MonthDeltaCache(), "2026-10", [a.name]);
 			for (const [date, byAccount] of balances) {
-				expect(byAccount.get(a.name)).toBe(sign * balanceAt(a, accountTransactions(snap, a.name), date));
+				expect(byAccount.get(a.name)).toBe(balanceAt(a, accountTransactions(snap, a.name), date));
 			}
 		}
 	});

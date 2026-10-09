@@ -5,7 +5,7 @@ import { findAccount } from "../../snapshot/queries";
 import { LedgerError } from "../../services/errors";
 import { Ledger } from "../../services/Ledger";
 import { validateSnapshot } from "../../validation/validate";
-import { loadedLedger } from "../helpers/ledgerFixture";
+import { addMortgage, loadedLedger } from "../helpers/ledgerFixture";
 import { MemoryVault } from "../helpers/memoryVault";
 
 const entry = { account: "Cash Main", date: "2026-10-03", merchant: "", subcategory: "Groceries", amountCents: -1000, note: "", tags: [], fromTo: "" };
@@ -204,5 +204,72 @@ describe("account color", () => {
 		const base = { name: "X", accountType: "cash" as const, enteredBalanceCents: 0, enteredBalanceAsOf: "2026-10-01" };
 		await expect(ledger.accounts.create({ ...base, color: "blue" })).rejects.toThrow(/color/);
 		await expect(ledger.accounts.update("Cash Main", { color: "#12" })).rejects.toThrow(/color/);
+	});
+});
+
+describe("loans", () => {
+	const loan = { name: "Mortgage", accountType: "loan" as const, loanKind: "mortgage" as const, enteredBalanceCents: -20000000, enteredBalanceAsOf: "2026-10-01" };
+
+	it("creates a loan with just a kind and a balance, and loads it back", async () => {
+		const { ledger } = await loadedLedger();
+		await ledger.accounts.create(loan);
+		const created = findAccount(ledger.snapshot, "Mortgage")!;
+		expect(created).toMatchObject({ accountType: "loan", loanKind: "mortgage", balanceCents: -20000000 });
+		expect(created.termMonths).toBeUndefined();
+		expect(validateSnapshot(ledger.snapshot)).toEqual([]);
+	});
+
+	it("creates a loan with its payment plan", async () => {
+		const { ledger } = await loadedLedger();
+		await ledger.accounts.create({ ...loan, termMonths: 360, startDate: "2024-03-01", interest: 6.25 });
+		expect(findAccount(ledger.snapshot, "Mortgage")).toMatchObject({ termMonths: 360, startDate: "2024-03-01", interest: 6.25 });
+	});
+
+	it("rejects a loan without a kind and bad plan fields", async () => {
+		const { ledger } = await loadedLedger();
+		await expect(ledger.accounts.create({ ...loan, loanKind: undefined })).rejects.toThrow(/needs a kind/);
+		await expect(ledger.accounts.create({ ...loan, termMonths: 0 })).rejects.toThrow(/term/);
+		await expect(ledger.accounts.create({ ...loan, termMonths: 1.5 })).rejects.toThrow(/term/);
+		await expect(ledger.accounts.create({ ...loan, interest: -1 })).rejects.toThrow(/interest/);
+		await expect(ledger.accounts.create({ ...loan, startDate: "2024-13-40" })).rejects.toThrow(/start date/);
+		expect(findAccount(ledger.snapshot, "Mortgage")).toBeUndefined();
+	});
+
+	it("refuses loan fields on cash and credit card accounts", async () => {
+		const { ledger } = await loadedLedger();
+		const base = { name: "X", enteredBalanceCents: 0, enteredBalanceAsOf: "2026-10-01", termMonths: 12 };
+		await expect(ledger.accounts.create({ ...base, accountType: "cash" })).rejects.toThrow(/Only a loan/);
+		await expect(ledger.accounts.create({ ...base, accountType: "creditCard" })).rejects.toThrow(/Only a loan/);
+		await expect(ledger.accounts.update("Card", { loanKind: "car" })).rejects.toThrow(/Only a loan/);
+	});
+
+	it("updates the plan, and clears a field passed as undefined", async () => {
+		const { ledger } = await loadedLedger();
+		await ledger.accounts.create({ ...loan, termMonths: 360, interest: 6.25 });
+		await ledger.accounts.update("Mortgage", { termMonths: 240, interest: undefined });
+		const updated = findAccount(ledger.snapshot, "Mortgage")!;
+		expect(updated.termMonths).toBe(240);
+		expect(updated.interest).toBeUndefined();
+		await expect(ledger.accounts.update("Mortgage", { termMonths: 0 })).rejects.toThrow(/term/);
+	});
+
+	it("sets a payment category on a loan, and only on one", async () => {
+		const { ledger } = await loadedLedger();
+		await addMortgage(ledger);
+		await ledger.accounts.update("Mortgage", { paymentSubcategory: "Loan payment" });
+		expect(findAccount(ledger.snapshot, "Mortgage")!.paymentSubcategory).toBe("Loan payment");
+		await expect(ledger.accounts.update("Cash Main", { paymentSubcategory: "Loan payment" })).rejects.toThrow(/Only a loan/);
+		await expect(ledger.accounts.update("Card", { paymentSubcategory: "Loan payment" })).rejects.toThrow(/Only a loan/);
+		await expect(ledger.accounts.update("Mortgage", { paymentSubcategory: "Credit card payment" })).rejects.toThrow(/not a debt payment/);
+		await expect(ledger.accounts.update("Mortgage", { paymentSubcategory: "Groceries" })).rejects.toThrow(/not a debt payment/);
+		await expect(ledger.accounts.update("Mortgage", { paymentSubcategory: "Nope" })).rejects.toThrow(/not a debt payment/);
+		await ledger.accounts.update("Mortgage", { paymentSubcategory: undefined });
+		expect(findAccount(ledger.snapshot, "Mortgage")!.paymentSubcategory).toBeUndefined();
+	});
+
+	it("does not become the default account", async () => {
+		const { ledger } = await loadedLedger();
+		await ledger.addAccount({ ...loan, name: "Car loan", loanKind: "car" });
+		expect(ledger.settings.current.defaultAccount).not.toBe("Car loan");
 	});
 });

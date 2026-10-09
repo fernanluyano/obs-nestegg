@@ -11,7 +11,7 @@ export function bulkReassignTargets(entries: LedgerEntry[], categories: Category
 	if (entries.length === 0) return { ok: false, problem: "empty" };
 	const types = new Set(entries.map((e) => index.typeOf(e.subcategory)));
 	if (types.has(undefined)) return { ok: false, problem: "unknown" };
-	if (types.has("transfer")) return { ok: false, problem: "transfer" };
+	if (types.has("transfer") || types.has("debt")) return { ok: false, problem: "transfer" };
 	if (types.size > 1) return { ok: false, problem: "mixed" };
 	const [type] = types;
 	return { ok: true, targets: subcategoryOptions(categories, type) };

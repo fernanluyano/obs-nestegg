@@ -5,7 +5,7 @@ import { budgetPath } from "../../notes/paths";
 import { isEmptyVault } from "../../services/seed";
 import { LedgerError } from "../../services/errors";
 import { budgetInput, vaultInputs } from "../helpers/fixtures";
-import { loadedLedger } from "../helpers/ledgerFixture";
+import { addMortgage, loadedLedger } from "../helpers/ledgerFixture";
 
 const planned = (ledger: Awaited<ReturnType<typeof loadedLedger>>["ledger"], month: string, subcategory: string) =>
 	ledger.snapshot.budgets.find((b) => b.month === month)?.lines.find((l) => l.subcategory === subcategory)?.plannedCents;
@@ -58,17 +58,47 @@ describe("setPlanned", () => {
 	it("adds a line for a subcategory created after the budget", async () => {
 		const { ledger } = await loadedLedger();
 		await ledger.budgets.create("2026-10");
-		await ledger.categories.addSubcategory("Food", "Coffee");
+		await ledger.categories.addSubcategory("Food", "Coffee", "expense");
 		await ledger.budgets.setPlanned("2026-10", "Coffee", 2000);
 		expect(planned(ledger, "2026-10", "Coffee")).toBe(2000);
 	});
 
-	it("rejects a missing budget, unknown subcategories, transfers and bad amounts", async () => {
+	it("plans a debt payment only once a loan names it", async () => {
+		const { ledger } = await loadedLedger();
+		await addMortgage(ledger);
+		await ledger.budgets.create("2026-10");
+		await expect(ledger.budgets.setPlanned("2026-10", "Loan payment", 5000)).rejects.toThrow(/payment category/);
+		await ledger.accounts.update("Mortgage", { paymentSubcategory: "Loan payment" });
+		await ledger.budgets.setPlanned("2026-10", "Loan payment", 185453);
+		expect(planned(ledger, "2026-10", "Loan payment")).toBe(185453);
+	});
+
+	it("seeds a new month with the linked payment lines", async () => {
+		const { ledger } = await loadedLedger();
+		await addMortgage(ledger);
+		await ledger.accounts.update("Mortgage", { paymentSubcategory: "Loan payment" });
+		await ledger.budgets.create("2026-10");
+		await ledger.budgets.setPlanned("2026-10", "Loan payment", 185453);
+		await ledger.budgets.create("2026-11");
+		const lines = ledger.snapshot.budgets.find((b) => b.month === "2026-11")!.lines.map((l) => l.subcategory);
+		expect(planned(ledger, "2026-11", "Loan payment")).toBe(185453);
+		expect(lines).not.toContain("Account transfer");
+		expect(lines).not.toContain("Credit card payment");
+	});
+
+	it("never plans a transfer, not even a card payment", async () => {
+		const { ledger } = await loadedLedger();
+		await ledger.budgets.create("2026-10");
+		await expect(ledger.budgets.setPlanned("2026-10", "Account transfer", 1)).rejects.toThrow(/transfer is not budgeted/);
+		await expect(ledger.budgets.setPlanned("2026-10", "Credit card payment", 1)).rejects.toThrow(/transfer is not budgeted/);
+	});
+
+	it("rejects a missing budget, unknown subcategories, unlinked debt payments and bad amounts", async () => {
 		const { ledger } = await loadedLedger();
 		await expect(ledger.budgets.setPlanned("2026-10", "Groceries", 1)).rejects.toThrow(/no budget for 2026-10/);
 		await ledger.budgets.create("2026-10");
 		await expect(ledger.budgets.setPlanned("2026-10", "Nope", 1)).rejects.toThrow(/No subcategory/);
-		await expect(ledger.budgets.setPlanned("2026-10", "Account transfer", 1)).rejects.toThrow(/Transfers/);
+		await expect(ledger.budgets.setPlanned("2026-10", "Loan payment", 1)).rejects.toThrow(/payment category/);
 		await expect(ledger.budgets.setPlanned("2026-10", "Groceries", -1)).rejects.toThrow(/zero or more/);
 	});
 });

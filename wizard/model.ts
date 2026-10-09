@@ -1,4 +1,6 @@
+import { balanceSignProblem } from '../domain/accounts'
 import { parseCents } from '../domain/money'
+import type { AccountType } from '../domain/types'
 import { miscName } from '../domain/names'
 import type { LabelKey } from '../labels'
 import { activeAccounts } from '../snapshot/queries'
@@ -51,16 +53,23 @@ export function canRemoveAccount(snapshot: Snapshot, name: string): Advance {
 
 export type BalanceCheck =
   | { ok: true; cents: number }
-  | { ok: false; message: 'err.balanceRequired' | 'err.amountInvalid' | 'err.balanceNegative' }
+  | { ok: false; message: 'err.balanceRequired' | 'err.amountInvalid' | 'err.balanceNegative' | 'err.debtBalancePositive' }
 
-// The balance must be typed in: blank is rejected, zero is fine.
-export function checkBalance(text: string): BalanceCheck {
+// The balance must be typed in: blank is rejected, zero is fine. Cash is not negative and a debt
+// is not positive.
+export function checkBalance(text: string, type: AccountType): BalanceCheck {
   if (text.trim() === '') return { ok: false, message: 'err.balanceRequired' }
   const cents = parseCents(text)
   if (cents === null) return { ok: false, message: 'err.amountInvalid' }
-  if (cents < 0) return { ok: false, message: 'err.balanceNegative' }
+  const problem = balanceSignProblem(type, cents)
+  if (problem) return { ok: false, message: BALANCE_SIGN_MESSAGES[problem] }
   return { ok: true, cents }
 }
+
+export const BALANCE_SIGN_MESSAGES = {
+  cashNegative: 'err.balanceNegative',
+  debtPositive: 'err.debtBalancePositive',
+} as const
 
 export interface RenameImpact {
   files: number        // notes that get rewritten (and possibly moved)

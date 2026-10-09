@@ -1,6 +1,6 @@
 import { balanceAt, currentBalance, netAssetCents } from "../domain/accounts";
 import { monthEndKey } from "../domain/dates";
-import { CREDIT_CARD_PAYMENT, DEFAULT_TAGS } from "../domain/defaults";
+import { DEFAULT_TAGS } from "../domain/defaults";
 import { summarize } from "../domain/transactions";
 import type { CategoryIndex } from "../domain/categories";
 import type { Account, AccountBalance, LedgerEntry, MonthSummary, TransactionType } from "../domain/types";
@@ -62,16 +62,20 @@ export function netAssetTimeline(snapshot: Snapshot, months: string[]): Map<stri
 }
 
 // Sums by category for one type. Expense totals are negated, so refunds net the total down and a
-// category is positive when money went out. Transfers and unknown subcategories are skipped.
+// category is positive when money went out; debt payments count as expense. Transfers and unknown
+// subcategories are skipped.
 export function groupByCategory(
 	entries: LedgerEntry[],
 	index: CategoryIndex,
-	type: Exclude<TransactionType, "transfer">,
+	type: "expense" | "income",
 ): Map<string, number> {
 	const totals = new Map<string, number>();
 	for (const entry of entries) {
 		const category = index.categoryOf(entry.subcategory);
-		if (!category || category.categoryType !== type) continue;
+		const entryType = index.typeOf(entry.subcategory);
+		// A debt payment is spending, counted once through its outgoing (negative) row.
+		const counts = entryType === type || (type === "expense" && entryType === "debt" && entry.amountCents < 0);
+		if (!category || !counts) continue;
 		const signed = type === "expense" ? -entry.amountCents : entry.amountCents;
 		totals.set(category.name, (totals.get(category.name) ?? 0) + signed);
 	}
@@ -98,15 +102,9 @@ export function accountHasTransactions(snapshot: Snapshot, name: string): boolea
 	return snapshot.months.some((m) => m.account === name && m.transactions.length > 0);
 }
 
-export type CategoryTypeProblem = "used" | "cardPayment";
-
-// A used category keeps its type, or past income and expense totals would silently change
-// meaning; Credit card payment only works under a transfer, so its category stays one.
-export function categoryTypeChangeProblem(snapshot: Snapshot, categoryName: string): CategoryTypeProblem | null {
-	const category = snapshot.categories.find((c) => c.category.name === categoryName)?.category;
-	if (!category) return null;
-	if (category.subcategories.includes(CREDIT_CARD_PAYMENT)) return "cardPayment";
-	return category.subcategories.some((s) => subcategoryUsage(snapshot, s) > 0) ? "used" : null;
+// A used subcategory keeps its type, or past income and expense totals would silently change meaning.
+export function subcategoryTypeLocked(snapshot: Snapshot, subcategory: string): boolean {
+	return subcategoryUsage(snapshot, subcategory) > 0;
 }
 
 export function subcategoryUsage(snapshot: Snapshot, subcategory: string): number {

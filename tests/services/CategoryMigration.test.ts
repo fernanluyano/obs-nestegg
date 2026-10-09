@@ -6,7 +6,7 @@ import { loadedLedger } from "../helpers/ledgerFixture";
 const spend = (subcategory: string, amountCents = -100, date = "2026-10-03") =>
 	({ account: "Cash Main", date, merchant: "", subcategory, amountCents, note: "", tags: [], fromTo: "" });
 const subcategoriesOf = (ledger: Awaited<ReturnType<typeof loadedLedger>>["ledger"], category: string) =>
-	ledger.snapshot.categories.find((c) => c.category.name === category)?.category.subcategories;
+	ledger.snapshot.categories.find((c) => c.category.name === category)?.category.subcategories.map((s) => s.name);
 const used = (ledger: Awaited<ReturnType<typeof loadedLedger>>["ledger"]) =>
 	ledger.snapshot.months.flatMap((m) => m.transactions.map((t) => t.subcategory));
 
@@ -82,7 +82,7 @@ describe("adding a category that shares a name with an existing subcategory", ()
 	it("creates the category and lets subcategories be added to it", async () => {
 		const { ledger, vault } = await loadedLedger();
 		await ledger.categories.createCategory("Utilities", "expense");
-		await ledger.categories.addSubcategory("Utilities", "ElectricityP1");
+		await ledger.categories.addSubcategory("Utilities", "ElectricityP1", "expense");
 		expect(vault.exists(categoryPath("Utilities"))).toBe(true);
 		expect(subcategoriesOf(ledger, "Utilities")).toEqual(["ElectricityP1", "Utilities - Misc"]);
 	});
@@ -92,7 +92,7 @@ describe("moving into something added moments ago", () => {
 	it("accepts a subcategory that was just added as the target", async () => {
 		const { ledger } = await loadedLedger();
 		await ledger.transactions.add(spend("Restaurants"));
-		await ledger.categories.addSubcategory("Food", "Coffee");
+		await ledger.categories.addSubcategory("Food", "Coffee", "expense");
 		await ledger.categories.removeSubcategory("Restaurants", "Coffee");
 		expect(used(ledger)).toEqual(["Coffee"]);
 	});
@@ -103,6 +103,27 @@ describe("moving into something added moments ago", () => {
 		await ledger.categories.createCategory("Pets", "expense");
 		await ledger.categories.removeSubcategory("Restaurants", "Pets - Misc");
 		expect(used(ledger)).toEqual(["Pets - Misc"]);
+	});
+});
+
+describe("a category holding several types", () => {
+	it("only offers a target of the transactions' own type, in any category", async () => {
+		const { ledger } = await loadedLedger();
+		await ledger.categories.addSubcategory("Food", "Meal refund", "income");
+		await ledger.transactions.add(spend("Meal refund", 900));
+		await expect(ledger.categories.removeSubcategory("Meal refund", "Groceries")).rejects.toThrow(/cannot take over/);
+		await ledger.categories.removeSubcategory("Meal refund", "Salary");
+		expect(used(ledger)).toEqual(["Salary"]);
+		expect(validateSnapshot(ledger.snapshot)).toEqual([]);
+	});
+
+	it("refuses to remove a category whose used subcategories have different types", async () => {
+		const { ledger } = await loadedLedger();
+		await ledger.categories.addSubcategory("Food", "Meal refund", "income");
+		await ledger.transactions.add(spend("Groceries"));
+		await ledger.transactions.add(spend("Meal refund", 900));
+		await expect(ledger.categories.removeCategory("Food", "Rent")).rejects.toThrow(/one at a time/);
+		expect(used(ledger).sort()).toEqual(["Groceries", "Meal refund"]);
 	});
 });
 
@@ -131,7 +152,7 @@ describe("removeCategory with a migration target", () => {
 	it("moves an income category's transactions to another income subcategory", async () => {
 		const { ledger } = await loadedLedger();
 		await ledger.categories.createCategory("Side gigs", "income");
-		await ledger.categories.addSubcategory("Side gigs", "Tutoring");
+		await ledger.categories.addSubcategory("Side gigs", "Tutoring", "income");
 		await ledger.transactions.add(spend("Tutoring", 5000));
 		await ledger.categories.removeCategory("Side gigs", "Salary");
 		expect(used(ledger)).toEqual(["Salary"]);

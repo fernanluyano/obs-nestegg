@@ -1,4 +1,5 @@
 import { buildCategoryIndex } from "../domain/categories";
+import { isTransferLike } from "../domain/types";
 import type { Snapshot } from "../snapshot/snapshot";
 import type { TransferIssue, TransferProblem } from "./issues";
 
@@ -24,7 +25,7 @@ export function detectTransferIssues(snapshot: Snapshot): TransferIssue[] {
 	for (const m of snapshot.months) {
 		for (const tx of m.transactions) {
 			const row: Row = { path: m.path, account: m.account, ...tx };
-			const isTransfer = index.typeOf(tx.subcategory) === "transfer";
+			const isTransfer = isTransferLike(index.typeOf(tx.subcategory));
 			const problem = rowProblem(row, isTransfer);
 			if (problem) issues.push(issueOf(problem, row));
 			else if (isTransfer) transferRows.push(row);
