@@ -1,5 +1,8 @@
 import { bulkReassignProblem, type BulkProblem } from "../domain/bulkEdit";
+import { currentBalance } from "../domain/accounts";
+import { outflowProblem } from "../domain/buckets";
 import { monthOf } from "../domain/dates";
+import { formatCents } from "../domain/money";
 import { entryProblem, transferProblem, type EntryProblem } from "../domain/entryRules";
 import { normalizeTags } from "../domain/names";
 import { accountsOf } from "../snapshot/queries";
@@ -11,6 +14,7 @@ import { patchProps } from "../notes/frontmatter";
 import { buildMonthNote, editMonthNote, type MonthEdit } from "../notes/monthNote";
 import { monthPath } from "../notes/paths";
 import { executePlan } from "../rename/execute";
+import { accountTransactions } from "../snapshot/snapshot";
 import type { FileChange } from "../rename/types";
 import { LedgerError } from "./errors";
 import type { LedgerStore } from "./LedgerStore";
@@ -83,9 +87,31 @@ export class TransactionService {
 		await this.applyEdit(entry.account, monthOf(entry.date), { kind: "remove", tx: toTransaction(entry) });
 	}
 
+	// Only new entries are held to this: an edit or delete may leave available negative, which
+	// validation reports instead. The balance change is measured on the rows, so an entry dated
+	// before the balance checkpoint, which the balance ignores, is never an outflow.
+	private guardAvailable(entries: LedgerEntry[]): void {
+		for (const account of new Set(entries.map((e) => e.account))) {
+			const record = this.store.snapshot.accounts.find((a) => a.account.name === account);
+			if (!record || record.account.accountType !== "cash") continue;
+			const rows = accountTransactions(this.store.snapshot, account);
+			const added = entries.filter((e) => e.account === account);
+			const before = currentBalance(record.account, rows);
+			const outflow = before - currentBalance(record.account, [...rows, ...added]);
+			const problem = outflowProblem(before, record.buckets, outflow);
+			if (!problem) continue;
+			if (problem.kind === "notEnoughFunds") throw new LedgerError(`Cannot save the transaction: not enough funds in ${account}`);
+			throw new LedgerError(
+				`Cannot save the transaction: available in ${account} is $${formatCents(problem.availableCents)}, this needs $${formatCents(problem.needsCents)}. ` +
+				`Your buckets hold $${formatCents(problem.bucketsCents)}. Move money out of a bucket to cover it.`,
+			);
+		}
+	}
+
 	async add(raw: LedgerEntry): Promise<void> {
 		const entry = tidy(raw);
 		this.fail(entryProblem(entry, this.context()));
+		this.guardAvailable([entry]);
 		await this.insert(entry);
 		await this.finish([entry.account]);
 	}
@@ -95,7 +121,9 @@ export class TransactionService {
 	async addTransfer(raw: TransferInput): Promise<void> {
 		const input = tidy(raw);
 		this.fail(transferProblem(input, this.context()));
-		await this.insertPair(transferEntries(input));
+		const pair = transferEntries(input);
+		this.guardAvailable(pair);
+		await this.insertPair(pair);
 		await this.finish([input.from, input.to]);
 	}
 

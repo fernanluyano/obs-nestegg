@@ -65,10 +65,10 @@ describe("update", () => {
 		await expect(ledger.accounts.update("Cash Main", { unbalancedCents: 1.5 })).rejects.toThrow(/difference/);
 	});
 
-	it("changes the type and the net asset flag", async () => {
+	it("refuses to change an account's type", async () => {
 		const { ledger } = await loadedLedger();
-		await ledger.accounts.update("Cash Main", { accountType: "creditCard" });
-		expect(findAccount(ledger.snapshot, "Cash Main")!.accountType).toBe("creditCard");
+		await expect(ledger.accounts.update("Cash Main", { accountType: "creditCard" } as never)).rejects.toThrow(/type cannot be changed/);
+		expect(findAccount(ledger.snapshot, "Cash Main")!.accountType).toBe("cash");
 	});
 
 	it("rejects unknown accounts, bad dates and bad amounts", async () => {

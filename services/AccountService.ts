@@ -1,14 +1,16 @@
 import { currentBalance, loanFieldProblem } from "../domain/accounts";
 import { isHexColor, nextAccountColor } from "../domain/colors";
 import { isIsoDate } from "../domain/dates";
+import { bucketsTotal } from "../domain/buckets";
 import { nameProblem } from "../domain/names";
 import type { Account, AccountType, LoanKind } from "../domain/types";
 import { buildAccountNote, unbalancedTagPatch } from "../notes/accountNote";
-import { patchProps } from "../notes/frontmatter";
+import { clearBuckets } from "../notes/bucketTable";
+import { patchProps, type Props } from "../notes/frontmatter";
 import { accountPath } from "../notes/paths";
 import { planAccountRename } from "../rename/accountRename";
 import { executePlan } from "../rename/execute";
-import { accountHasTransactions, accountsOf, findAccount } from "../snapshot/queries";
+import { accountHasTransactions, accountsOf, bucketsOf, findAccount } from "../snapshot/queries";
 import { accountTransactions } from "../snapshot/snapshot";
 import { cleanupEmptyFolders } from "../storage/folders";
 import { LedgerError } from "./errors";
@@ -30,7 +32,6 @@ export interface NewAccount {
 
 // The user's own settings for an account; the cached balance is derived and never passed in.
 export interface AccountPatch {
-	accountType?: AccountType;
 	includeInNetAsset?: boolean;
 	enteredBalanceCents?: number;
 	enteredBalanceAsOf?: string;
@@ -87,6 +88,7 @@ export class AccountService {
 			...input,
 			color: (input.color ?? nextAccountColor(accountsOf(this.store.snapshot).map((a) => a.color))).toLowerCase(),
 			active: true, includeInNetAsset: true, balanceCents: input.enteredBalanceCents,
+			...(input.accountType === "cash" ? { availableCents: input.enteredBalanceCents } : {}),
 		};
 		await this.store.port.create(accountPath(input.name), buildAccountNote(account));
 		await this.store.reload();
@@ -100,15 +102,19 @@ export class AccountService {
 		if (patch.unbalancedCents !== undefined && !Number.isSafeInteger(patch.unbalancedCents)) throw new LedgerError("The difference is not a valid amount");
 		if (patch.color !== undefined && !isHexColor(patch.color)) throw new LedgerError("The color is not a valid #rrggbb color");
 
+		if ("accountType" in patch) throw new LedgerError("An account's type cannot be changed; delete it and create a new one");
+
 		const next = { ...account, ...patch };
 		this.checkDebtFields(next.accountType, next);
 		const balanceCents = currentBalance(next, accountTransactions(this.store.snapshot, name));
+		const availableCents = account.accountType === "cash" ? balanceCents - bucketsTotal(bucketsOf(this.store.snapshot, name)) : undefined;
 		const path = this.pathOf(name);
 		const written = patch.color === undefined ? patch : { ...patch, color: patch.color.toLowerCase() };
 		const touchesFlag = "unbalancedCents" in patch;
 		await this.store.port.modify(path, (c) => patchProps(c, {
 			...written,
 			balanceCents,
+			availableCents,
 			...(touchesFlag ? unbalancedTagPatch(c, Boolean(patch.unbalancedCents)) : {}),
 		}));
 		await this.store.reload();
@@ -131,9 +137,12 @@ export class AccountService {
 
 	// Archiving takes an account out of the active lists; active accounts always count in net asset.
 	async setActive(name: string, active: boolean): Promise<void> {
-		this.require(name);
-		const patch = active ? { active, includeInNetAsset: true } : { active };
-		await this.store.port.modify(this.pathOf(name), (c) => patchProps(c, patch));
+		const account = this.require(name);
+		const patch: Props = active ? { active, includeInNetAsset: true } : { active };
+		// Archiving gives up the buckets, so what they held is available again.
+		const releases = !active && account.accountType === "cash" && bucketsOf(this.store.snapshot, name).length > 0;
+		if (releases) patch.availableCents = account.balanceCents;
+		await this.store.port.modify(this.pathOf(name), (c) => patchProps(releases ? clearBuckets(c) : c, patch));
 		await this.store.reload();
 	}
 

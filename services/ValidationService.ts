@@ -39,9 +39,10 @@ export class ValidationService {
 	async createMissingAccount(name: string, today: string): Promise<void> {
 		const account = {
 			name, accountType: "cash" as const, active: false, includeInNetAsset: false,
-			enteredBalanceCents: 0, enteredBalanceAsOf: today, balanceCents: 0, color: DEFAULT_ACCOUNT_COLOR,
+			enteredBalanceCents: 0, enteredBalanceAsOf: today, balanceCents: 0, availableCents: 0, color: DEFAULT_ACCOUNT_COLOR,
 		};
 		account.balanceCents = currentBalance(account, accountTransactions(this.store.snapshot, name));
+		account.availableCents = account.balanceCents;
 		await this.store.port.create(accountPath(name), buildAccountNote(account));
 		await this.store.reload();
 	}

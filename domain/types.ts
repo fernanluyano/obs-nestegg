@@ -22,6 +22,7 @@ export interface Account {
 	enteredBalanceCents: number; // checkpoint only the user changes; debt accounts hold it negative
 	enteredBalanceAsOf: string; // YYYY-MM-DD the entered balance applies to
 	balanceCents: number; // cache of the current balance, recomputed on every write
+	availableCents?: number; // cash only: cache of the balance minus what its buckets hold; absent reads as the balance
 	color: string; // #rrggbb, how the account is told apart in lists and legends
 	unbalancedCents?: number; // set when the user saved a correction that disagreed with their known balance: our balance minus theirs, so nonzero when present
 	loanKind?: LoanKind; // loan only, always present there

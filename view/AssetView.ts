@@ -1,7 +1,8 @@
 import { Events, ItemView, WorkspaceLeaf } from 'obsidian'
 import type { Ledger } from '../services/Ledger'
-import { accountBalances, monthSummaries, netAsset as computeNetAsset, netAssetTimeline } from '../snapshot/queries'
-import { t, formatMonthLabel, formatYearMonth } from '../labels'
+import { accountBalances, bucketsOf, monthSummaries, netAsset as computeNetAsset, netAssetTimeline } from '../snapshot/queries'
+import { t, tn, formatMonthLabel, formatYearMonth } from '../labels'
+import { bucketsTotal } from '../domain/buckets'
 import { formatCents } from '../domain/money'
 import { isLiability } from '../domain/types'
 import { renderSharedHeader } from './SharedHeader'
@@ -88,6 +89,10 @@ export class AssetView extends ItemView {
         cls: `ne-wallet-badge ne-badge-${account.accountType}`,
       })
       left.createEl('span', { text: account.name, cls: 'ne-wallet-name' })
+      const buckets = bucketsOf(snapshot, account.name)
+      if (buckets.length > 0) {
+        left.createEl('span', { text: tn('accounts.available', { amount: formatCents(balance - bucketsTotal(buckets)) }), cls: 'ne-wallet-row-desc' })
+      }
 
       row.createEl('span', {
         text: formatCents(Math.abs(balance)),

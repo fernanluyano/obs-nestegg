@@ -54,7 +54,7 @@ describe("createMissingAccount", () => {
 		await ledger.reload();
 		await ledger.validation.createMissingAccount("Ghost", "2026-10-01");
 		expect(findAccount(ledger.snapshot, "Ghost")).toMatchObject({ active: false, includeInNetAsset: false, balanceCents: -300 });
-		expect(types(await ledger.validation.validate())).toEqual([]);
+		expect(types(await ledger.validation.validate())).toEqual(["negativeAvailable"]);
 	});
 
 	it("uses today's date as the checkpoint when none is given by the caller", async () => {

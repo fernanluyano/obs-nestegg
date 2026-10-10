@@ -31,9 +31,9 @@ export class LedgerStore {
 		return this.current;
 	}
 
-	// After patching an account note's cached balance, keep memory in step without a full reload.
-	setAccountBalance(name: string, balanceCents: number): void {
+	// After patching an account note's cached amounts, keep memory in step without a full reload.
+	setAccountAmounts(name: string, balanceCents: number, availableCents?: number): void {
 		const record = this.current.accounts.find((a) => a.account.name === name);
-		if (record) record.account = { ...record.account, balanceCents };
+		if (record) record.account = { ...record.account, balanceCents, ...(availableCents === undefined ? {} : { availableCents }) };
 	}
 }

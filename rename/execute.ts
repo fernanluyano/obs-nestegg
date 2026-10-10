@@ -16,8 +16,10 @@ export class RenameValidationError extends RenameError {
 }
 
 // A rename never changes amounts, so totals and balances can't be affected by it, and moved files
-// are expected to change path. Everything else must not get worse than it already was.
-const NOT_JUDGED = new Set<ValidationIssue["type"]>(["monthTotals", "accountBalance", "pathMismatch", "inTransit"]);
+// are expected to change path. Everything else must not get worse than it already was. Bulk
+// deletes also go through here and refresh the cached balances and available amounts afterwards;
+// a deletion may leave available negative, which is reported rather than refused.
+const NOT_JUDGED = new Set<ValidationIssue["type"]>(["monthTotals", "accountBalance", "accountAvailable", "negativeAvailable", "pathMismatch", "inTransit"]);
 
 function countByType(issues: ValidationIssue[]): Map<ValidationIssue["type"], number> {
 	const counts = new Map<ValidationIssue["type"], number>();

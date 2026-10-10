@@ -16,12 +16,12 @@ describe("loadInputs / loadSnapshot", () => {
 		expect(inputs.length).toBe(vaultInputs().length);
 	});
 
-	it("reads bodies only for categories and month files", async () => {
+	it("reads bodies only for accounts, categories, month files and budgets", async () => {
 		const inputs = await loadInputs(MemoryVault.fromInputs(vaultInputs()));
 		const by = (suffix: string) => inputs.find((i) => i.path.endsWith(suffix))!;
 		expect(by("Food.md").content).toContain("| Subcategory |");
 		expect(by("2026-10.md").content).toContain("| Date |");
-		expect(by("Cash Main.md").content).toBe("");
+		expect(by("Cash Main.md").content).toContain("accountType: cash");
 		expect(by("Settings.md").content).toBe("");
 	});
 

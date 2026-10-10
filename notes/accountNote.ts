@@ -62,6 +62,7 @@ export function parseAccountProps(props: RawProps): ParsedAccount {
 	const active = bool(props, "active") ?? true;
 	const color = str(props, "color");
 	const unbalancedCents = int(props, "unbalancedCents");
+	const availableCents = accountType === "cash" ? int(props, "availableCents") : undefined;
 
 	let loan: LoanFields = {};
 	if (accountType === "loan") {
@@ -80,6 +81,7 @@ export function parseAccountProps(props: RawProps): ParsedAccount {
 			enteredBalanceCents,
 			enteredBalanceAsOf,
 			balanceCents: int(props, "balanceCents") ?? enteredBalanceCents,
+			...(availableCents === undefined ? {} : { availableCents }),
 			color: color && isHexColor(color) ? color.toLowerCase() : DEFAULT_ACCOUNT_COLOR,
 				...loan,
 				...(paymentSubcategory ? { paymentSubcategory } : {}),
@@ -100,6 +102,7 @@ export function accountProps(account: Account, extra: Props = {}): Props {
 		enteredBalanceCents: account.enteredBalanceCents,
 		enteredBalanceAsOf: account.enteredBalanceAsOf,
 		balanceCents: account.balanceCents,
+		availableCents: account.accountType === "cash" ? account.availableCents : undefined,
 		color: account.color,
 		...(account.unbalancedCents ? { unbalancedCents: account.unbalancedCents } : {}),
 		loanKind: account.loanKind,

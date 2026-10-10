@@ -18,6 +18,23 @@ export interface AccountBalanceIssue {
 	actualCents: number;
 }
 
+export interface AccountAvailableIssue {
+	type: "accountAvailable";
+	path: string;
+	account: string;
+	storedCents: number;
+	actualCents: number;
+}
+
+// More is set aside in buckets than the account holds (or the balance itself is below zero).
+export interface NegativeAvailableIssue {
+	type: "negativeAvailable";
+	account: string;
+	availableCents: number;
+	balanceCents: number;
+	bucketsCents: number;
+}
+
 export interface MalformedRowIssue {
 	type: "malformedRow";
 	path: string;
@@ -102,6 +119,8 @@ export interface InvalidDefaultAccountIssue {
 export type ValidationIssue =
 	| MonthTotalsIssue
 	| AccountBalanceIssue
+	| AccountAvailableIssue
+	| NegativeAvailableIssue
 	| MalformedRowIssue
 	| OrphanedAccountIssue
 	| DuplicateNameIssue

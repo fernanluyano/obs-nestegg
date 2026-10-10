@@ -1,6 +1,8 @@
 import { buildCategoryIndex, type CategoryIndex } from "../domain/categories";
 import type { Account, BudgetLine, Category, LedgerEntry, MonthSummary, Settings, Transaction } from "../domain/types";
+import type { Bucket } from "../domain/buckets";
 import { parseAccountProps } from "../notes/accountNote";
+import { readBuckets } from "../notes/bucketTable";
 import { parseBudgetNote } from "../notes/budgetNote";
 import { parseCategoryNote } from "../notes/categoryNote";
 import type { RawProps } from "../notes/frontmatter";
@@ -10,7 +12,7 @@ import { parseSettingsProps } from "../notes/settingsNote";
 import type { TableIssue } from "../table/types";
 
 // What the loader hands over for each plugin note. `content` is only read for the kinds that
-// have a table body (categories, month files); the others only need their properties.
+// have a table body (accounts, categories, month files); the others only need their properties.
 export interface NoteInput {
 	path: string;
 	props: RawProps;
@@ -20,6 +22,8 @@ export interface NoteInput {
 export interface AccountRecord {
 	path: string;
 	account: Account;
+	buckets: Bucket[]; // cash accounts only; always empty for the others
+	bucketIssues: RowIssue[];
 }
 
 export interface CategoryRecord {
@@ -97,8 +101,10 @@ export function buildSnapshot(inputs: NoteInput[]): Snapshot {
 				break;
 			case "account": {
 				const parsed = parseAccountProps(props);
-				if (parsed.ok) snapshot.accounts.push({ path, account: parsed.account });
-				else snapshot.invalid.push({ path, kind, reason: parsed.reason });
+				if (parsed.ok) {
+					const { buckets, issues } = parsed.account.accountType === "cash" ? readBuckets(content) : { buckets: [], issues: [] };
+					snapshot.accounts.push({ path, account: parsed.account, buckets, bucketIssues: issues });
+				} else snapshot.invalid.push({ path, kind, reason: parsed.reason });
 				break;
 			}
 			case "category": {

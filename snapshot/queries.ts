@@ -1,4 +1,5 @@
 import { balanceAt, currentBalance, netAssetCents } from "../domain/accounts";
+import { bucketsTotal, type Bucket } from "../domain/buckets";
 import { monthEndKey } from "../domain/dates";
 import { DEFAULT_TAGS } from "../domain/defaults";
 import { loanDebt, type LoanDebt } from "../domain/loans";
@@ -132,4 +133,24 @@ export function subcategoryTypeLocked(snapshot: Snapshot, subcategory: string): 
 
 export function subcategoryUsage(snapshot: Snapshot, subcategory: string): number {
 	return snapshot.months.reduce((n, m) => n + m.transactions.filter((tx) => tx.subcategory === subcategory).length, 0);
+}
+
+export function bucketsOf(snapshot: Snapshot, name: string): Bucket[] {
+	return snapshot.accounts.find((a) => a.account.name === name)?.buckets ?? [];
+}
+
+export interface AccountAvailability {
+	balanceCents: number;
+	bucketsCents: number;
+	availableCents: number;
+}
+
+// Like the balance, computed from the rows and the bucket table rather than read from the cache.
+// Only a cash account has anything set aside; any other account's available is its balance.
+export function availability(snapshot: Snapshot, name: string): AccountAvailability | undefined {
+	const record = snapshot.accounts.find((a) => a.account.name === name);
+	if (!record) return undefined;
+	const balanceCents = currentBalance(record.account, accountTransactions(snapshot, name));
+	const bucketsCents = bucketsTotal(record.buckets);
+	return { balanceCents, bucketsCents, availableCents: balanceCents - bucketsCents };
 }

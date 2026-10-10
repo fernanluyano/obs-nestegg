@@ -5,7 +5,7 @@ import { isLiability, type Account, type AccountType } from '../../domain/types'
 import { t, tn } from '../../labels'
 import { ConfirmModal } from '../../modal/ConfirmModal'
 import { openAccountEdit } from '../../modal/editAccountFlow'
-import { accountBalances, accountHasTransactions } from '../../snapshot/queries'
+import { accountBalances, accountHasTransactions, bucketsOf } from '../../snapshot/queries'
 import { loanScheduleText } from '../../view/accounts/loanScheduleText'
 import { ACCOUNTS_VIEW_TYPE } from '../../view/AccountsView'
 import { openOrRevealView } from '../../view/openView'
@@ -75,9 +75,11 @@ function editAccount(ctx: WizardContext, account: Account): void {
 function removeAccount(ctx: WizardContext, account: Account, hasRows: boolean): void {
   const allowed = canRemoveAccount(ctx.ledger.snapshot, account.name)
   if (!allowed.ok) { new Notice(t(allowed.reason)); return }
-  const message = hasRows
-    ? tn('wizard.confirm.archiveAccount', { name: account.name })
-    : tn('wizard.confirm.deleteAccount', { name: account.name })
+  const hasBuckets = bucketsOf(ctx.ledger.snapshot, account.name).length > 0
+  const key = hasRows
+    ? (hasBuckets ? 'wizard.confirm.archiveAccountBuckets' : 'wizard.confirm.archiveAccount')
+    : (hasBuckets ? 'wizard.confirm.deleteAccountBuckets' : 'wizard.confirm.deleteAccount')
+  const message = tn(key, { name: account.name })
   new ConfirmModal(ctx.app, message, async () => {
     await runAction(ctx, () => (hasRows ? ctx.ledger.archiveAccount(account.name) : ctx.ledger.accounts.remove(account.name)))
   }).open()

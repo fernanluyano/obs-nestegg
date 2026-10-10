@@ -30,7 +30,7 @@ describe("validateSnapshot", () => {
 			months: [monthInput("Cash Main", "2026-10", [tx({ subcategory: "Nope" })]), monthInput("Ghost", "2026-10", [tx()])],
 		});
 		const types = new Set(validateSnapshot(snap(inputs)).map((i) => i.type));
-		expect(types).toEqual(new Set(["unknownSubcategory", "accountBalance", "orphanedAccount"]));
+		expect(types).toEqual(new Set(["unknownSubcategory", "accountBalance", "accountAvailable", "orphanedAccount"]));
 	});
 });
 

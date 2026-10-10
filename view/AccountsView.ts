@@ -1,12 +1,15 @@
 import { Events, ItemView, Notice, WorkspaceLeaf } from 'obsidian'
+import { bucketsTotal, type Bucket } from '../domain/buckets'
 import { todayString } from '../domain/dates'
 import { formatCents } from '../domain/money'
 import { isLiability } from '../domain/types'
 import { t, tn } from '../labels'
 import { AddAccountModal } from '../modal/AddAccountModal'
+import { bucketRowModel } from '../modal/bucketState'
+import { BucketsModal } from '../modal/BucketsModal'
 import { openAccountEdit, openBalanceCorrection } from '../modal/editAccountFlow'
 import type { Ledger } from '../services/Ledger'
-import { accountBalances } from '../snapshot/queries'
+import { accountBalances, bucketsOf } from '../snapshot/queries'
 import { loanScheduleText } from './accounts/loanScheduleText'
 import { renderCard } from './components'
 import { renderSharedHeader } from './SharedHeader'
@@ -50,6 +53,21 @@ export class AccountsView extends ItemView {
     }
   }
 
+  private renderBucketDetails(card: HTMLElement, buckets: Bucket[]) {
+    const details = card.createEl('details', { cls: 'ne-bucket-details' })
+    details.createEl('summary', { text: tn('buckets.showDetails', { count: String(buckets.length) }) })
+    for (const bucket of buckets) {
+      const model = bucketRowModel(bucket)
+      const line = details.createDiv('ne-bucket-row')
+      const head = line.createDiv('ne-bucket-head')
+      head.createSpan({ text: model.name, cls: 'ne-wallet-row-name' })
+      head.createSpan({ text: model.balanceText, cls: 'ne-wallet-row-balance' })
+      if (model.percent === null || model.goalText === null) continue
+      line.createDiv('ne-bucket-bar').createDiv('ne-bucket-bar-fill').style.width = `${model.percent}%`
+      line.createDiv({ text: tn('buckets.progress', { percent: String(model.percent), goal: model.goalText }), cls: 'ne-wallet-row-desc' })
+    }
+  }
+
   render() {
     const { contentEl } = this
     const savedScroll = contentEl.scrollTop
@@ -64,7 +82,8 @@ export class AccountsView extends ItemView {
     }
     for (const { account, balanceCents } of balances) {
       const isDebt = isLiability(account.accountType)
-      const row = card.createDiv('ne-wallet-row')
+      const entry = card.createDiv('ne-wallet-entry')
+      const row = entry.createDiv('ne-wallet-row')
       const info = row.createDiv('ne-wallet-row-info')
       info.createSpan('ne-account-dot').style.background = account.color
       info.createSpan({ text: account.name, cls: 'ne-wallet-row-name' })
@@ -75,6 +94,14 @@ export class AccountsView extends ItemView {
       })
       const schedule = loanScheduleText(account, todayString())
       if (schedule) info.createSpan({ text: schedule, cls: 'ne-wallet-row-desc' })
+      const buckets = bucketsOf(this.ledger.snapshot, account.name)
+      if (buckets.length > 0) {
+        const available = balanceCents - bucketsTotal(buckets)
+        info.createSpan({
+          text: tn('accounts.available', { amount: formatCents(available) }),
+          cls: `ne-wallet-row-desc${available < 0 ? ' ne-bucket-negative' : ''}`,
+        })
+      }
       if (account.unbalancedCents) {
         info.createSpan({
           text: tn('accounts.unbalanced', { diff: formatCents(Math.abs(account.unbalancedCents)) }),
@@ -86,10 +113,15 @@ export class AccountsView extends ItemView {
         cls: `ne-wallet-row-balance${isDebt ? ' is-debt' : ''}`,
       })
       const actions = row.createDiv('ne-wallet-row-actions')
+      if (account.accountType === 'cash') {
+        actions.createEl('button', { text: t('buckets.button') })
+          .addEventListener('click', () => new BucketsModal(this.app, this.ledger, account.name, (a) => this.runChecked(a)).open())
+      }
       actions.createEl('button', { text: t('accounts.correctBalance') })
         .addEventListener('click', () => openBalanceCorrection(this.app, this.ledger, account, (a) => this.run(a)))
       actions.createEl('button', { text: t('ui.edit') })
         .addEventListener('click', () => openAccountEdit(this.app, this.ledger, account, (a) => this.run(a)))
+      if (buckets.length > 0) this.renderBucketDetails(entry, buckets)
     }
 
     contentEl.createDiv('ne-accounts-add').createEl('button', { text: t('settings.addAccount'), cls: 'mod-cta' })

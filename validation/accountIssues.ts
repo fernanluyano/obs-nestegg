@@ -1,7 +1,8 @@
 import { currentBalance } from "../domain/accounts";
+import { bucketsTotal, cachedAvailable } from "../domain/buckets";
 import { accountTransactions, type Snapshot } from "../snapshot/snapshot";
 import type {
-	AccountBalanceIssue, DuplicateNameIssue, InvalidDefaultAccountIssue, OrphanedAccountIssue,
+	AccountAvailableIssue, AccountBalanceIssue, NegativeAvailableIssue, DuplicateNameIssue, InvalidDefaultAccountIssue, OrphanedAccountIssue,
 } from "./issues";
 
 export function detectStaleBalances(snapshot: Snapshot): AccountBalanceIssue[] {
@@ -10,6 +11,32 @@ export function detectStaleBalances(snapshot: Snapshot): AccountBalanceIssue[] {
 		const actualCents = currentBalance(account, accountTransactions(snapshot, account.name));
 		if (actualCents !== account.balanceCents) {
 			issues.push({ type: "accountBalance", path, account: account.name, storedCents: account.balanceCents, actualCents });
+		}
+	}
+	return issues;
+}
+
+// Cash only. A note without the property reads as available = balance, so it is stale only
+// if that reading is wrong.
+export function detectStaleAvailable(snapshot: Snapshot): AccountAvailableIssue[] {
+	const issues: AccountAvailableIssue[] = [];
+	for (const { path, account, buckets } of snapshot.accounts) {
+		if (account.accountType !== "cash") continue;
+		const actualCents = currentBalance(account, accountTransactions(snapshot, account.name)) - bucketsTotal(buckets);
+		const storedCents = cachedAvailable(account);
+		if (actualCents !== storedCents) issues.push({ type: "accountAvailable", path, account: account.name, storedCents, actualCents });
+	}
+	return issues;
+}
+
+export function detectNegativeAvailable(snapshot: Snapshot): NegativeAvailableIssue[] {
+	const issues: NegativeAvailableIssue[] = [];
+	for (const { account, buckets } of snapshot.accounts) {
+		if (account.accountType !== "cash") continue;
+		const balanceCents = currentBalance(account, accountTransactions(snapshot, account.name));
+		const bucketsCents = bucketsTotal(buckets);
+		if (balanceCents - bucketsCents < 0) {
+			issues.push({ type: "negativeAvailable", account: account.name, availableCents: balanceCents - bucketsCents, balanceCents, bucketsCents });
 		}
 	}
 	return issues;

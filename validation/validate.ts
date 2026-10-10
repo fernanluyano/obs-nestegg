@@ -1,6 +1,7 @@
 import { categoryIndexOf, type Snapshot } from "../snapshot/snapshot";
 import {
-	detectDuplicateAccounts, detectInvalidDefaultAccount, detectOrphanedAccounts, detectStaleBalances,
+	detectDuplicateAccounts, detectInvalidDefaultAccount, detectNegativeAvailable, detectOrphanedAccounts,
+	detectStaleAvailable, detectStaleBalances,
 } from "./accountIssues";
 import {
 	detectDuplicateCategories, detectDuplicateSubcategories, detectUnknownSubcategories,
@@ -25,6 +26,8 @@ export function validateSnapshot(snapshot: Snapshot): ValidationIssue[] {
 		...detectTransferIssues(snapshot),
 		...detectMonthTotals(snapshot, index),
 		...detectStaleBalances(snapshot),
+		...detectStaleAvailable(snapshot),
+		...detectNegativeAvailable(snapshot),
 		...detectInvalidDefaultAccount(snapshot),
 		...detectPathMismatches(snapshot),
 	];

@@ -55,6 +55,24 @@ export function describeIssue(issue: ValidationIssue): IssueView {
 				fixes: [{ label: "validation.fix.recalculate", action: { kind: "recalculateBalance", account: issue.account } }],
 				auto: true,
 			};
+		case "accountAvailable":
+			return {
+				section: "validation.section.accountAvailable",
+				text: tn("validation.desc.accountAvailable", {
+					account: issue.account,
+					actual: formatCents(issue.actualCents),
+					stored: formatCents(issue.storedCents),
+				}),
+				fixes: [{ label: "validation.fix.recalculate", action: { kind: "recalculateBalance", account: issue.account } }],
+				auto: true,
+			};
+		case "negativeAvailable":
+			return info("validation.section.negativeAvailable", tn("validation.desc.negativeAvailable", {
+				account: issue.account,
+				available: formatCents(issue.availableCents),
+				balance: formatCents(issue.balanceCents),
+				buckets: formatCents(issue.bucketsCents),
+			}));
 		case "malformedRow":
 			return info("validation.section.malformedRow", tn("validation.desc.malformedRow", {
 				file: basenameNoExt(issue.path), line: String(issue.line), reason: issue.reason,

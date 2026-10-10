@@ -10,7 +10,7 @@ export async function loadInputs(port: VaultPort): Promise<NoteInput[]> {
 	for (const { path, props } of notes) {
 		const kind = kindOf(props);
 		if (!kind) continue;
-		const hasTable = kind === "category" || kind === "transactions" || kind === "budget";
+		const hasTable = kind === "account" || kind === "category" || kind === "transactions" || kind === "budget";
 		const content = hasTable && stateOf(props) === "current" ? ((await port.read(path)) ?? "") : "";
 		inputs.push({ path, props, content });
 	}

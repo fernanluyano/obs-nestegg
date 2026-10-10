@@ -2881,3 +2881,98 @@ select.ne-add-wallet-input {
 .ne-debt-chart {
   min-height: 260px;
 }
+
+/* Savings buckets */
+.ne-bucket-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ne-bucket-summary-item {
+  background: var(--background-secondary);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.ne-bucket-summary-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ne-bucket-summary-value {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ne-bucket-summary-value.is-negative,
+.ne-bucket-negative {
+  color: var(--text-error);
+}
+
+.ne-bucket-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ne-bucket-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.ne-bucket-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--background-modifier-border);
+  overflow: hidden;
+}
+
+.ne-bucket-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-green);
+}
+
+.ne-bucket-actions {
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.ne-bucket-editor,
+.ne-bucket-create {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.ne-bucket-create {
+  margin-top: 14px;
+}
+
+/* The separator sits under an account's row and its bucket list together, so the buckets read as part of that account. */
+.ne-wallet-entry {
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ne-wallet-entry:last-child {
+  border-bottom: none;
+}
+
+.ne-wallet-entry > .ne-wallet-row,
+.ne-bucket-details .ne-bucket-row:last-child {
+  border-bottom: none;
+}
+
+.ne-bucket-details summary {
+  cursor: pointer;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+}

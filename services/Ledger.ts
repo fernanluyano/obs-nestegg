@@ -1,6 +1,7 @@
 import type { Snapshot } from "../snapshot/snapshot";
 import type { VaultPort } from "../storage/VaultPort";
 import { AccountService, type NewAccount } from "./AccountService";
+import { BucketService } from "./BucketService";
 import { BudgetService } from "./BudgetService";
 import { CategoryService } from "./CategoryService";
 import { LedgerStore } from "./LedgerStore";
@@ -15,6 +16,7 @@ export class Ledger {
 	readonly transactions: TransactionService;
 	readonly accounts: AccountService;
 	readonly categories: CategoryService;
+	readonly buckets: BucketService;
 	readonly budgets: BudgetService;
 	readonly settings: SettingsService;
 	readonly validation: ValidationService;
@@ -24,6 +26,7 @@ export class Ledger {
 		this.transactions = new TransactionService(this.store);
 		this.accounts = new AccountService(this.store);
 		this.categories = new CategoryService(this.store);
+		this.buckets = new BucketService(this.store);
 		this.budgets = new BudgetService(this.store);
 		this.settings = new SettingsService(this.store);
 		this.validation = new ValidationService(this.store, this.settings);
