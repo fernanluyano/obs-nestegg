@@ -82,6 +82,21 @@ export function groupByCategory(
 	return totals;
 }
 
+// Expense totals (counted as in groupByCategory) per chosen tag. A row carrying several chosen tags
+// counts under each, so the slices can add up to more than the month's spending.
+export function groupByTags(entries: LedgerEntry[], index: CategoryIndex, tags: readonly string[]): Map<string, number> {
+	const totals = new Map<string, number>();
+	for (const entry of entries) {
+		const entryType = index.typeOf(entry.subcategory);
+		const counts = entryType === "expense" || (entryType === "debt" && entry.amountCents < 0);
+		if (!counts) continue;
+		for (const tag of tags) {
+			if (entry.tags.includes(tag)) totals.set(tag, (totals.get(tag) ?? 0) - entry.amountCents);
+		}
+	}
+	return totals;
+}
+
 export function knownTags(snapshot: Snapshot): string[] {
 	const tags = new Set(snapshot.months.flatMap((m) => m.transactions.flatMap((tx) => tx.tags)));
 	return [...tags].sort();

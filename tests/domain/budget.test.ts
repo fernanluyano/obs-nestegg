@@ -113,6 +113,27 @@ describe("buildBudgetSheet", () => {
 		expect([...sheet.income, ...sheet.expense].some((s) => s.category === "Transfers")).toBe(false);
 	});
 
+	it("counts spending on lines with no plan as unbudgeted, inside the total, with refunds netted and income left out", () => {
+		const cats = [category("Home", "expense", ["Rent", "Vet", ["Salary", "income"]])];
+		const result = buildBudgetSheet(
+			cats,
+			[{ subcategory: "Rent", plannedCents: 100000 }],
+			[
+				entry({ subcategory: "Rent", amountCents: -90000 }),
+				entry({ subcategory: "Vet", amountCents: -50000 }),
+				entry({ subcategory: "Vet", amountCents: 20000 }),
+				entry({ subcategory: "Salary", amountCents: 300000 }),
+			],
+			buildCategoryIndex(cats),
+		);
+		expect(result.summary).toMatchObject({
+			expensePlannedCents: 100000,
+			expenseActualCents: 120000,
+			unbudgetedCents: 30000,
+			surplusCents: 180000,
+		});
+	});
+
 	it("splits a category that holds several types into one section per type", () => {
 		const mixed = [category("Home", "expense", ["Rent", ["Rental income", "income"]])];
 		const mixedIndex = buildCategoryIndex(mixed);
@@ -153,13 +174,14 @@ describe("buildBudgetSheet", () => {
 			expensePlannedCents: 50000,
 			expenseActualCents: 47000,
 			expenseLeftCents: 3000,
+			unbudgetedCents: 0,
 			surplusCents: 203000,
 		});
 	});
 
 	it("is all zeros with no lines and no entries", () => {
 		expect(buildBudgetSheet(categories, [], [], index).summary).toEqual({
-			incomePlannedCents: 0, incomeActualCents: 0, expensePlannedCents: 0, expenseActualCents: 0, expenseLeftCents: 0, surplusCents: 0,
+			incomePlannedCents: 0, incomeActualCents: 0, expensePlannedCents: 0, expenseActualCents: 0, expenseLeftCents: 0, unbudgetedCents: 0, surplusCents: 0,
 		});
 	});
 });

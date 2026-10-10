@@ -6,6 +6,7 @@ import type { Ledger } from '../services/Ledger'
 import { budgetSheetOf, findBudget } from '../snapshot/budgetQueries'
 import { currentYearMonth } from '../utils'
 import { barWidth, leftText } from './budgetRow'
+import { budgetCards } from './budgetCards'
 import { NESTEGG_ICON } from '../plugin/icon'
 import { createMetric, renderCard } from './components'
 import { renderSharedHeader } from './SharedHeader'
@@ -74,15 +75,9 @@ export class BudgetView extends ItemView {
     const { income, expense, payments, summary } = budgetSheetOf(this.ledger.snapshot, this.yearMonth)
 
     const metrics = parent.createDiv('ne-metrics')
-    createMetric(metrics, t('budget.income'), summary.incomeActualCents, 'income')
-    createMetric(metrics, t('budget.expenses'), summary.expenseActualCents, 'expense')
-    createMetric(metrics, t('budget.remaining'), Math.abs(summary.expenseLeftCents), summary.expenseLeftCents >= 0 ? 'positive' : 'negative')
-    createMetric(metrics, t('budget.surplus'), Math.abs(summary.surplusCents), summary.surplusCents >= 0 ? 'positive' : 'negative', { hero: true })
-
-    parent.createDiv({
-      cls: 'ne-budget-muted ne-budget-plan-line',
-      text: `${t('budget.planned')}: ${t('budget.income')} ${formatCents(summary.incomePlannedCents)} · ${t('budget.expenses')} ${formatCents(summary.expensePlannedCents)}`,
-    })
+    for (const c of budgetCards(summary)) {
+      createMetric(metrics, c.label, c.valueCents, c.variant, { compact: true, signed: c.signed, hero: c.hero, hint: c.hint })
+    }
 
     for (const group of sectionsByCategory([...income, ...expense, ...payments])) this.renderCategory(parent, group)
   }

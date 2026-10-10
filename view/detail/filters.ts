@@ -7,13 +7,14 @@ export interface DetailFilters {
   types: Set<TransactionType>
   categories: Set<string>
   accounts: Set<string>
+  untagged: boolean // true = only transactions without tags
   dateFrom: string | null // YYYY-MM-DD; null = no lower bound
   dateTo: string | null   // YYYY-MM-DD; null = no upper bound
   search: string
 }
 
 export function emptyFilters(): DetailFilters {
-  return { types: new Set(), categories: new Set(), accounts: new Set(), dateFrom: null, dateTo: null, search: '' }
+  return { types: new Set(), categories: new Set(), accounts: new Set(), untagged: false, dateFrom: null, dateTo: null, search: '' }
 }
 
 export function cloneFilters(f: DetailFilters): DetailFilters {
@@ -21,7 +22,7 @@ export function cloneFilters(f: DetailFilters): DetailFilters {
 }
 
 export function countActiveFilters(f: DetailFilters): number {
-  return [f.types.size > 0, f.categories.size > 0, f.accounts.size > 0, f.dateFrom !== null, f.dateTo !== null, f.search !== '']
+  return [f.types.size > 0, f.categories.size > 0, f.accounts.size > 0, f.untagged, f.dateFrom !== null, f.dateTo !== null, f.search !== '']
     .filter(Boolean).length
 }
 
@@ -38,6 +39,7 @@ export function applyFilters(entries: LedgerEntry[], f: DetailFilters, index: Ca
     if (f.types.size > 0 && (!type || !f.types.has(type))) return false
     if (f.categories.size > 0 && !f.categories.has(index.categoryOf(entry.subcategory)?.name ?? '')) return false
     if (f.accounts.size > 0 && !f.accounts.has(entry.account) && !f.accounts.has(entry.fromTo)) return false
+    if (f.untagged && entry.tags.length > 0) return false
     if (f.dateFrom && entry.date < f.dateFrom) return false
     if (f.dateTo && entry.date > f.dateTo) return false
     if (f.search && !matchesSearch(entry, f.search)) return false

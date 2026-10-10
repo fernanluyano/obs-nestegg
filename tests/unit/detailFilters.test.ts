@@ -34,7 +34,8 @@ describe('emptyFilters / countActiveFilters / cloneFilters', () => {
     f.dateFrom = '2026-10-01'
     f.dateTo = '2026-10-31'
     f.search = 'x'
-    expect(countActiveFilters(f)).toBe(6)
+    f.untagged = true
+    expect(countActiveFilters(f)).toBe(7)
   })
 
   it('clones the sets', () => {
@@ -61,6 +62,11 @@ describe('applyFilters', () => {
   it('filters by category name, with unknown subcategories matching none', () => {
     expect(apply({ categories: new Set(['Food']) })).toHaveLength(1)
     expect(apply({ categories: new Set(['Income', 'Transfers']) })).toHaveLength(3)
+  })
+
+  it('keeps only transactions without tags', () => {
+    expect(apply({ untagged: true })).toHaveLength(4)
+    expect(apply({ untagged: true }).some(e => e.tags.length > 0)).toBe(false)
   })
 
   it('filters by account, matching a transfer from either side', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	accountColors, accountBalances, accountHasTransactions, accountsOf, activeAccounts,
-	findAccount, groupByCategory, knownMerchants, knownTags, monthEntries, monthSummaries,
+	findAccount, groupByCategory, groupByTags, knownMerchants, knownTags, monthEntries, monthSummaries,
 	monthSummary, netAsset, netAssetTimeline, subcategoryUsage, suggestedTags,
 } from "../../snapshot/queries";
 import { buildSnapshot, categoryIndexOf } from "../../snapshot/snapshot";
@@ -86,6 +86,18 @@ describe("month queries", () => {
 		expect([...groupByCategory(entries, index, "expense")]).toEqual([["Food", 8450 - 1200 + 2000]]);
 		expect([...groupByCategory(entries, index, "income")]).toEqual([["Income", 250000]]);
 		expect(groupByCategory([{ ...entries[0], subcategory: "Nope" }], index, "expense").size).toBe(0);
+	});
+
+	it("groups spending by the chosen tags, a row under each tag it carries", () => {
+		const base = monthEntries(snap, "2026-10")[0];
+		const entries = [
+			{ ...base, subcategory: "Groceries", amountCents: -1000, tags: ["need"] },
+			{ ...base, subcategory: "Groceries", amountCents: -500, tags: ["need", "want"] },
+			{ ...base, subcategory: "Groceries", amountCents: -300, tags: ["other"] },
+			{ ...base, subcategory: "Salary", amountCents: 9000, tags: ["need"] },
+		];
+		expect([...groupByTags(entries, index, ["need", "want"])]).toEqual([["need", 1500], ["want", 500]]);
+		expect(groupByTags(entries, index, []).size).toBe(0);
 	});
 
 	it("counts a debt payment under its category as spending, once", () => {

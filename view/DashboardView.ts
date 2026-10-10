@@ -1,6 +1,10 @@
-import { Events, ItemView, WorkspaceLeaf } from 'obsidian'
+import { Events, ItemView, ViewStateResult, WorkspaceLeaf } from 'obsidian'
 import type { Ledger } from '../services/Ledger'
-import { groupByCategory, monthEntries, monthSummaries, netAssetTimeline } from '../snapshot/queries'
+import { groupByCategory, groupByTags, monthEntries, monthSummaries, netAssetTimeline, suggestedTags } from '../snapshot/queries'
+import { DEFAULT_TAGS } from '../domain/defaults'
+import type { CategoryIndex } from '../domain/categories'
+import type { LedgerEntry } from '../domain/types'
+import { renderMultiDropdown } from './detail/dropdown'
 import { t, formatMonthLabel, formatYearMonth } from '../labels'
 import { currentYearMonth } from '../utils'
 import { createMetric, renderCard } from './components'
@@ -12,15 +16,31 @@ import { NESTEGG_ICON } from '../plugin/icon'
 import { MonthData, drawIncExpChart, drawPie, getMonthRangeEndingAt } from './charts'
 
 export const DASHBOARD_VIEW_TYPE = 'nestegg-dashboard'
+const DASH_TAG_LIMIT = 10
 
 export class DashboardView extends ItemView {
   private ledger: Ledger
   private currentYearMonth: string
   private charts: Chart[] = []
+  private tagChart: Chart | null = null
+  private selectedTags = new Set<string>(DEFAULT_TAGS)
+  private tagPanel = { open: false }
 
   private clearCharts() {
     this.charts.forEach(c => c.destroy())
     this.charts = []
+    this.tagChart = null
+  }
+
+  getState() {
+    return { ...super.getState(), selectedTags: [...this.selectedTags] }
+  }
+
+  async setState(state: Record<string, unknown>, result: ViewStateResult) {
+    const saved = state?.selectedTags
+    if (Array.isArray(saved)) this.selectedTags = new Set(saved.filter((tag): tag is string => typeof tag === 'string').slice(0, DASH_TAG_LIMIT))
+    await super.setState(state, result)
+    if (this.contentEl.hasClass('ne-dashboard')) await this.render()
   }
 
   constructor(leaf: WorkspaceLeaf, ledger: Ledger) {
@@ -106,15 +126,42 @@ export class DashboardView extends ItemView {
     const gridRight = grid2.createDiv('ne-grid-right')
 
     const expenseMap = groupByCategory(entries, index, 'expense')
-    const incomeMap  = groupByCategory(entries, index, 'income')
 
     const expCard = renderCard(gridRight, { title: t('dash.expenseByCategory') })
     if (expenseMap.size > 0) this.charts.push(drawPie(expCard, expenseMap, (cat: string) => { void this.openDetailWithFilter('expense', cat) }, 200))
     else expCard.createEl('p', { text: t('dash.noData'), cls: 'ne-no-data' })
 
-    const incCard = renderCard(gridRight, { title: t('dash.incomeByCategory') })
-    if (incomeMap.size > 0) this.charts.push(drawPie(incCard, incomeMap, (cat: string) => { void this.openDetailWithFilter('income', cat) }, 200))
-    else incCard.createEl('p', { text: t('dash.noData'), cls: 'ne-no-data' })
+    // ── Expense by chosen tags ───────────────────────────────────────────────
+    const tagCard = renderCard(gridRight, { title: t('dash.expenseByTag') })
+    renderMultiDropdown(tagCard, {
+      label: t('dash.tags'), allLabel: t('dash.noTags'),
+      options: suggestedTags(snapshot), selected: this.selectedTags, panelState: this.tagPanel,
+      onChange: () => {
+        // The set keeps insertion order, so the tag just added is the last one.
+        while (this.selectedTags.size > DASH_TAG_LIMIT) this.selectedTags.delete([...this.selectedTags].pop()!)
+        this.drawTagPie(tagPieEl, entries, index)
+      },
+      register: (cleanup) => this.register(cleanup),
+    })
+    const tagPieEl = tagCard.createDiv()
+    this.drawTagPie(tagPieEl, entries, index)
+  }
+
+  // Redrawn alone when the tags change, so the tag box keeps focus.
+  private drawTagPie(el: HTMLElement, entries: LedgerEntry[], index: CategoryIndex) {
+    if (this.tagChart) {
+      this.tagChart.destroy()
+      this.charts = this.charts.filter(c => c !== this.tagChart)
+      this.tagChart = null
+    }
+    el.empty()
+    const totals = groupByTags(entries, index, [...this.selectedTags])
+    if (totals.size === 0) {
+      el.createEl('p', { text: t('dash.noData'), cls: 'ne-no-data' })
+      return
+    }
+    this.tagChart = drawPie(el, totals, undefined, 200)
+    this.charts.push(this.tagChart)
   }
 
   private async openDetailWithFilter(type: TransactionType, category: string) {

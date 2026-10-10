@@ -38,6 +38,15 @@ export function accountDropdown(container: HTMLElement, host: FilterHost, panelS
   })
 }
 
+export function untaggedToggle(container: HTMLElement, host: FilterHost): void {
+  const btn = container.createEl('button', {
+    cls: 'ne-cat-toggle' + (host.filters.untagged ? ' is-active' : ''),
+    text: t('detail.filterUntagged'),
+  })
+  btn.dataset['testid'] = 'detail-filter-untagged'
+  btn.addEventListener('click', () => { host.filters.untagged = !host.filters.untagged; host.rerender() })
+}
+
 export function dateRangeInputs(row: HTMLElement, host: FilterHost, onChange: () => void): void {
   const bounds = monthDateBounds(host.yearMonth)
   const make = (value: string, testid: string, set: (v: string | null) => void) => {

@@ -39,6 +39,10 @@ function buildBody(sheet: HTMLElement, host: FilterHost, rerender: () => void): 
     }, t('detail.filterAllAccounts'))
   }
 
+  const tagPill = section(sheet, t('detail.filterTags')).createDiv('ne-pill-group')
+  tagPill.createEl('button', { text: t('detail.filterUntagged'), cls: 'ne-pill ne-pill-color-neutral' + (filters.untagged ? ' is-active' : '') })
+    .addEventListener('click', change(() => { filters.untagged = !filters.untagged }))
+
   dateRangeInputs(section(sheet, t('detail.filterDateRange')).createDiv('ne-detail-date-row'), host, () => host.refreshList())
 
   const clear = sheet.createEl('button', { cls: 'ne-action-btn ne-filter-clear-all', text: t('detail.filterClearAll') })

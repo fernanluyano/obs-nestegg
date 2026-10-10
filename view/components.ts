@@ -1,9 +1,13 @@
-import { formatCents } from '../domain/money'
+import { metricText, type CardVariant } from './budgetCards'
 
-export type MetricVariant = 'income' | 'expense' | 'positive' | 'negative' | 'neutral'
+export type MetricVariant = CardVariant
 
 export interface MetricOptions {
   hero?: boolean
+  compact?: boolean
+  hint?: string
+  // Colour still follows the variant; only the leading +/- is dropped
+  signed?: boolean
 }
 
 export function createMetric(
@@ -13,25 +17,22 @@ export function createMetric(
   variant: MetricVariant,
   options: MetricOptions = {},
 ): HTMLElement {
-  const { hero = false } = options
+  const { hero = false, compact = false, hint, signed = true } = options
   const card = container.createDiv('ne-metric')
+  if (compact) card.addClass('ne-metric--small')
   if (hero) {
     card.addClass('ne-metric--hero')
     if (variant !== 'neutral') card.addClass(variant)
   }
   card.createEl('div', { text: label, cls: 'ne-metric-label' })
 
-  const prefix =
-    variant === 'income' || variant === 'positive' ? '+' :
-    variant === 'expense' || variant === 'negative' ? '-' :
-    ''
-
   const valueClass = variant === 'neutral' ? 'ne-metric-value' : `ne-metric-value ${variant}`
 
   card.createEl('div', {
-    text: prefix + formatCents(Math.abs(value)),
+    text: metricText(value, variant, signed),
     cls: valueClass,
   })
+  if (hint) card.createEl('div', { text: hint, cls: 'ne-metric-hint' })
 
   return card
 }

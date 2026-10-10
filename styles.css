@@ -2764,9 +2764,13 @@ select.ne-add-wallet-input {
 .ne-bulk-count { flex: 1; font-weight: var(--font-semibold); min-width: 90px; }
 
 /* Budget view: a row is name | planned | spent | progress bar */
-.ne-budget .ne-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 960px; }
+.ne-budget .ne-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding-bottom: 12px; max-width: 960px; }
+.ne-metric--small { padding: 0.5rem 0.75rem; }
+.ne-metric--small.ne-metric--hero { padding-left: calc(0.75rem - 4px); }
+.ne-metric--small .ne-metric-label { font-size: 11px; margin-bottom: 2px; }
+.ne-metric--small .ne-metric-value { font-size: 18px; }
+.ne-metric-hint { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
 .ne-budget-muted { color: var(--text-muted); }
-.ne-budget-plan-line { padding: 0 20px 12px; font-size: var(--font-ui-smaller); }
 .ne-budget-empty { margin: 16px 20px; max-width: 480px; }
 .ne-budget-section { margin: 0 20px 12px; max-width: 960px; padding: 0; overflow: hidden; }
 .ne-budget-row {
@@ -2791,6 +2795,7 @@ select.ne-add-wallet-input {
 .ne-budget-fill.is-over { background: var(--color-red); }
 @media (max-width: 600px) {
   .ne-budget .ne-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ne-budget .ne-metrics { padding-left: 12px; padding-right: 12px; }
   .ne-budget-row { grid-template-columns: minmax(0, 1fr) 84px 72px 48px; padding: 6px 10px; }
-  .ne-budget-section, .ne-budget-plan-line { margin-left: 12px; margin-right: 12px; }
+  .ne-budget-section { margin-left: 12px; margin-right: 12px; }
 }

@@ -11,7 +11,7 @@ import type { Ledger } from '../services/Ledger'
 import { accountColors, monthEntries } from '../snapshot/queries'
 import { balanceAccounts, dailyBalances } from '../snapshot/runningBalance'
 import { currentYearMonth } from '../utils'
-import { accountDropdown, categoryDropdown, dateRangeRow, searchRow, typePills } from './detail/controls'
+import { accountDropdown, categoryDropdown, dateRangeRow, searchRow, typePills, untaggedToggle } from './detail/controls'
 import type { FilterHost } from './detail/FilterHost'
 import { openDetailFilterSheet } from './detail/filterSheet'
 import { applyFilters, countActiveFilters, emptyFilters, sortForDisplay, subtotals, type DetailFilters } from './detail/filters'
@@ -141,6 +141,7 @@ export class DetailView extends ItemView {
       typePills(pills, host)
       categoryDropdown(pills, host, this.panels.category)
       accountDropdown(pills, host, this.panels.account)
+      untaggedToggle(pills, host)
       dateRangeRow(header, host)
       searchRow(header, host, null, contentEl)
     }

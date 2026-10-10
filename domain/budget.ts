@@ -35,6 +35,7 @@ export interface BudgetSummary {
 	expensePlannedCents: number;
 	expenseActualCents: number;
 	expenseLeftCents: number;
+	unbudgetedCents: number; // the part of expenseActualCents spent on lines with no planned amount
 	surplusCents: number; // income received minus money spent
 }
 
@@ -128,6 +129,7 @@ export function buildBudgetSheet(categories: Category[], lines: BudgetLine[], en
 	const expensePlannedCents = sumOf(spending, "plannedCents");
 	const expenseActualCents = sumOf(spending, "actualCents");
 	const incomeActualCents = sumOf(income, "actualCents");
+	const unbudgetedCents = spending.flatMap((s) => s.rows).filter((r) => r.plannedCents === 0).reduce((sum, r) => sum + r.actualCents, 0);
 	return {
 		income,
 		expense,
@@ -137,7 +139,7 @@ export function buildBudgetSheet(categories: Category[], lines: BudgetLine[], en
 			incomeActualCents,
 			expensePlannedCents,
 			expenseActualCents,
-			expenseLeftCents: expensePlannedCents - expenseActualCents,
+			expenseLeftCents: expensePlannedCents - expenseActualCents,			unbudgetedCents,
 			surplusCents: incomeActualCents - expenseActualCents,
 		},
 	};
