@@ -7,6 +7,7 @@ import {
 	isPartnerRow, sameTransaction, transferEntries, type TransactionDraft, type TransferInput,
 } from "../domain/transactions";
 import type { LedgerEntry, Transaction } from "../domain/types";
+import { patchProps } from "../notes/frontmatter";
 import { buildMonthNote, editMonthNote, type MonthEdit } from "../notes/monthNote";
 import { monthPath } from "../notes/paths";
 import { executePlan } from "../rename/execute";
@@ -57,6 +58,15 @@ export class TransactionService {
 			return;
 		}
 		await port.modify(path, (content) => editMonthNote(content, edit, index));
+	}
+
+	// Only the property changes, so every cached running balance stays valid.
+	async setBalanceShown(account: string, month: string, shown: boolean): Promise<void> {
+		const { port, snapshot } = this.store;
+		const known = snapshot.months.find((m) => m.account === account && m.month === month);
+		if (!known) throw new LedgerError("That account has no transactions file for this month");
+		await port.modify(known.path, (content) => patchProps(content, { showBalance: shown }));
+		await this.store.reload([]);
 	}
 
 	private async finish(accounts: string[]): Promise<void> {

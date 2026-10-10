@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { balanceAt } from "../../domain/accounts";
-import { MonthDeltaCache, balanceAccounts, dailyBalances } from "../../snapshot/runningBalance";
+import { MonthDeltaCache, balanceAccounts, dailyBalances, hiddenBalances } from "../../snapshot/runningBalance";
 import { accountTransactions, buildSnapshot } from "../../snapshot/snapshot";
 import { account, monthInput, tx, vaultInputs } from "../helpers/fixtures";
 
@@ -153,5 +153,26 @@ describe("balanceAccounts", () => {
 
 	it("lists only the chosen active accounts", () => {
 		expect(balanceAccounts(snap, ["Cash Main", "Old"])).toEqual(["Cash Main"]);
+	});
+});
+
+describe("balances switched off for a month", () => {
+	const off = () => {
+		const snap = snapshot();
+		snap.months.find((m) => m.account === "Card" && m.month === "2026-10")!.showBalance = false;
+		return snap;
+	};
+
+	it("skips the account in the daily balances but not in the legend list", () => {
+		const snap = off();
+		const balances = dailyBalances(snap, new MonthDeltaCache(), "2026-10", []);
+		expect([...balances.values()].every((byAccount) => !byAccount.has("Card"))).toBe(true);
+		expect(balances.has("2026-10-04")).toBe(false);
+		expect(balanceAccounts(snap, [])).toContain("Card");
+		expect(hiddenBalances(snap, "2026-10")).toEqual(new Set(["Card"]));
+	});
+
+	it("only affects that month", () => {
+		expect(hiddenBalances(off(), "2026-11").size).toBe(0);
 	});
 });

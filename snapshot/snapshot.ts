@@ -33,6 +33,7 @@ export interface MonthRecord {
 	account: string;
 	month: string;
 	stored: Partial<MonthSummary>;
+	showBalance: boolean;
 	transactions: Transaction[];
 	rowIssues: RowIssue[];
 }
@@ -115,8 +116,8 @@ export function buildSnapshot(inputs: NoteInput[]): Snapshot {
 			case "transactions": {
 				const parsed = parseMonthNote(props, content);
 				if (parsed.ok) {
-					const { account, month, stored, transactions, rowIssues } = parsed;
-					snapshot.months.push({ path, account, month, stored, transactions, rowIssues });
+					const { account, month, stored, showBalance, transactions, rowIssues } = parsed;
+					snapshot.months.push({ path, account, month, stored, showBalance, transactions, rowIssues });
 				} else {
 					snapshot.invalid.push({ path, kind, reason: parsed.reason });
 				}

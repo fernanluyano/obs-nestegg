@@ -51,6 +51,8 @@ const strings = {
     'detail.filterDebt': 'Debt payment',
     'detail.subtotalIncome': 'Income subtotal',
     'detail.subtotalExpense': 'Expense subtotal',
+    'detail.balanceHide': 'Hide running balance',
+    'detail.balanceShow': 'Show running balance',
     'detail.noTransactions': 'No matching transactions',    'detail.searchPlaceholder': 'Search merchant, note or tags...',
     'detail.filterCategory': 'Category',
     'detail.filterButton': 'Filter',

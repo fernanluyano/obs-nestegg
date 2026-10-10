@@ -81,12 +81,18 @@ export function balanceAccounts(snapshot: Snapshot, chosen: string[]): string[] 
 	return activeOf(snapshot).filter((a) => chosen.length === 0 || chosen.includes(a.name)).map((a) => a.name);
 }
 
+// Accounts whose month note opts out of the running balance; an account without a note that month stays on.
+export function hiddenBalances(snapshot: Snapshot, month: string): Set<string> {
+	return new Set(snapshot.months.filter((m) => m.month === month && !m.showBalance).map((m) => m.account));
+}
+
 // For each date in `month` that has a row in the listed accounts, the balance of every listed
-// account at the end of that date, in account order.
+// account at the end of that date, in account order. Accounts switched off for the month are never replayed.
 export function dailyBalances(
 	snapshot: Snapshot, cache: MonthDeltaCache, month: string, chosen: string[],
 ): Map<string, Map<string, number>> {
-	const names = new Set(balanceAccounts(snapshot, chosen));
+	const hidden = hiddenBalances(snapshot, month);
+	const names = new Set(balanceAccounts(snapshot, chosen).filter((n) => !hidden.has(n)));
 	const accounts = activeOf(snapshot).filter((a) => names.has(a.name));
 	const monthData = cache.get(snapshot, month);
 	const dates = new Set<string>();

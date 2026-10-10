@@ -9,7 +9,7 @@ import { SubcategoryPickModal } from '../modal/SubcategoryPickModal'
 import { TransactionModal } from '../modal/TransactionModal'
 import type { Ledger } from '../services/Ledger'
 import { accountColors, monthEntries } from '../snapshot/queries'
-import { balanceAccounts, dailyBalances } from '../snapshot/runningBalance'
+import { balanceAccounts, dailyBalances, hiddenBalances } from '../snapshot/runningBalance'
 import { currentYearMonth } from '../utils'
 import { accountDropdown, categoryDropdown, dateRangeRow, searchRow, typePills, untaggedToggle } from './detail/controls'
 import type { FilterHost } from './detail/FilterHost'
@@ -167,11 +167,22 @@ export class DetailView extends ItemView {
 
     this.listEl.empty()
     if (shown.length === 0) this.listEl.createEl('p', { text: t('detail.noTransactions'), cls: 'ne-no-data' })
-    const { snapshot, store } = this.ledger
+    const { ledger } = this
+    const { snapshot, store } = ledger
     const chosen = [...this.filters.accounts]
     const balances = dailyBalances(snapshot, store.monthDeltas, this.yearMonth, chosen)
     const colors = accountColors(snapshot)
-    if (shown.length > 0) renderBalanceLegend(this.listEl, balanceAccounts(snapshot, chosen), colors)
+    if (shown.length > 0) {
+      renderBalanceLegend(this.listEl, balanceAccounts(snapshot, chosen), colors, {
+        hidden: hiddenBalances(snapshot, this.yearMonth),
+        toggleable: new Set(snapshot.months.filter(m => m.month === this.yearMonth).map(m => m.account)),
+        onToggle: (account, on) => {
+          ledger.transactions.setBalanceShown(account, this.yearMonth, on)
+            .then(() => this.applyFilters())
+            .catch((e: unknown) => new Notice(e instanceof Error ? e.message : String(e)))
+        },
+      })
+    }
     let day = ''
     for (const entry of shown) {
       if (entry.date !== day) {

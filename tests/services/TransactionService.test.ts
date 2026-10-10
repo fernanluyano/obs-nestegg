@@ -380,3 +380,27 @@ describe("running balance cache", () => {
 		expect(ledger.store.monthDeltas.has("2026-10")).toBe(false);
 	});
 });
+
+describe("setBalanceShown", () => {
+	it("persists a boolean property that defaults to true and survives row edits", async () => {
+		const { ledger, vault } = await loadedLedger();
+		await ledger.transactions.add(entry());
+		const path = monthPath("Cash Main", "2026-10");
+		expect(ledger.snapshot.months[0].showBalance).toBe(true);
+
+		await ledger.transactions.setBalanceShown("Cash Main", "2026-10", false);
+		expect(parseProps(vault.files.get(path)!).showBalance).toBe(false);
+		expect(ledger.snapshot.months[0].showBalance).toBe(false);
+
+		await ledger.transactions.add(entry({ merchant: "Shell" }));
+		expect(ledger.snapshot.months[0].showBalance).toBe(false);
+
+		await ledger.transactions.setBalanceShown("Cash Main", "2026-10", true);
+		expect(ledger.snapshot.months[0].showBalance).toBe(true);
+	});
+
+	it("refuses an account with no file that month", async () => {
+		const { ledger } = await loadedLedger();
+		await expect(ledger.transactions.setBalanceShown("Cash Main", "2026-10", false)).rejects.toThrow(LedgerError);
+	});
+});

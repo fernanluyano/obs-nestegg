@@ -7,7 +7,7 @@ import { formatRow } from "../table/cells";
 import { parseTable } from "../table/parse";
 import { serializeTable } from "../table/serialize";
 import type { ParsedTable } from "../table/types";
-import { buildNote, int, patchProps, str, type RawProps } from "./frontmatter";
+import { bool, buildNote, int, patchProps, str, type RawProps } from "./frontmatter";
 import { NOTE_TAGS } from "./kinds";
 
 export const MONTH_COLUMNS = ["Date", "Merchant", "Subcategory", "AmountCents", "Note", "Tags", "FromTo"] as const;
@@ -26,6 +26,7 @@ export type ParsedMonth =
 			account: string;
 			month: string;
 			stored: Partial<MonthSummary>;
+			showBalance: boolean;
 			transactions: Transaction[];
 			rowIssues: RowIssue[];
 	  }
@@ -88,6 +89,7 @@ export function parseMonthNote(props: RawProps, content: string): ParsedMonth {
 		account,
 		month,
 		stored: { incomeCents: int(props, "incomeCents"), expenseCents: int(props, "expenseCents") },
+		showBalance: bool(props, "showBalance") ?? true,
 		transactions,
 		rowIssues: issues,
 	};
