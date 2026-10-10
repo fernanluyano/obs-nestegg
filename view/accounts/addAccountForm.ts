@@ -13,10 +13,11 @@ import { checkBalance } from '../../wizard/model'
 
 const ACCOUNT_TYPES: AccountType[] = ['cash', 'creditCard', 'loan']
 
-const PLAN_ERRORS: Record<'term' | 'start' | 'interest', LabelKey> = {
+const PLAN_ERRORS: Record<'term' | 'start' | 'interest' | 'original', LabelKey> = {
   term: 'err.loanTermInvalid',
   start: 'err.invalidDate',
   interest: 'err.loanInterestInvalid',
+  original: 'err.loanOriginalInvalid',
 }
 
 export interface AddAccountFormOptions {
@@ -50,6 +51,7 @@ export function renderAddAccountForm(container: HTMLElement, { app, ledger, run 
   let termMonths = ''
   let startDate = ''
   let interest = ''
+  let originalAmount = ''
   const loanFields = form.createDiv('ne-add-wallet-loan')
   const loanField = (label: string) => {
     const f = loanFields.createDiv('ne-add-wallet-field')
@@ -67,6 +69,9 @@ export function renderAddAccountForm(container: HTMLElement, { app, ledger, run 
   const interestInput = loanField(t('settings.loanInterest')).createEl('input', { type: 'number', placeholder: '6.25', cls: 'ne-add-wallet-input' })
   interestInput.setAttribute('step', '0.001')
   interestInput.addEventListener('input', () => { interest = interestInput.value })
+  const originalInput = loanField(t('settings.loanOriginal')).createEl('input', { type: 'number', placeholder: '25000.00', cls: 'ne-add-wallet-input' })
+  originalInput.setAttribute('step', '0.01')
+  originalInput.addEventListener('input', () => { originalAmount = originalInput.value })
 
   const balanceInput = field(t('settings.enteredBalance')).createEl('input', { type: 'number', placeholder: '0.00', cls: 'ne-add-wallet-input' })
   balanceInput.addEventListener('input', () => { balance = balanceInput.value })
@@ -93,7 +98,7 @@ export function renderAddAccountForm(container: HTMLElement, { app, ledger, run 
     if (nameProblem(name)) { new Notice(t('err.invalidName')); return }
     const checked = checkBalance(balance, type)
     if (!checked.ok) { new Notice(t(checked.message)); return }
-    const plan = type === 'loan' ? parsePlanFields({ termMonths, startDate, interest }) : null
+    const plan = type === 'loan' ? parsePlanFields({ termMonths, startDate, interest, originalAmount }) : null
     if (plan && !plan.ok) { new Notice(t(PLAN_ERRORS[plan.error])); return }
     const message = tn('accounts.confirmAdd', {
       type: t(`label.accountType.${type}`).toLowerCase(), name, balance: formatCents(checked.cents), date: asOf,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	accountColors, accountBalances, accountHasTransactions, accountsOf, activeAccounts,
-	findAccount, groupByCategory, groupByTags, knownMerchants, knownTags, monthEntries, monthSummaries,
+	findAccount, groupByCategory, groupByTags, knownMerchants, knownTags, loanDebts, monthEntries, monthSummaries,
 	monthSummary, netAsset, netAssetTimeline, subcategoryUsage, suggestedTags,
 } from "../../snapshot/queries";
 import { buildSnapshot, categoryIndexOf } from "../../snapshot/snapshot";
@@ -58,6 +58,25 @@ describe("balances", () => {
 		expect(timeline.get("2026-09")).toBe(200000 - 5000);
 		expect(timeline.get("2026-10")).toBe(200000 - 8450 + 250000 + 1200 - 7000);
 		expect(timeline.get("2026-11")).toBe(timeline.get("2026-10"));
+	});
+});
+
+describe("loanDebts", () => {
+	const loanSnap = buildSnapshot(
+		vaultInputs({
+			accounts: [
+				card,
+				account({ name: "Car", accountType: "loan", loanKind: "car", enteredBalanceCents: -1000000, enteredBalanceAsOf: "2026-09-30", balanceCents: -1000000 }),
+				account({ name: "Old loan", accountType: "loan", loanKind: "other", active: false, enteredBalanceCents: -5000, enteredBalanceAsOf: "2026-09-30", balanceCents: -5000 }),
+			],
+			months: [monthInput("Car", "2026-10", [tx({ subcategory: "Salary", amountCents: 100000, date: "2026-10-05" })])],
+		}),
+	);
+
+	it("lists active loans only, with what is owed after payments", () => {
+		const debts = loanDebts(loanSnap, "2026-10-10");
+		expect(debts.map((d) => d.account.name)).toEqual(["Car"]);
+		expect(debts[0].owedCents).toBe(900000);
 	});
 });
 

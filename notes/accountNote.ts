@@ -8,7 +8,7 @@ import { NOTE_TAGS, UNBALANCED_TAG } from "./kinds";
 export type ParsedAccount = { ok: true; account: Account } | { ok: false; reason: string };
 
 type Fields<T> = { ok: true; fields: T } | { ok: false; reason: string };
-type LoanFields = Pick<Account, "loanKind" | "termMonths" | "startDate" | "interest">;
+type LoanFields = Pick<Account, "loanKind" | "termMonths" | "startDate" | "interest" | "originalCents" | "extraPaymentCents">;
 
 const isSet = (props: RawProps, key: string) => props[key] !== undefined && props[key] !== "";
 
@@ -32,6 +32,16 @@ function parseLoanFields(props: RawProps): Fields<LoanFields> {
 		const interest = Number(str(props, "interest")?.trim());
 		if (Number.isNaN(interest) || loanFieldProblem({ interest })) return { ok: false, reason: "interest must be a percent of zero or more with up to three decimals" };
 		fields.interest = interest;
+	}
+	if (isSet(props, "originalCents")) {
+		const originalCents = int(props, "originalCents");
+		if (originalCents === undefined || loanFieldProblem({ originalCents })) return { ok: false, reason: "originalCents must be a whole number of cents above zero" };
+		fields.originalCents = originalCents;
+	}
+	if (isSet(props, "extraPaymentCents")) {
+		const extraPaymentCents = int(props, "extraPaymentCents");
+		if (extraPaymentCents === undefined || loanFieldProblem({ extraPaymentCents })) return { ok: false, reason: "extraPaymentCents must be a whole number of cents, zero or more" };
+		if (extraPaymentCents > 0) fields.extraPaymentCents = extraPaymentCents;
 	}
 	return { ok: true, fields };
 }
@@ -96,6 +106,8 @@ export function accountProps(account: Account, extra: Props = {}): Props {
 		termMonths: account.termMonths,
 		startDate: account.startDate,
 		interest: account.interest,
+		originalCents: account.originalCents,
+		extraPaymentCents: account.extraPaymentCents || undefined,
 		paymentSubcategory: account.paymentSubcategory,
 		...extra,
 	};

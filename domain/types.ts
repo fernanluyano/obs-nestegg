@@ -28,6 +28,8 @@ export interface Account {
 	termMonths?: number; // loan only: original term, whole months >= 1
 	startDate?: string; // loan only: YYYY-MM-DD the loan began
 	interest?: number; // loan only: percent, up to two decimals, not negative
+	originalCents?: number; // loan only: the amount first borrowed, positive; progress is measured against it
+	extraPaymentCents?: number; // loan only: optional extra paid on top of the standard payment every month; absent means none
 	paymentSubcategory?: string; // debt accounts: the debt-payment subcategory its payments use
 }
 

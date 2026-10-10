@@ -225,6 +225,30 @@ describe("loans", () => {
 		expect(findAccount(ledger.snapshot, "Mortgage")).toMatchObject({ termMonths: 360, startDate: "2024-03-01", interest: 6.25 });
 	});
 
+	it("stores the original amount, clears it when passed undefined, and rejects bad amounts", async () => {
+		const { ledger } = await loadedLedger();
+		await ledger.accounts.create({ ...loan, originalCents: 25000000 });
+		expect(findAccount(ledger.snapshot, "Mortgage")!.originalCents).toBe(25000000);
+		await expect(ledger.accounts.update("Mortgage", { originalCents: 0 })).rejects.toThrow(/original amount/);
+		await ledger.accounts.update("Mortgage", { originalCents: undefined });
+		expect(findAccount(ledger.snapshot, "Mortgage")!.originalCents).toBeUndefined();
+	});
+
+	it("stores the extra payment, clears it when passed undefined, and rejects bad amounts", async () => {
+		const { ledger } = await loadedLedger();
+		await ledger.accounts.create(loan);
+		await ledger.accounts.update("Mortgage", { extraPaymentCents: 25000 });
+		expect(findAccount(ledger.snapshot, "Mortgage")!.extraPaymentCents).toBe(25000);
+		await expect(ledger.accounts.update("Mortgage", { extraPaymentCents: -1 })).rejects.toThrow(/extra payment/);
+		await ledger.accounts.update("Mortgage", { extraPaymentCents: undefined });
+		expect(findAccount(ledger.snapshot, "Mortgage")!.extraPaymentCents).toBeUndefined();
+	});
+
+	it("rejects an extra payment on a card", async () => {
+		const { ledger } = await loadedLedger();
+		await expect(ledger.accounts.create({ name: "Store Card", accountType: "creditCard", enteredBalanceCents: 0, enteredBalanceAsOf: "2026-10-01", extraPaymentCents: 100 } as never)).rejects.toThrow(/extra payment/);
+	});
+
 	it("rejects a loan without a kind and bad plan fields", async () => {
 		const { ledger } = await loadedLedger();
 		await expect(ledger.accounts.create({ ...loan, loanKind: undefined })).rejects.toThrow(/needs a kind/);

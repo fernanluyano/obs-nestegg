@@ -56,7 +56,7 @@ describe("parseAccountProps", () => {
 describe("loan accounts", () => {
 	const loan: Account = {
 		...account, name: "Mortgage", accountType: "loan", enteredBalanceCents: -20000000, balanceCents: -20000000,
-		loanKind: "mortgage", termMonths: 360, startDate: "2024-03-01", interest: 6.25, paymentSubcategory: "Mortgage payment",
+		loanKind: "mortgage", termMonths: 360, startDate: "2024-03-01", interest: 6.25, originalCents: 25000000, paymentSubcategory: "Mortgage payment",
 	};
 	const base = { name: "Loan", accountType: "loan", enteredBalanceAsOf: "2026-10-02", loanKind: "car" };
 
@@ -71,7 +71,21 @@ describe("loan accounts", () => {
 	it("loads with just a kind, leaving the plan fields unset", () => {
 		const parsed = parseAccountProps(base);
 		expect(parsed).toMatchObject({ ok: true, account: { loanKind: "car" } });
-		if (parsed.ok) for (const key of ["termMonths", "startDate", "interest", "paymentSubcategory"]) expect(parsed.account).not.toHaveProperty(key);
+		if (parsed.ok) for (const key of ["termMonths", "startDate", "interest", "originalCents", "paymentSubcategory"]) expect(parsed.account).not.toHaveProperty(key);
+	});
+
+	it("round trips the extra payment and leaves zero unset", () => {
+		const withExtra = { ...loan, extraPaymentCents: 15000 };
+		expect(parseAccountProps(parseProps(buildAccountNote(withExtra)))).toEqual({ ok: true, account: withExtra });
+		expect(buildAccountNote({ ...loan, extraPaymentCents: 0 })).not.toContain("extraPaymentCents");
+		const zero = parseAccountProps({ ...base, extraPaymentCents: 0 });
+		expect(zero).toMatchObject({ ok: true });
+		if (zero.ok) expect(zero.account).not.toHaveProperty("extraPaymentCents");
+	});
+
+	it("is invalid with a negative or non-numeric extra payment", () => {
+		expect(parseAccountProps({ ...base, extraPaymentCents: -100 })).toMatchObject({ ok: false });
+		expect(parseAccountProps({ ...base, extraPaymentCents: "lots" })).toMatchObject({ ok: false });
 	});
 
 	it("treats blank plan fields as not set", () => {
@@ -93,6 +107,9 @@ describe("loan accounts", () => {
 		["interest", -1],
 		["interest", "6.2555"],
 		["interest", "high"],
+		["originalCents", 0],
+		["originalCents", -100],
+		["originalCents", "a lot"],
 	])("is invalid with %s of %j", (key, value) => {
 		expect(parseAccountProps({ ...base, [key]: value })).toMatchObject({ ok: false });
 	});

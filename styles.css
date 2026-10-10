@@ -2804,3 +2804,80 @@ select.ne-add-wallet-input {
   .ne-budget-row { grid-template-columns: minmax(0, 1fr) 84px 72px 48px; padding: 6px 10px; }
   .ne-budget-section { margin-left: 12px; margin-right: 12px; }
 }
+
+/* Long term debt view */
+.ne-debt-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+  padding: 0 20px 16px;
+}
+
+.ne-debt-card {
+  background: var(--background-secondary);
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+}
+
+.ne-debt-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ne-debt-card-name {
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+
+.ne-debt-card-kind {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ne-debt-card-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 2px 0;
+}
+
+.ne-debt-card-value {
+  color: var(--text-normal);
+  font-variant-numeric: tabular-nums;
+}
+
+.ne-debt-card-hint {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 6px;
+}
+
+.ne-debt-card-extra {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.ne-debt-card-extra-input {
+  width: 96px;
+  text-align: right;
+}
+
+.ne-debt-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 10px;
+  padding: 0 20px 16px;
+}
+
+.ne-debt-chart {
+  min-height: 260px;
+}

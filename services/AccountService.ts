@@ -24,6 +24,7 @@ export interface NewAccount {
 	termMonths?: number;
 	startDate?: string;
 	interest?: number;
+	originalCents?: number;
 	paymentSubcategory?: string; // debt accounts only
 }
 
@@ -41,10 +42,12 @@ export interface AccountPatch {
 	termMonths?: number;
 	startDate?: string;
 	interest?: number;
+	originalCents?: number;
+	extraPaymentCents?: number;
 	paymentSubcategory?: string;
 }
 
-const LOAN_FIELDS = ["loanKind", "termMonths", "startDate", "interest"] as const;
+const LOAN_FIELDS = ["loanKind", "termMonths", "startDate", "interest", "originalCents", "extraPaymentCents"] as const;
 
 export class AccountService {
 	constructor(private store: LedgerStore) {}
@@ -63,7 +66,7 @@ export class AccountService {
 			const problem = loanFieldProblem(fields);
 			if (problem) throw new LedgerError(problem);
 		} else if (LOAN_FIELDS.some((key) => fields[key] !== undefined)) {
-			throw new LedgerError("Only a loan has a kind, term, start date or interest");
+			throw new LedgerError("Only a loan has a kind, term, start date, interest, original amount or extra payment");
 		}
 		if (fields.paymentSubcategory === undefined) return;
 		if (type !== "loan") throw new LedgerError("Only a loan has a payment category; a credit card is paid with a transfer");

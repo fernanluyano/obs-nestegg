@@ -9,10 +9,11 @@ import { BUDGET_VIEW_TYPE } from './BudgetView'
 import { DASHBOARD_VIEW_TYPE } from './DashboardView'
 import { ASSET_VIEW_TYPE } from './AssetView'
 import { ACCOUNTS_VIEW_TYPE } from './AccountsView'
+import { DEBT_VIEW_TYPE } from './DebtView'
 import { DETAIL_VIEW_TYPE } from './DetailView'
 import { openOrRevealView } from './openView'
 
-export type ActiveView = 'dashboard' | 'asset' | 'accounts' | 'detail' | 'budget'
+export type ActiveView = 'dashboard' | 'asset' | 'accounts' | 'debt' | 'detail' | 'budget'
 
 export type SharedHeaderOptions = {
   view: ItemView
@@ -53,6 +54,7 @@ export function renderSharedHeader(container: HTMLElement, opts: SharedHeaderOpt
     { id: 'dashboard', label: t('ui.overview'), targetType: DASHBOARD_VIEW_TYPE },
     { id: 'asset',     label: t('ui.asset'),    targetType: ASSET_VIEW_TYPE },
     { id: 'accounts',  label: t('ui.accounts'), targetType: ACCOUNTS_VIEW_TYPE },
+    { id: 'debt',      label: t('ui.debt'),     targetType: DEBT_VIEW_TYPE },
     { id: 'budget',    label: t('ui.budget'),   targetType: BUDGET_VIEW_TYPE,
       state: opts.yearMonth ? { yearMonth: opts.yearMonth } : undefined },
     { id: 'detail',    label: t('ui.detail'),   targetType: DETAIL_VIEW_TYPE,

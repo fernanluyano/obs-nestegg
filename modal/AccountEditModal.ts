@@ -1,5 +1,6 @@
 import { App, Modal, Notice } from 'obsidian'
 import { parsePlanFields } from '../domain/accounts'
+import { centsToDecimal } from '../domain/money'
 import { nameProblem } from '../domain/names'
 import { LOAN_KINDS, type Account, type LoanKind } from '../domain/types'
 import { t, type LabelKey } from '../labels'
@@ -14,6 +15,7 @@ export interface AccountEdit {
   termMonths?: number
   startDate?: string
   interest?: number
+  originalCents?: number
   // Debt accounts only; undefined means no payment category.
   paymentSubcategory?: string
 }
@@ -26,10 +28,11 @@ export interface AccountEditOptions {
 
 const NEW_CATEGORY = '\u0000new'
 
-const PLAN_ERRORS: Record<'term' | 'start' | 'interest', LabelKey> = {
+const PLAN_ERRORS: Record<'term' | 'start' | 'interest' | 'original', LabelKey> = {
   term: 'err.loanTermInvalid',
   start: 'err.invalidDate',
   interest: 'err.loanInterestInvalid',
+  original: 'err.loanOriginalInvalid',
 }
 
 export class AccountEditModal extends Modal {
@@ -39,6 +42,7 @@ export class AccountEditModal extends Modal {
   private termMonths: string
   private startDate: string
   private interest: string
+  private originalAmount: string
   private paymentSubcategory: string
   private choices: string[]
   private categorySelect!: HTMLSelectElement
@@ -56,6 +60,7 @@ export class AccountEditModal extends Modal {
     this.termMonths = account.termMonths === undefined ? '' : String(account.termMonths)
     this.startDate = account.startDate ?? ''
     this.interest = account.interest === undefined ? '' : String(account.interest)
+    this.originalAmount = account.originalCents === undefined ? '' : centsToDecimal(account.originalCents)
     this.paymentSubcategory = account.paymentSubcategory ?? ''
     this.choices = [...options.transferSubcategories]
   }
@@ -95,6 +100,7 @@ export class AccountEditModal extends Modal {
     this.field(form, t('settings.loanTerm'), 'number', this.termMonths, (v) => { this.termMonths = v })
     this.field(form, t('settings.loanStart'), 'date', this.startDate, (v) => { this.startDate = v })
     this.field(form, t('settings.loanInterest'), 'number', this.interest, (v) => { this.interest = v }, '0.001')
+    this.field(form, t('settings.loanOriginal'), 'number', this.originalAmount, (v) => { this.originalAmount = v }, '0.01')
   }
 
   private renderPaymentCategory(form: HTMLElement) {
@@ -142,7 +148,7 @@ export class AccountEditModal extends Modal {
     if (nameProblem(this.name)) { new Notice(t('err.invalidName')); return }
     const edit: AccountEdit = { name: this.name, color: this.color }
     if (this.account.accountType === 'loan') {
-      const plan = parsePlanFields({ termMonths: this.termMonths, startDate: this.startDate, interest: this.interest })
+      const plan = parsePlanFields({ termMonths: this.termMonths, startDate: this.startDate, interest: this.interest, originalAmount: this.originalAmount })
       if (!plan.ok) { new Notice(t(PLAN_ERRORS[plan.error])); return }
       Object.assign(edit, { loanKind: this.loanKind, ...plan.fields })
     }

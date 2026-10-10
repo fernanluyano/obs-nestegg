@@ -25,6 +25,7 @@ export default defineConfig({
 				"modal/mobileCalculatorState.ts",
 				"view/detailRow.ts",
 				"view/budgetRow.ts",
+				"view/debtRows.ts",
 				"view/detail/filters.ts",
 				"view/detail/selection.ts",
 				"wizard/model.ts",

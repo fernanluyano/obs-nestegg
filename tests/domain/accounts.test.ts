@@ -139,6 +139,8 @@ describe("loanFieldProblem", () => {
 	it("accepts a full valid plan", () => {
 		expect(loanFieldProblem({ loanKind: "mortgage", termMonths: 360, startDate: "2024-03-01", interest: 6.25 })).toBeNull();
 		expect(loanFieldProblem({ interest: 0 })).toBeNull();
+		expect(loanFieldProblem({ extraPaymentCents: 0 })).toBeNull();
+		expect(loanFieldProblem({ extraPaymentCents: 20000 })).toBeNull();
 		expect(loanFieldProblem({ interest: 4.875 })).toBeNull();
 	});
 
@@ -150,6 +152,8 @@ describe("loanFieldProblem", () => {
 		[{ startDate: "soon" }],
 		[{ interest: -1 }],
 		[{ interest: 6.2555 }],
+		[{ extraPaymentCents: -1 }],
+		[{ extraPaymentCents: 1.5 }],
 		[{ loanKind: "boat" as never }],
 	])("rejects %j", (fields) => {
 		expect(loanFieldProblem(fields)).not.toBeNull();
@@ -181,7 +185,15 @@ describe("parsePlanFields", () => {
 		[{ interest: "-1" }, "interest"],
 		[{ interest: "1.2345" }, "interest"],
 		[{ interest: "abc" }, "interest"],
+		[{ originalAmount: "0" }, "original"],
+		[{ originalAmount: "-5" }, "original"],
+		[{ originalAmount: "1.234" }, "original"],
+		[{ originalAmount: "lots" }, "original"],
 	])("rejects %j", (over, error) => {
 		expect(parsePlanFields({ ...blank, ...over })).toEqual({ ok: false, error });
+	});
+
+	it("reads the original amount into cents from its digits", () => {
+		expect(parsePlanFields({ ...blank, originalAmount: " 25000.10 " })).toEqual({ ok: true, fields: { originalCents: 2500010 } });
 	});
 });

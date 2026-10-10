@@ -1,6 +1,7 @@
 import { balanceAt, currentBalance, netAssetCents } from "../domain/accounts";
 import { monthEndKey } from "../domain/dates";
 import { DEFAULT_TAGS } from "../domain/defaults";
+import { loanDebt, type LoanDebt } from "../domain/loans";
 import { summarize } from "../domain/transactions";
 import type { CategoryIndex } from "../domain/categories";
 import type { Account, AccountBalance, LedgerEntry, MonthSummary, TransactionType } from "../domain/types";
@@ -29,6 +30,13 @@ export function accountBalances(snapshot: Snapshot): AccountBalance[] {
 		account,
 		balanceCents: currentBalance(account, accountTransactions(snapshot, account.name)),
 	}));
+}
+
+// Active loans only; credit cards and archived loans are left out.
+export function loanDebts(snapshot: Snapshot, today: string): LoanDebt[] {
+	return accountBalances(snapshot)
+		.filter(({ account }) => account.accountType === "loan" && account.active)
+		.map(({ account, balanceCents }) => loanDebt(account, balanceCents, today));
 }
 
 export function netAsset(snapshot: Snapshot): number {

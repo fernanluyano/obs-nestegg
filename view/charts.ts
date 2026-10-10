@@ -1,12 +1,13 @@
+import { percentPaid, type PayoffChart } from '../domain/loans'
 import { formatCents } from '../domain/money'
-import { t } from '../labels'
+import { formatYearMonth, t, tn } from '../labels'
 import {
   Chart,
   BarElement, BarController,
   LineElement, LineController, PointElement,
   ArcElement, PieController,
   CategoryScale, LinearScale,
-  Tooltip, Legend,
+  Tooltip, Legend, Filler,
   type ChartConfiguration,
 } from 'chart.js'
 import ChartDataLabels, { type Context as DatalabelsContext } from 'chartjs-plugin-datalabels'
@@ -16,7 +17,7 @@ Chart.register(
   LineElement, LineController, PointElement,
   ArcElement, PieController,
   CategoryScale, LinearScale,
-  Tooltip, Legend,
+  Tooltip, Legend, Filler,
   ChartDataLabels,
 )
 
@@ -242,6 +243,65 @@ export function drawNetChart(
             color: colors.muted,
             callback: (v) => formatK(v as number),
           },
+        },
+      },
+    },
+  }
+
+  return new Chart(canvas, cfg)
+}
+
+// ─── Loan payoff chart ────────────────────────────────────────────────────────
+
+// Stacked areas of what is still owed, one layer per loan, down to the kind's last payoff.
+export function drawPayoffChart(container: HTMLElement, chart: PayoffChart): Chart {
+  const colors = getThemeColors()
+  const canvas = container.createEl('canvas')
+
+  const cfg: ChartConfiguration<'line'> = {
+    type: 'line',
+    data: {
+      labels: chart.months.map(m => formatYearMonth(m, 'short')),
+      datasets: chart.series.map(s => ({
+        label: s.name,
+        data: s.balances,
+        borderColor: s.color,
+        backgroundColor: s.color + '55',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        fill: true,
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: colors.label, boxWidth: 12, boxHeight: 12, padding: 10 } },
+        datalabels: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const owed = ctx.raw as number
+              const paid = percentPaid(chart.series[ctx.datasetIndex].originalCents ?? undefined, owed)
+              const text = `${ctx.dataset.label ?? ''}: ${formatCents(owed)}`
+              return paid === null ? text : tn('debt.tooltipPaid', { text, percent: paid.toFixed(1) })
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          border: { display: false },
+          grid: { display: false },
+          ticks: { color: colors.muted, maxTicksLimit: 6 },
+        },
+        y: {
+          stacked: true,
+          border: { display: false },
+          grid: { color: colors.grid },
+          ticks: { color: colors.muted, maxTicksLimit: 5, callback: (v) => formatK(v as number) },
         },
       },
     },

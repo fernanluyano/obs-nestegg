@@ -31,7 +31,7 @@ export function openAccountEdit(
       await ledger.accounts.update(change.name, {
         color: change.color,
         ...(account.accountType === 'loan'
-          ? { loanKind: change.loanKind, termMonths: change.termMonths, startDate: change.startDate, interest: change.interest }
+          ? { loanKind: change.loanKind, termMonths: change.termMonths, startDate: change.startDate, interest: change.interest, originalCents: change.originalCents }
           : {}),
         ...(account.accountType === 'loan' ? { paymentSubcategory: change.paymentSubcategory } : {}),
       })
