@@ -12,6 +12,7 @@ export function isEmptyVault(snapshot: Snapshot): boolean {
 	return (
 		snapshot.settings === null &&
 		snapshot.accounts.length === 0 &&
+		snapshot.assets.length === 0 &&
 		snapshot.categories.length === 0 &&
 		snapshot.months.length === 0 &&
 		snapshot.budgets.length === 0 &&

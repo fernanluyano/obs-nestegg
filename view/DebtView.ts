@@ -2,14 +2,14 @@ import { Events, ItemView, Notice, WorkspaceLeaf } from 'obsidian'
 import type { Chart } from 'chart.js'
 import { todayString } from '../domain/dates'
 import { payoffCharts, type LoanDebt } from '../domain/loans'
-import { centsToDecimal, parseCents } from '../domain/money'
+import { centsToDecimal, formatCents, parseCents } from '../domain/money'
 import { NESTEGG_ICON } from '../plugin/icon'
 import { t, tn } from '../labels'
 import type { Ledger } from '../services/Ledger'
-import { loanDebts } from '../snapshot/queries'
+import { creditCardDebts, loanDebts } from '../snapshot/queries'
 import { drawPayoffChart } from './charts'
 import { createMetric, renderCard } from './components'
-import { debtCard, debtTotals } from './debtRows'
+import { creditCardRows, debtCard, debtTotals } from './debtRows'
 import { renderSharedHeader } from './SharedHeader'
 
 export const DEBT_VIEW_TYPE = 'nestegg-debt'
@@ -75,18 +75,24 @@ export class DebtView extends ItemView {
 
     const today = todayString()
     const loans = loanDebts(this.ledger.snapshot, today)
-    if (loans.length === 0) {
+    const creditCards = creditCardDebts(this.ledger.snapshot)
+    if (loans.length === 0 && creditCards.length === 0) {
       renderCard(contentEl, { title: t('debt.title') }).createEl('p', { text: t('debt.empty'), cls: 'ne-settings-empty' })
       contentEl.scrollTop = savedScroll
       return
     }
 
-    const totals = debtTotals(loans)
-    const metrics = contentEl.createDiv('ne-metrics')
-    createMetric(metrics, t('debt.totalDebt'), totals.owedCents, 'expense', { signed: false })
-    const count = metrics.createDiv('ne-metric')
-    count.createDiv({ text: t('debt.loans'), cls: 'ne-metric-label' })
-    count.createDiv({ text: String(totals.loans), cls: 'ne-metric-value' })
+    const totals = debtTotals(loans, creditCards)
+    const metrics = contentEl.createDiv('ne-metrics ne-metrics--debt')
+    const statLine = (parent: HTMLElement, label: string, value: string) => {
+      const row = parent.createDiv('ne-debt-card-stat')
+      row.createSpan({ text: label })
+      row.createSpan({ text: value, cls: 'ne-debt-card-value' })
+    }
+    // One summary card: the overall debt, then what part of it is cards and what part is loans.
+    const total = createMetric(metrics, t('debt.totalDebt'), totals.owedCents, 'expense', { signed: false, hero: true })
+    statLine(total, t('debt.creditCards'), formatCents(totals.cardsCents))
+    statLine(total, t('debt.loans'), formatCents(totals.loansCents))
 
     const cards = contentEl.createDiv('ne-debt-cards')
     for (const loan of loans) {
@@ -103,6 +109,18 @@ export class DebtView extends ItemView {
       }
       for (const hint of hints) card.createDiv({ text: hint, cls: 'ne-debt-card-hint' })
       if (loan.projection) this.renderExtraInput(card, loan)
+    }
+    // One read only card for all the credit cards, a line each: a card has no plan to edit, and it is paid with a transfer.
+    if (creditCards.length > 0) {
+      const card = cards.createDiv('ne-debt-card')
+      card.createDiv('ne-debt-card-header').createSpan({ text: t('debt.creditCards'), cls: 'ne-debt-card-name' })
+      for (const { name, color, owedText } of creditCardRows(creditCards)) {
+        const row = card.createDiv('ne-debt-card-stat')
+        const label = row.createSpan('ne-debt-card-line')
+        label.createSpan('ne-account-dot').style.background = color
+        label.createSpan({ text: name })
+        row.createSpan({ text: owedText, cls: 'ne-debt-card-value' })
+      }
     }
 
     const chartsWrap = contentEl.createDiv('ne-debt-charts')

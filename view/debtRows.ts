@@ -2,6 +2,7 @@ import { loanSchedule } from '../domain/accounts'
 import type { LoanDebt } from '../domain/loans'
 import { formatCents } from '../domain/money'
 import { t, tn } from '../labels'
+import type { CardDebt } from '../snapshot/queries'
 
 export interface DebtStat {
   label: string
@@ -15,12 +16,26 @@ export interface DebtCard {
 }
 
 export interface DebtTotals {
-  owedCents: number
-  loans: number
+  loansCents: number
+  cardsCents: number
+  owedCents: number // loans and credit cards together
 }
 
-export function debtTotals(loans: LoanDebt[]): DebtTotals {
-  return { owedCents: loans.reduce((sum, l) => sum + l.owedCents, 0), loans: loans.length }
+export function debtTotals(loans: LoanDebt[], cards: CardDebt[]): DebtTotals {
+  const loansCents = loans.reduce((sum, l) => sum + l.owedCents, 0)
+  const cardsCents = cards.reduce((sum, c) => sum + c.owedCents, 0)
+  return { loansCents, cardsCents, owedCents: loansCents + cardsCents }
+}
+
+export interface CardRow {
+  name: string
+  color: string
+  owedText: string
+}
+
+// One line per credit card for the single card that lists them all.
+export function creditCardRows(cards: CardDebt[]): CardRow[] {
+  return cards.map(({ account, owedCents }) => ({ name: account.name, color: account.color, owedText: formatCents(owedCents) }))
 }
 
 // Only what can be derived is shown; a missing field adds a hint instead of an empty row.

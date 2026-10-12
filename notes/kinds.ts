@@ -5,6 +5,7 @@ export const NOTE_TAGS = {
 	category: "nestegg/category",
 	transactions: "nestegg/transactions",
 	budget: "nestegg/budget",
+	asset: "nestegg/asset",
 	settings: "nestegg/settings",
 } as const;
 

@@ -2,6 +2,7 @@ export const ROOT_FOLDER = "Nestegg";
 const ACCOUNTS_FOLDER = `${ROOT_FOLDER}/Accounts`;
 const CATEGORIES_FOLDER = `${ROOT_FOLDER}/Categories`;
 const BUDGETS_FOLDER = `${ROOT_FOLDER}/Budgets`;
+const ASSETS_FOLDER = `${ROOT_FOLDER}/Assets`;
 
 export const SETTINGS_PATH = `${ROOT_FOLDER}/Settings.md`;
 
@@ -23,6 +24,10 @@ export function categoryPath(name: string): string {
 
 export function budgetPath(month: string): string {
 	return `${BUDGETS_FOLDER}/${month}.md`;
+}
+
+export function assetPath(name: string): string {
+	return `${ASSETS_FOLDER}/${name}.md`;
 }
 
 export function isInsideRoot(path: string): boolean {

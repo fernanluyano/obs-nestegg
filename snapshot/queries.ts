@@ -40,6 +40,18 @@ export function loanDebts(snapshot: Snapshot, today: string): LoanDebt[] {
 		.map(({ account, balanceCents }) => loanDebt(account, balanceCents, today));
 }
 
+export interface CardDebt {
+	account: Account;
+	owedCents: number; // positive; debts are stored negative, and a card in credit owes nothing
+}
+
+// Active credit cards only, with what each owes now.
+export function creditCardDebts(snapshot: Snapshot): CardDebt[] {
+	return accountBalances(snapshot)
+		.filter(({ account }) => account.accountType === "creditCard" && account.active)
+		.map(({ account, balanceCents }) => ({ account, owedCents: Math.max(0, -balanceCents) }));
+}
+
 export function netAsset(snapshot: Snapshot): number {
 	return netAssetCents(accountBalances(snapshot));
 }

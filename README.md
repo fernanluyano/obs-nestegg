@@ -13,6 +13,7 @@ Everything lives under a `Nestegg/` folder at the vault root. The notes are writ
 - `Settings.md` — default account and startup validation
 - `Accounts/<Name>/<Name>.md` — one note per account (cash or credit card), with its entered balance and date
 - `Accounts/<Name>/Transactions/YYYY-MM.md` — one table of transactions per account per month
+- `Assets/<Name>.md` — one note per asset you own (house, vehicle, metals), with a table of dated valuations
 - `Categories/<Category>.md` — one note per category, listing its subcategories
 
 Amounts are stored as integer cents. A transaction's amount is signed from its account's point of view, and a transfer is two rows, one in each account. Every note carries a `nestegg/...` tag, so you can query them from Obsidian.

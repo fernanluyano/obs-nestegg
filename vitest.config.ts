@@ -19,6 +19,7 @@ export default defineConfig({
 				"services/*.ts",
 				"storage/*.ts",
 				"table/*.ts",
+				"modal/assetState.ts",
 				"modal/balanceCorrectionState.ts",
 				"modal/bucketState.ts",
 				"modal/transactionState.ts",

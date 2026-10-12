@@ -1,7 +1,9 @@
+import type { Asset, Valuation } from "../domain/assets";
 import { buildCategoryIndex, type CategoryIndex } from "../domain/categories";
 import type { Account, BudgetLine, Category, LedgerEntry, MonthSummary, Settings, Transaction } from "../domain/types";
 import type { Bucket } from "../domain/buckets";
 import { parseAccountProps } from "../notes/accountNote";
+import { parseAssetProps, readValuations } from "../notes/assetNote";
 import { readBuckets } from "../notes/bucketTable";
 import { parseBudgetNote } from "../notes/budgetNote";
 import { parseCategoryNote } from "../notes/categoryNote";
@@ -24,6 +26,13 @@ export interface AccountRecord {
 	account: Account;
 	buckets: Bucket[]; // cash accounts only; always empty for the others
 	bucketIssues: RowIssue[];
+}
+
+export interface AssetRecord {
+	path: string;
+	asset: Asset;
+	valuations: Valuation[]; // sorted by date
+	valuationIssues: RowIssue[];
 }
 
 export interface CategoryRecord {
@@ -69,6 +78,7 @@ export interface InvalidNote {
 export interface Snapshot {
 	settings: SettingsRecord | null;
 	accounts: AccountRecord[];
+	assets: AssetRecord[];
 	categories: CategoryRecord[];
 	months: MonthRecord[];
 	budgets: BudgetRecord[];
@@ -77,7 +87,7 @@ export interface Snapshot {
 }
 
 export function emptySnapshot(): Snapshot {
-	return { settings: null, accounts: [], categories: [], months: [], budgets: [], transit: [], invalid: [] };
+	return { settings: null, accounts: [], assets: [], categories: [], months: [], budgets: [], transit: [], invalid: [] };
 }
 
 // Only `current` notes count toward data; staged copies are set aside for recovery. Paths are
@@ -104,6 +114,14 @@ export function buildSnapshot(inputs: NoteInput[]): Snapshot {
 				if (parsed.ok) {
 					const { buckets, issues } = parsed.account.accountType === "cash" ? readBuckets(content) : { buckets: [], issues: [] };
 					snapshot.accounts.push({ path, account: parsed.account, buckets, bucketIssues: issues });
+				} else snapshot.invalid.push({ path, kind, reason: parsed.reason });
+				break;
+			}
+			case "asset": {
+				const parsed = parseAssetProps(props);
+				if (parsed.ok) {
+					const { valuations, issues } = readValuations(content);
+					snapshot.assets.push({ path, asset: parsed.asset, valuations, valuationIssues: issues });
 				} else snapshot.invalid.push({ path, kind, reason: parsed.reason });
 				break;
 			}

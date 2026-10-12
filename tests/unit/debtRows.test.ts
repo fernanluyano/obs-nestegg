@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { loanDebt } from '../../domain/loans'
 import { formatCents } from '../../domain/money'
 import type { Account } from '../../domain/types'
-import { debtCard, debtTotals } from '../../view/debtRows'
+import type { CardDebt } from '../../snapshot/queries'
+import { creditCardRows, debtCard, debtTotals } from '../../view/debtRows'
 
 const loan = (over: Partial<Account> = {}): Account => ({
   name: 'Car',
@@ -19,14 +20,39 @@ const loan = (over: Partial<Account> = {}): Account => ({
 
 const TODAY = '2026-10-04'
 
+const cardDebt = (name: string, owedCents: number, color = '#378add'): CardDebt => ({
+  account: { ...loan({ name, color }), accountType: 'creditCard', loanKind: undefined },
+  owedCents,
+})
+
 describe('debtTotals', () => {
-  it('sums what is owed across the loans', () => {
-    const loans = [loanDebt(loan(), -1000000, TODAY), loanDebt(loan({ name: 'House' }), -250050, TODAY)]
-    expect(debtTotals(loans)).toEqual({ owedCents: 1250050, loans: 2 })
+  const loans = [loanDebt(loan(), -1000000, TODAY), loanDebt(loan({ name: 'House' }), -250050, TODAY)]
+  const cards = [cardDebt('Visa', 4313), cardDebt('Amex', 11373)]
+
+  it('totals the loans, the credit cards and both together', () => {
+    expect(debtTotals(loans, cards)).toEqual({ loansCents: 1250050, cardsCents: 15686, owedCents: 1265736 })
   })
 
-  it('is zero without loans', () => {
-    expect(debtTotals([])).toEqual({ owedCents: 0, loans: 0 })
+  it('counts credit cards as debt when there are no loans, and loans when there are no cards', () => {
+    expect(debtTotals([], cards)).toEqual({ loansCents: 0, cardsCents: 15686, owedCents: 15686 })
+    expect(debtTotals(loans, [])).toEqual({ loansCents: 1250050, cardsCents: 0, owedCents: 1250050 })
+  })
+
+  it('is zero without either', () => {
+    expect(debtTotals([], [])).toEqual({ loansCents: 0, cardsCents: 0, owedCents: 0 })
+  })
+})
+
+describe('creditCardRows', () => {
+  it('gives one line per card with its color and what it owes', () => {
+    expect(creditCardRows([cardDebt('Visa', 4313, '#e5484d'), cardDebt('Amex', 0)])).toEqual([
+      { name: 'Visa', color: '#e5484d', owedText: '43.13' },
+      { name: 'Amex', color: '#378add', owedText: '0.00' },
+    ])
+  })
+
+  it('is empty without cards', () => {
+    expect(creditCardRows([])).toEqual([])
   })
 })
 

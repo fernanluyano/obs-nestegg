@@ -7,13 +7,14 @@ import { buildSnapshot, emptySnapshot } from "../../snapshot/snapshot";
 import { validateSnapshot } from "../../validation/validate";
 import { MemoryVault } from "../helpers/memoryVault";
 import { loadedLedger } from "../helpers/ledgerFixture";
-import { account, accountInput, settingsInput } from "../helpers/fixtures";
+import { account, accountInput, asset, assetInput, settingsInput } from "../helpers/fixtures";
 
 describe("isEmptyVault / seedVault", () => {
 	it("is empty only when no Nestegg note exists", () => {
 		expect(isEmptyVault(emptySnapshot())).toBe(true);
 		expect(isEmptyVault(buildSnapshot([settingsInput()]))).toBe(false);
 		expect(isEmptyVault(buildSnapshot([accountInput(account())]))).toBe(false);
+		expect(isEmptyVault(buildSnapshot([assetInput(asset())]))).toBe(false);
 	});
 
 	it("is not empty when only invalid or staged notes remain", () => {

@@ -52,7 +52,7 @@ export interface OrphanedAccountIssue {
 
 export interface DuplicateNameIssue {
 	type: "duplicateName";
-	kind: "account" | "category";
+	kind: "account" | "category" | "asset";
 	name: string;
 	paths: string[];
 }

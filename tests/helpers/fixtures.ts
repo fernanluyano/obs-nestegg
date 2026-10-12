@@ -1,12 +1,14 @@
+import type { Asset, Valuation } from "../../domain/assets";
 import { buildCategoryIndex } from "../../domain/categories";
 import { DEFAULT_SETTINGS, defaultCategories } from "../../domain/defaults";
 import type { Account, BudgetLine, Category, Settings, Transaction, TransactionType } from "../../domain/types";
 import { buildAccountNote } from "../../notes/accountNote";
+import { buildAssetNote } from "../../notes/assetNote";
 import { buildBudgetNote } from "../../notes/budgetNote";
 import { buildCategoryNote } from "../../notes/categoryNote";
 import { parseProps } from "../../notes/frontmatter";
 import { buildMonthNote } from "../../notes/monthNote";
-import { accountPath, budgetPath, categoryPath, monthPath, SETTINGS_PATH } from "../../notes/paths";
+import { accountPath, assetPath, budgetPath, categoryPath, monthPath, SETTINGS_PATH } from "../../notes/paths";
 import { buildSettingsNote } from "../../notes/settingsNote";
 import { buildSnapshot, type NoteInput } from "../../snapshot/snapshot";
 
@@ -30,6 +32,21 @@ export const account = (over: Partial<Account> = {}): Account => ({
 	...over,
 });
 
+export const asset = (over: Partial<Asset> = {}): Asset => ({
+	name: "House",
+	assetType: "house",
+	active: true,
+	color: "#3e63dd",
+	...over,
+});
+
+export const valuation = (over: Partial<Valuation> = {}): Valuation => ({
+	date: "2026-06-15",
+	valueCents: 52000000,
+	note: "",
+	...over,
+});
+
 export const tx = (over: Partial<Transaction> = {}): Transaction => ({
 	date: "2026-10-03",
 	merchant: "Publix",
@@ -46,7 +63,8 @@ export function inputOf(path: string, text: string): NoteInput {
 }
 
 export const accountInput = (a: Account) => inputOf(accountPath(a.name), buildAccountNote(a));
-export const categoryInput = (c: Category) => inputOf(categoryPath(c.name), buildCategoryNote(c));
+export const assetInput = (a: Asset, valuations: Valuation[] = [valuation()]) => inputOf(assetPath(a.name), buildAssetNote(a, valuations));
+export const categoryInput =(c: Category) => inputOf(categoryPath(c.name), buildCategoryNote(c));
 export const settingsInput = (s: Settings = DEFAULT_SETTINGS) => inputOf(SETTINGS_PATH, buildSettingsNote(s));
 export const monthInput = (acct: string, month: string, rows: Transaction[]) =>
 	inputOf(monthPath(acct, month), buildMonthNote({ account: acct, month }, rows, index));

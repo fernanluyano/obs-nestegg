@@ -182,11 +182,17 @@ export function drawIncExpChart(
   return new Chart(canvas, cfg)
 }
 
-// ─── Net asset line chart ─────────────────────────────────────────────────────
+// ─── Total value of assets line chart ─────────────────────────────────────────
 
-export function drawNetChart(
+export interface ValuePoint {
+  monthLabel: string
+  tooltipLabel: string
+  valueCents: number
+}
+
+export function drawAssetsChart(
   container: HTMLElement,
-  data: MonthData[],
+  data: ValuePoint[],
 ): Chart {
   const colors = getThemeColors()
 
@@ -198,8 +204,8 @@ export function drawNetChart(
       labels: data.map(d => d.monthLabel),
       datasets: [
         {
-          label: t('dash.netAsset'),
-          data: data.map(d => d.net),
+          label: t('assets.totalValue'),
+          data: data.map(d => d.valueCents),
           borderColor: colors.net,
           pointBackgroundColor: colors.net,
           pointRadius: 4,
@@ -222,11 +228,7 @@ export function drawNetChart(
               const idx = items[0].dataIndex
               return data[idx].tooltipLabel
             },
-            label: (ctx) => {
-              const v = ctx.raw as number | null
-              if (v === null) return ''
-              return `${t('dash.netAsset')}: ${formatCents(v)}`
-            },
+            label: (ctx) => `${t('assets.totalValue')}: ${formatCents(ctx.raw as number)}`,
           },
         },
       },

@@ -2845,6 +2845,17 @@ select.ne-add-wallet-input {
   padding: 2px 0;
 }
 
+.ne-debt-card-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ne-metrics--debt {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .ne-debt-card-value {
   color: var(--text-normal);
   font-variant-numeric: tabular-nums;
@@ -2869,6 +2880,33 @@ select.ne-add-wallet-input {
 .ne-debt-card-extra-input {
   width: 96px;
   text-align: right;
+}
+
+/* Assets tab: the total graph takes most of the width, the by-type pie a small share */
+.ne-assets-charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+
+.ne-assets-charts.is-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ne-assets-charts .ne-chart-wrap {
+  height: 200px;
+}
+
+@media (max-width: 700px) {
+  .ne-assets-charts { grid-template-columns: minmax(0, 1fr); }
+}
+
+.ne-asset-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .ne-debt-charts {

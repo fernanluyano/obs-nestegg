@@ -1,4 +1,5 @@
 import { categoryIndexOf, type Snapshot } from "../snapshot/snapshot";
+import { detectDuplicateAssets } from "./assetIssues";
 import {
 	detectDuplicateAccounts, detectInvalidDefaultAccount, detectNegativeAvailable, detectOrphanedAccounts,
 	detectStaleAvailable, detectStaleBalances,
@@ -18,6 +19,7 @@ export function validateSnapshot(snapshot: Snapshot): ValidationIssue[] {
 		...detectInvalidNotes(snapshot),
 		...detectMalformedRows(snapshot),
 		...detectDuplicateAccounts(snapshot),
+		...detectDuplicateAssets(snapshot),
 		...detectDuplicateCategories(snapshot),
 		...detectDuplicateSubcategories(snapshot),
 		...detectDuplicateMonths(snapshot),

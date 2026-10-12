@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-	accountColors, accountBalances, accountHasTransactions, accountsOf, activeAccounts,
+	accountColors, accountBalances, accountHasTransactions, accountsOf, activeAccounts, creditCardDebts,
 	findAccount, groupByCategory, groupByTags, knownMerchants, knownTags, loanDebts, monthEntries, monthSummaries,
 	monthSummary, netAsset, netAssetTimeline, subcategoryUsage, suggestedTags,
 } from "../../snapshot/queries";
@@ -77,6 +77,29 @@ describe("loanDebts", () => {
 		const debts = loanDebts(loanSnap, "2026-10-10");
 		expect(debts.map((d) => d.account.name)).toEqual(["Car"]);
 		expect(debts[0].owedCents).toBe(900000);
+	});
+});
+
+describe("creditCardDebts", () => {
+	const cardSnap = buildSnapshot(
+		vaultInputs({
+			accounts: [
+				card,
+				account({ name: "Old card", accountType: "creditCard", active: false, enteredBalanceCents: -900, enteredBalanceAsOf: "2026-09-30", balanceCents: -900 }),
+				account({ name: "In credit", accountType: "creditCard", enteredBalanceCents: 700, enteredBalanceAsOf: "2026-09-30", balanceCents: 700 }),
+				account({ name: "Car", accountType: "loan", loanKind: "car", enteredBalanceCents: -1000000, enteredBalanceAsOf: "2026-09-30", balanceCents: -1000000 }),
+				account({ name: "Cash", enteredBalanceAsOf: "2026-09-30" }),
+			],
+			months: [monthInput("Card", "2026-10", [tx({ amountCents: -2500, date: "2026-10-05" })])],
+		}),
+	);
+
+	it("lists the active credit cards only, with what each owes after its rows", () => {
+		expect(creditCardDebts(cardSnap).map((d) => [d.account.name, d.owedCents])).toEqual([["Card", 7500], ["In credit", 0]]);
+	});
+
+	it("is empty without credit cards", () => {
+		expect(creditCardDebts(buildSnapshot(vaultInputs()))).toEqual([]);
 	});
 });
 

@@ -1,4 +1,4 @@
-import { accountPath, budgetPath, categoryPath, monthPath, SETTINGS_PATH } from "../notes/paths";
+import { accountPath, assetPath, budgetPath, categoryPath, monthPath, SETTINGS_PATH } from "../notes/paths";
 import type { Snapshot } from "../snapshot/snapshot";
 import type { InTransitIssue, InvalidNoteIssue, PathMismatchIssue } from "./issues";
 
@@ -10,6 +10,7 @@ export function detectPathMismatches(snapshot: Snapshot): PathMismatchIssue[] {
 	};
 	if (snapshot.settings) check("settings", snapshot.settings.path, SETTINGS_PATH);
 	for (const a of snapshot.accounts) check("account", a.path, accountPath(a.account.name));
+	for (const a of snapshot.assets) check("asset", a.path, assetPath(a.asset.name));
 	for (const c of snapshot.categories) check("category", c.path, categoryPath(c.category.name));
 	for (const m of snapshot.months) check("transactions", m.path, monthPath(m.account, m.month));
 	for (const b of snapshot.budgets) check("budget", b.path, budgetPath(b.month));

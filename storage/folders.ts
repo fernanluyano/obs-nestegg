@@ -1,7 +1,7 @@
 import { dirname, ROOT_FOLDER } from "../notes/paths";
 import type { VaultPort } from "./VaultPort";
 
-const PROTECTED = new Set([ROOT_FOLDER, `${ROOT_FOLDER}/Accounts`, `${ROOT_FOLDER}/Categories`]);
+const PROTECTED = new Set([ROOT_FOLDER, `${ROOT_FOLDER}/Accounts`, `${ROOT_FOLDER}/Categories`, `${ROOT_FOLDER}/Assets`]);
 
 // After files move out, drop the folders they leave empty (an account's old folder and its
 // Transactions folder), deepest first and each once, never the plugin's own top-level folders.
