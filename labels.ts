@@ -257,6 +257,10 @@ const strings = {
     'notice.actionFailed': 'Failed: {reason}',
 
     'ui.setup': 'Set up',
+    'ui.previousMonth': 'Previous month',
+    'ui.nextMonth': 'Next month',
+    'theme.setting': 'Colour theme',
+    'theme.settingDesc': 'Applies to Nestegg only, on this device. "Match Obsidian" follows your Obsidian theme and accent colour.',
     'wizard.stepOf': 'Step {n} of {total}',
     'wizard.back': 'Back',
     'wizard.next': 'Next',
@@ -373,6 +377,7 @@ const strings = {
     'assets.startingValue': 'Starting value',
     'assets.date': 'As of',
     'assets.note': 'Note (optional)',
+    'assets.noteLatest': 'Note on the latest value',
     'assets.confirmAdd': 'Add the {type} "{name}" valued at {value} as of {date}?',
     'assets.confirmArchive': 'Archive "{name}"? It will no longer be shown, but its note and history stay in your vault.',
     'assets.editTitle': 'Edit asset',

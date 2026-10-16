@@ -25,6 +25,7 @@ export class BucketsModal extends Modal {
   }
 
   onOpen() {
+    this.containerEl.addClass('ne-scope')
     this.containerEl.addClass('ne-wallet-edit-modal-container')
     this.contentEl.addClass('ne-modal')
     this.render()

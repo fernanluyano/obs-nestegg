@@ -66,6 +66,7 @@ export class AccountEditModal extends Modal {
   }
 
   onOpen() {
+    this.containerEl.addClass('ne-scope')
     const { contentEl, containerEl } = this
     containerEl.addClass('ne-wallet-edit-modal-container')
     contentEl.addClass('ne-modal')

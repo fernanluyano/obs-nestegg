@@ -12,6 +12,7 @@ export class TextPromptModal extends Modal {
   }
 
   onOpen() {
+    this.containerEl.addClass('ne-scope')
     const { contentEl } = this
     contentEl.addClass('ne-modal')
     contentEl.createEl('h2', { text: this.title })

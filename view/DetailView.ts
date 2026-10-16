@@ -184,14 +184,16 @@ export class DetailView extends ItemView {
       })
     }
     let day = ''
+    let group = this.listEl
     for (const entry of shown) {
       if (entry.date !== day) {
         day = entry.date
-        renderDayHeader(this.listEl, day, balances.get(day), colors)
+        group = this.listEl.createDiv('ne-day-group')
+        renderDayHeader(group, day, balances.get(day), colors)
       }
       const key = this.keyOf.get(entry)!
       renderTxRow(
-        this.listEl, entry, index.typeOf(entry.subcategory), colors,
+        group, entry, index.typeOf(entry.subcategory), colors,
         () => (this.selecting ? this.toggle(key) : this.edit(entry)),
         this.selecting ? { selected: this.selected.has(key) } : undefined,
       )

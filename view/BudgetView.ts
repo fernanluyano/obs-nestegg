@@ -1,4 +1,4 @@
-import { Events, ItemView, Notice, ViewStateResult, WorkspaceLeaf } from 'obsidian'
+import { Events, ItemView, Notice, ViewStateResult, WorkspaceLeaf, setIcon } from 'obsidian'
 import { categoryTotals, parsePlanned, sectionsByCategory, type BudgetProgress, type BudgetSection } from '../domain/budget'
 import { centsToDecimal, formatCents } from '../domain/money'
 import { t, tn } from '../labels'
@@ -91,8 +91,10 @@ export class BudgetView extends ItemView {
     const key = main.category
     if (this.collapsed.has(key)) card.addClass('is-collapsed')
 
-    const head = card.createDiv('ne-budget-row ne-budget-head')
-    head.createSpan({ text: main.category, cls: 'ne-budget-name' })
+    const head = card.createDiv({ cls: 'ne-budget-row ne-budget-head', attr: { role: 'button', 'aria-expanded': String(!this.collapsed.has(key)) } })
+    const name = head.createSpan('ne-budget-name')
+    setIcon(name.createSpan('ne-budget-chevron'), 'chevron-down')
+    name.createSpan({ text: main.category })
     head.createSpan({ text: formatCents(totals.plannedCents), cls: 'ne-budget-amount ne-budget-muted' })
     head.createSpan({ text: formatCents(totals.actualCents), cls: 'ne-budget-amount' })
     this.renderBar(head, totals.progress)
@@ -100,6 +102,7 @@ export class BudgetView extends ItemView {
       if (this.collapsed.has(key)) this.collapsed.delete(key)
       else this.collapsed.add(key)
       card.toggleClass('is-collapsed', this.collapsed.has(key))
+      head.setAttr('aria-expanded', String(!this.collapsed.has(key)))
     })
 
     const body = card.createDiv('ne-budget-body')

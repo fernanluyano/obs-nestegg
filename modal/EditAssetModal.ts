@@ -1,4 +1,5 @@
 import { App, Modal, Notice } from 'obsidian'
+import { latestValuation } from '../domain/assets'
 import { t } from '../labels'
 import type { Ledger } from '../services/Ledger'
 import { findAsset } from '../snapshot/assetQueries'
@@ -17,6 +18,7 @@ export class EditAssetModal extends Modal {
   }
 
   onOpen() {
+    this.containerEl.addClass('ne-scope')
     const { contentEl, containerEl } = this
     const record = findAsset(this.ledger.snapshot, this.asset)
     if (!record) { this.close(); return }
@@ -40,10 +42,23 @@ export class EditAssetModal extends Modal {
     nameInput.addEventListener('input', () => { name = nameInput.value.trim() })
     renderColorSwatches(field(t('assets.color')), color, (picked) => { color = picked })
 
+    // The note belongs to a valuation, so this edits the one the card shows: the latest.
+    const latest = latestValuation(record.valuations)
+    let note = latest?.note ?? ''
+    if (latest) {
+      const noteInput = field(t('assets.noteLatest')).createEl('input', { type: 'text', cls: 'ne-add-wallet-input' })
+      noteInput.value = note
+      noteInput.addEventListener('input', () => { note = noteInput.value })
+    }
+
     const submit = async () => {
       const parsed = parseAssetEditForm({ name }, this.ledger.snapshot.assets.map(a => a.asset), this.asset)
       if (!parsed.ok) { new Notice(t(parsed.error)); return }
-      const saved = await this.run(() => this.ledger.assets.edit(this.asset, { name: parsed.name, color }))
+      const saved = await this.run(async () => {
+        // First, while the asset still has its old name: a rename moves the note.
+        if (latest && note.trim() !== latest.note) await this.ledger.assets.addValuation(this.asset, { ...latest, note })
+        await this.ledger.assets.edit(this.asset, { name: parsed.name, color })
+      })
       if (saved) this.close()
     }
     card.createDiv('ne-add-wallet-submit').createEl('button', { text: t('ui.save'), cls: 'mod-cta' })

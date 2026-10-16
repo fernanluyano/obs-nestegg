@@ -26,6 +26,7 @@ export class MobileTransactionModal extends TransactionModal {
   private viewportCleanups: (() => void)[] = []
 
   onOpen() {
+    this.containerEl.addClass('ne-scope')
     this.buildMobileUI()
     // iOS auto-focuses first button; delay ensures blur after animation
     setTimeout(() => (document.activeElement as HTMLElement)?.blur(), 100)

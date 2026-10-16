@@ -77,6 +77,7 @@ export class AssetView extends ItemView {
     stat.createSpan({ text: t('assets.currentValue') })
     stat.createSpan({ text: formatCents(latest?.valueCents ?? 0), cls: 'ne-debt-card-value' })
     if (latest) card.createDiv({ text: tn('assets.valueAsOf', { date: latest.date }), cls: 'ne-debt-card-hint' })
+    if (latest?.note) card.createDiv({ text: latest.note, cls: 'ne-asset-note' })
 
     const actions = card.createDiv('ne-asset-card-actions')
     actions.createEl('button', { text: t('assets.addValuation') })

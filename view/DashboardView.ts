@@ -7,7 +7,9 @@ import type { LedgerEntry } from '../domain/types'
 import { renderMultiDropdown } from './detail/dropdown'
 import { t, formatMonthLabel, formatYearMonth } from '../labels'
 import { currentYearMonth } from '../utils'
-import { createMetric, renderCard } from './components'
+import { renderCard } from './components'
+import { metricText } from './budgetCards'
+import { formatCents } from '../domain/money'
 import type { TransactionType } from '../domain/types'
 import { DETAIL_VIEW_TYPE } from './DetailView'
 import { renderSharedHeader } from './SharedHeader'
@@ -95,13 +97,24 @@ export class DashboardView extends ItemView {
     const { incomeCents: monthIncome, expenseCents: monthExpense } = summaries.get(this.currentYearMonth)!
     const monthBalance = monthIncome - monthExpense
 
-    const metricsEl = contentEl.createDiv('ne-metrics')
-    createMetric(metricsEl, t('dash.income'),  monthIncome,  'income')
-    createMetric(metricsEl, t('dash.expense'), monthExpense, 'expense')
-    createMetric(metricsEl, t('dash.balance'), monthBalance,
-      monthBalance >= 0 ? 'positive' : 'negative',
-      { hero: true },
-    )
+    // One panel: the month's balance as the headline, with income and expense as the two sides
+    // of a bar that fills as spending approaches (and passes) income.
+    const balanceVariant = monthBalance >= 0 ? 'positive' : 'negative'
+    const hero = contentEl.createDiv(`ne-hero ${balanceVariant}`)
+    hero.createDiv({ text: t('dash.balance'), cls: 'ne-hero-label' })
+    hero.createDiv({ text: metricText(monthBalance, balanceVariant, true), cls: 'ne-hero-value' })
+    const spentShare = monthIncome > 0 ? Math.min(100, (monthExpense / monthIncome) * 100) : monthExpense > 0 ? 100 : 0
+    hero.createDiv('ne-hero-bar').createDiv('ne-hero-bar-fill').style.width = `${spentShare}%`
+    const sides = hero.createDiv('ne-hero-sides')
+    for (const [label, cents, variant] of [
+      [t('dash.income'), monthIncome, 'income'],
+      [t('dash.expense'), monthExpense, 'expense'],
+    ] as const) {
+      const side = sides.createDiv('ne-hero-side')
+      side.createSpan({ cls: `ne-hero-dot ${variant}` })
+      side.createSpan({ text: label, cls: 'ne-hero-side-label' })
+      side.createSpan({ text: formatCents(cents), cls: 'ne-hero-side-value' })
+    }
 
     // ── 6-month bar chart ────────────────────────────────────────────────────
     const data: MonthData[] = months.map(ym => ({

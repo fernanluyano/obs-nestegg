@@ -1,7 +1,14 @@
+import { setIcon } from 'obsidian'
 import type { TransactionType, LedgerEntry } from '../../domain/types'
-import { dateToMonthDay } from '../../utils'
 import { t } from '../../labels'
 import { buildAccountParts, buildAmountDisplay, buildLine3Display, buildTitleText } from '../detailRow'
+
+const TYPE_ICONS: Record<TransactionType, string> = {
+  expense: 'arrow-up-right',
+  income: 'arrow-down-left',
+  transfer: 'arrow-left-right',
+  debt: 'landmark',
+}
 
 export function renderTxRow(
   container: HTMLElement,
@@ -21,13 +28,14 @@ export function renderTxRow(
     box.tabIndex = -1 // the row itself is the click target; the box only shows the state
   }
 
-  row.createEl('span', { text: dateToMonthDay(entry.date), cls: 'ne-tx-date' })
-  if (type) row.createEl('span', { text: t(`label.type.${type}`), cls: `ne-type-badge ne-type-${type}` })
-  else row.createEl('span', { text: '—', cls: 'ne-type-badge' })
+  // The day header carries the date, so the row leads with a round type marker instead.
+  const avatar = row.createSpan({ cls: `ne-tx-avatar${type ? ` ne-type-${type}` : ''}`, attr: { title: type ? t(`label.type.${type}`) : '' } })
+  setIcon(avatar, type ? TYPE_ICONS[type] : 'circle-dashed')
 
   const stack = row.createDiv('ne-tx-row-stack')
   stack.createEl('div', { text: buildTitleText(entry), cls: 'ne-tx-category' })
   const accountEl = stack.createEl('div', { cls: 'ne-tx-wallet' })
+  if (type) accountEl.createSpan({ text: `${t(`label.type.${type}`)} · `, cls: 'ne-tx-type-text' })
   buildAccountParts(entry).forEach((name, i) => {
     if (i > 0) accountEl.appendText(' → ')
     const part = accountEl.createSpan({ text: name })

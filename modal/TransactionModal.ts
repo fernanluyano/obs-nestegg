@@ -57,6 +57,7 @@ export class TransactionModal extends Modal {
   }
 
   onOpen() {
+    this.containerEl.addClass('ne-scope')
     const { contentEl } = this
     contentEl.empty()
     contentEl.addClass('ne-modal')

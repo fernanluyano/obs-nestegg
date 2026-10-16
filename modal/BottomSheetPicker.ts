@@ -171,7 +171,7 @@ export function openFilterSheet(params: FilterSheetParams): () => void {
 
   // Leaf context: attach backdrop to document.body so position:fixed escapes
   // the workspace leaf's transformed ancestor and covers the Obsidian toolbar.
-  const backdrop = document.body.createDiv('ne-bottom-sheet-backdrop is-leaf-context')
+  const backdrop = document.body.createDiv('ne-bottom-sheet-backdrop is-leaf-context ne-scope')
   const sheet = backdrop.createDiv('ne-bottom-sheet ne-filter-sheet')
   document.body.addClass('ne-bottom-sheet-lock')
   containerEl.addClass('ne-bottom-sheet-active')

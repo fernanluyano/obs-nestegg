@@ -32,9 +32,11 @@ export interface MonthData {
 // ─── Color helpers ────────────────────────────────────────────────────────────
 
 export function getThemeColors() {
-  const s = getComputedStyle(document.body)
+  // A Nestegg theme overrides colours on the view, not on body, so read them from the view.
+  const s = getComputedStyle(document.querySelector('.view-content.ne-scope') ?? document.body)
   const v = (name: string, fallback: string) => s.getPropertyValue(name).trim() || fallback
-  const dark = document.body.classList.contains('theme-dark')
+  const scheme = s.getPropertyValue('--ne-scheme').trim()
+  const dark = scheme ? scheme === 'dark' : document.body.classList.contains('theme-dark')
   return {
     income:  v('--ne-income',  '#5DCAA5'),
     expense: v('--ne-expense', '#EF9F27'),

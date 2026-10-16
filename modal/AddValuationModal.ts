@@ -1,7 +1,10 @@
 import { App, Modal, Notice } from 'obsidian'
+import { latestValuation } from '../domain/assets'
 import { todayString } from '../domain/dates'
+import { centsToDecimal } from '../domain/money'
 import { t, tn } from '../labels'
 import type { Ledger } from '../services/Ledger'
+import { findAsset } from '../snapshot/assetQueries'
 import { parseValuationForm } from './assetState'
 
 export class AddValuationModal extends Modal {
@@ -16,6 +19,7 @@ export class AddValuationModal extends Modal {
   }
 
   onOpen() {
+    this.containerEl.addClass('ne-scope')
     const { contentEl, containerEl } = this
     containerEl.addClass('ne-wallet-edit-modal-container')
     contentEl.addClass('ne-modal')
@@ -29,8 +33,11 @@ export class AddValuationModal extends Modal {
       return f
     }
 
+    // Valuations usually move a little, so the form starts from the last known value.
+    const latest = latestValuation(findAsset(this.ledger.snapshot, this.asset)?.valuations ?? [])
+
     let date = todayString()
-    let value = ''
+    let value = latest ? centsToDecimal(latest.valueCents) : ''
     let note = ''
 
     const dateInput = field(t('assets.date')).createEl('input', { type: 'date', cls: 'ne-add-wallet-input' })
@@ -39,6 +46,7 @@ export class AddValuationModal extends Modal {
 
     const valueInput = field(t('assets.value')).createEl('input', { type: 'number', placeholder: '0.00', cls: 'ne-add-wallet-input' })
     valueInput.setAttribute('step', '0.01')
+    valueInput.value = value
     valueInput.addEventListener('input', () => { value = valueInput.value })
 
     const noteInput = field(t('assets.note')).createEl('input', { type: 'text', cls: 'ne-add-wallet-input' })
@@ -62,7 +70,8 @@ export class AddValuationModal extends Modal {
         if ((e as KeyboardEvent).key === 'Enter') { e.preventDefault(); void submit() }
       })
     }
-    setTimeout(() => valueInput.focus(), 50)
+    // Selected, so typing a new value replaces the suggestion.
+    setTimeout(() => { valueInput.focus(); valueInput.select() }, 50)
   }
 
   onClose() {

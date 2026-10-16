@@ -21,6 +21,7 @@ describe('getThemeColors', () => {
 
     vi.stubGlobal('document', {
       documentElement: {},
+      querySelector: () => null,
       body: { classList: { contains: (name: string) => name === 'theme-light' } },
     })
     vi.stubGlobal('getComputedStyle', () => ({
@@ -51,12 +52,28 @@ describe('getThemeColors', () => {
       getPropertyValue: (name: string) => name,
     }))
 
-    vi.stubGlobal('document', { documentElement, body })
+    vi.stubGlobal('document', { documentElement, body, querySelector: () => null })
     vi.stubGlobal('getComputedStyle', getComputedStyle)
 
     getThemeColors()
 
     expect(getComputedStyle).toHaveBeenCalledWith(body)
+  })
+
+  it('reads from the themed view when one is open, and takes the scheme from it', () => {
+    const view = {}
+    const body = { classList: { contains: () => true } }
+    const getComputedStyle = vi.fn(() => ({
+      getPropertyValue: (name: string) => (name === '--ne-scheme' ? 'light' : ''),
+    }))
+
+    vi.stubGlobal('document', { body, querySelector: () => view })
+    vi.stubGlobal('getComputedStyle', getComputedStyle)
+
+    const colors = getThemeColors()
+
+    expect(getComputedStyle).toHaveBeenCalledWith(view)
+    expect(colors.muted).toBe('rgba(0,0,0,0.45)')
   })
 })
 

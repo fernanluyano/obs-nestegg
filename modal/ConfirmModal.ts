@@ -16,6 +16,7 @@ export class ConfirmModal extends Modal {
   }
 
   onOpen() {
+    this.containerEl.addClass('ne-scope')
     const { contentEl } = this
     contentEl.createEl('p', { text: this.message })
     const row = contentEl.createDiv('ne-btn-row')

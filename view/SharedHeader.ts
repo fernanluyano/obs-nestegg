@@ -1,10 +1,11 @@
-import { Events, ItemView, Platform } from 'obsidian'
+import { Events, ItemView, Platform, setIcon } from 'obsidian'
 import type { Ledger } from '../services/Ledger'
 import { TransactionModal } from '../modal/TransactionModal'
 import { MobileTransactionModal } from '../modal/MobileTransactionModal'
 import { t } from '../labels'
 import { SetupWizard } from '../wizard/SetupWizard'
 import { stepMonth, isAfterCurrentMonth } from '../utils'
+import { NESTEGG_ICON } from '../plugin/icon'
 import { BUDGET_VIEW_TYPE } from './BudgetView'
 import { DASHBOARD_VIEW_TYPE } from './DashboardView'
 import { ASSET_VIEW_TYPE } from './AssetView'
@@ -24,18 +25,59 @@ export type SharedHeaderOptions = {
   monthDisabled?: boolean
 }
 
-export function renderSharedHeader(container: HTMLElement, opts: SharedHeaderOptions): void {
-  const root = container.createDiv('ne-shared-header')
+type NavItem = { id: ActiveView; label: string; icon: string; targetType: string; state?: Record<string, unknown> }
 
-  const monthCell = root.createDiv('ne-shared-header-month')
+// Two siblings that the view's stylesheet places in a grid: the navigation (a side rail on wide
+// panes, a bottom bar on phones) and the top bar with the page title, month and primary action.
+export function renderSharedHeader(container: HTMLElement, opts: SharedHeaderOptions): void {
+  // Marks the view as a themed surface (see paletteVars and the token block in styles.css).
+  container.addClass('ne-scope')
+  const monthState = opts.yearMonth ? { yearMonth: opts.yearMonth } : undefined
+  const items: NavItem[] = [
+    { id: 'dashboard', label: t('ui.overview'), icon: 'layout-dashboard', targetType: DASHBOARD_VIEW_TYPE },
+    { id: 'detail',    label: t('ui.detail'),   icon: 'list',             targetType: DETAIL_VIEW_TYPE, state: monthState },
+    { id: 'budget',    label: t('ui.budget'),   icon: 'pie-chart',        targetType: BUDGET_VIEW_TYPE, state: monthState },
+    { id: 'accounts',  label: t('ui.accounts'), icon: 'wallet',           targetType: ACCOUNTS_VIEW_TYPE },
+    { id: 'debt',      label: t('ui.debt'),     icon: 'credit-card',      targetType: DEBT_VIEW_TYPE },
+    { id: 'asset',     label: t('ui.asset'),    icon: 'home',             targetType: ASSET_VIEW_TYPE },
+  ]
+
+  const nav = container.createEl('nav', { cls: 'ne-nav' })
+  const brand = nav.createDiv('ne-nav-brand')
+  setIcon(brand.createSpan('ne-nav-brand-icon'), NESTEGG_ICON)
+  brand.createSpan({ text: 'Nestegg', cls: 'ne-nav-brand-name' })
+
+  const list = nav.createDiv({ cls: 'ne-nav-list', attr: { role: 'tablist' } })
+  for (const item of items) {
+    const isActive = opts.activeView === item.id
+    const btn = list.createEl('button', {
+      cls: 'ne-nav-item' + (isActive ? ' is-active' : ''),
+      attr: { role: 'tab', 'aria-selected': String(isActive) },
+    })
+    setIcon(btn.createSpan('ne-nav-item-icon'), item.icon)
+    btn.createSpan({ text: item.label, cls: 'ne-nav-item-label' })
+    if (!isActive) {
+      btn.addEventListener('click', () => { void openOrRevealView(opts.view.app, item.targetType, item.state) })
+    }
+  }
+
+  const setup = nav.createEl('button', { cls: 'ne-nav-setup' })
+  setIcon(setup.createSpan('ne-nav-item-icon'), 'settings')
+  setup.createSpan({ text: t('ui.setup'), cls: 'ne-nav-item-label' })
+  setup.addEventListener('click', () => new SetupWizard(opts.view.app, opts.ledger).open())
+
+  const bar = container.createDiv('ne-topbar')
+  bar.createEl('h1', { text: items.find(i => i.id === opts.activeView)?.label ?? '', cls: 'ne-topbar-title' })
+
+  const monthCell = bar.createDiv('ne-topbar-month')
   if (opts.yearMonth !== null) {
     const ym = opts.yearMonth
     const monthDisabled = opts.monthDisabled === true
     if (monthDisabled) monthCell.addClass('is-disabled')
 
-    const prevBtn = monthCell.createEl('button', { text: '‹', cls: 'ne-nav-btn' })
+    const prevBtn = monthCell.createEl('button', { text: '‹', cls: 'ne-nav-btn', attr: { 'aria-label': t('ui.previousMonth') } })
     monthCell.createEl('span', { text: ym, cls: 'ne-month-label' })
-    const nextBtn = monthCell.createEl('button', { text: '›', cls: 'ne-nav-btn' })
+    const nextBtn = monthCell.createEl('button', { text: '›', cls: 'ne-nav-btn', attr: { 'aria-label': t('ui.nextMonth') } })
     prevBtn.disabled = monthDisabled
     nextBtn.disabled = monthDisabled || isAfterCurrentMonth(stepMonth(ym, 1))
 
@@ -49,37 +91,12 @@ export function renderSharedHeader(container: HTMLElement, opts: SharedHeaderOpt
     monthCell.addClass('is-empty')
   }
 
-  const tabsCell = root.createDiv('ne-shared-header-tabs')
-  const tabs: { id: ActiveView; label: string; targetType: string; state?: Record<string, unknown> }[] = [
-    { id: 'dashboard', label: t('ui.overview'), targetType: DASHBOARD_VIEW_TYPE },
-    { id: 'asset',     label: t('ui.asset'),    targetType: ASSET_VIEW_TYPE },
-    { id: 'accounts',  label: t('ui.accounts'), targetType: ACCOUNTS_VIEW_TYPE },
-    { id: 'debt',      label: t('ui.debt'),     targetType: DEBT_VIEW_TYPE },
-    { id: 'budget',    label: t('ui.budget'),   targetType: BUDGET_VIEW_TYPE,
-      state: opts.yearMonth ? { yearMonth: opts.yearMonth } : undefined },
-    { id: 'detail',    label: t('ui.detail'),   targetType: DETAIL_VIEW_TYPE,
-      state: opts.yearMonth ? { yearMonth: opts.yearMonth } : undefined },
-  ]
-  for (const tab of tabs) {
-    const isActive = opts.activeView === tab.id
-    const btn = tabsCell.createEl('button', {
-      text: tab.label,
-      cls: 'ne-shared-header-tab' + (isActive ? ' is-active' : ''),
-    })
-    if (!isActive) {
-      btn.addEventListener('click', () => {
-        void openOrRevealView(opts.view.app, tab.targetType, tab.state)
-      })
-    }
-  }
-
-  const actionsCell = root.createDiv('ne-shared-header-actions')
-  actionsCell.createEl('button', { text: t('ui.setup'), cls: 'ne-action-btn' })
-    .addEventListener('click', () => new SetupWizard(opts.view.app, opts.ledger).open())
-  const addBtn = actionsCell.createEl('button', {
-    text: '+ ' + t('ui.addTransaction'),
-    cls: 'ne-action-btn ne-shared-header-add',
+  const addBtn = bar.createEl('button', {
+    cls: 'ne-add-btn',
+    attr: { 'aria-label': t('ui.addTransaction') },
   })
+  addBtn.createSpan({ text: '+', cls: 'ne-add-icon' })
+  addBtn.createSpan({ text: t('ui.addTransaction'), cls: 'ne-add-label' })
   addBtn.addEventListener('click', () => {
     addBtn.disabled = true
     const ModalClass = Platform.isMobile ? MobileTransactionModal : TransactionModal

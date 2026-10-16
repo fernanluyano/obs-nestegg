@@ -20,6 +20,7 @@ export class SubcategoryPickModal extends Modal {
   }
 
   onOpen() {
+    this.containerEl.addClass('ne-scope')
     const { contentEl } = this
     const { title, intro, label, confirmText, emptyText, targets, onConfirm } = this.request
     contentEl.addClass('ne-modal')

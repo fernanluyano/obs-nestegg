@@ -20,6 +20,7 @@ export class SetupWizard extends Modal {
   }
 
   onOpen() {
+    this.containerEl.addClass('ne-scope')
     const { contentEl, containerEl } = this
     containerEl.addClass('ne-wizard-container')
     contentEl.empty()

@@ -43,7 +43,7 @@ Layers, from pure to Obsidian-bound; each folder mirrors a spec folder under `te
 - `storage/` — `VaultPort` (what the plugin needs from the vault), `loader`, folder cleanup, and `ObsidianVault` (the only file that touches the vault API)
 - `services/` — `Ledger` facade and the services that write (transactions, accounts, categories, settings, validation fixes); run against `tests/helpers/memoryVault.ts`
 - `plugin/` — wiring only: views, commands, startup
-- `wizard/` — the setup wizard, the only place to manage accounts, categories and preferences (there is no settings tab); `wizard/model.ts` holds the pure rules (mandatory pieces, rename impact), `steps/` one file per step
+- `wizard/` — the setup wizard, the only place to manage accounts, categories and finance preferences (the plugin settings tab holds just the per-device colour theme, stored in `data.json`, never in the vault; themes are data in `domain/themes.ts`, so adding one is a single entry); `wizard/model.ts` holds the pure rules (mandatory pieces, rename impact), `steps/` one file per step
 - `view/`, `modal/` — Obsidian UI; keep logic in the pure modules beside them (`view/detail/filters.ts`, `modal/transactionState.ts`, `modal/tagPickerState.ts`)
 - `main.ts` — plugin entry point, registered in `manifest.json` by `id`; stays tiny
 - `labels.ts` — the English string table
