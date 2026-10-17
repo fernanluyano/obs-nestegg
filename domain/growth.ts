@@ -1,3 +1,5 @@
+import { formatCents } from "./money";
+
 // Growth of a balance over time. Ratios are fractions (0.05 is 5%); null means the figure is not
 // defined, which is not the same as zero growth.
 
@@ -31,6 +33,12 @@ export function formatPercent(ratio: number | null): string {
 	if (ratio === null) return "n/a";
 	const percent = (Math.round(ratio * 1000) / 10).toFixed(1);
 	return `${ratio > 0 ? "+" : ""}${percent}%`;
+}
+
+// A change in dollars with its percent, for example "+433.18 (+2.3%)"; "n/a" when there is nothing to compare with.
+export function formatChange(changeCents: number | null, ratio: number | null): string {
+	if (changeCents === null) return "n/a";
+	return `${changeCents > 0 ? "+" : ""}${formatCents(changeCents)} (${formatPercent(ratio)})`;
 }
 
 export interface GrowthPoint {

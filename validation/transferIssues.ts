@@ -8,6 +8,7 @@ interface Row {
 	account: string;
 	date: string;
 	subcategory: string;
+	merchant: string;
 	amountCents: number;
 	fromTo: string;
 }
@@ -17,20 +18,26 @@ const key = (account: string, other: string, date: string, subcategory: string, 
 
 // Transfers are two rows, one per account. A row is matched with a partner that points back at it
 // on the same date and subcategory with the exact opposite amount; each partner pairs only once.
+// A loan payment's rows differ by the interest, so they are matched by date and merchant instead,
+// in file order, and the money that left must cover what reached the loan.
 export function detectTransferIssues(snapshot: Snapshot): TransferIssue[] {
 	const index = buildCategoryIndex(snapshot.categories.map((c) => c.category));
 	const issues: TransferIssue[] = [];
 	const transferRows: Row[] = [];
+	const loanRows: Row[] = [];
 
 	for (const m of snapshot.months) {
 		for (const tx of m.transactions) {
 			const row: Row = { path: m.path, account: m.account, ...tx };
-			const isTransfer = isTransferLike(index.typeOf(tx.subcategory));
+			const type = index.typeOf(tx.subcategory);
+			const isTransfer = isTransferLike(type);
 			const problem = rowProblem(row, isTransfer);
 			if (problem) issues.push(issueOf(problem, row));
+			else if (type === "debt") loanRows.push(row);
 			else if (isTransfer) transferRows.push(row);
 		}
 	}
+	issues.push(...loanPaymentIssues(loanRows));
 
 	const available = new Map<string, number>();
 	for (const r of transferRows) {
@@ -42,6 +49,30 @@ export function detectTransferIssues(snapshot: Snapshot): TransferIssue[] {
 		const left = available.get(partner) ?? 0;
 		if (left > 0) available.set(partner, left - 1);
 		else issues.push(issueOf("noPartner", r));
+	}
+	return issues;
+}
+
+// The nth cash row of a payment goes with the nth loan row of it. A pair whose cash row is smaller
+// than its loan row cannot be one payment, so both come back as unmatched.
+function loanPaymentIssues(rows: Row[]): TransferIssue[] {
+	const legs = new Map<string, { out: Row[]; arrived: Row[] }>();
+	for (const row of rows) {
+		const sent = row.amountCents < 0;
+		const [cash, loan] = sent ? [row.account, row.fromTo] : [row.fromTo, row.account];
+		const k = [cash, loan, row.date, row.subcategory, row.merchant].join("\u0000");
+		const leg = legs.get(k) ?? { out: [], arrived: [] };
+		(sent ? leg.out : leg.arrived).push(row);
+		legs.set(k, leg);
+	}
+	const issues: TransferIssue[] = [];
+	for (const { out, arrived } of legs.values()) {
+		for (let i = 0; i < Math.max(out.length, arrived.length); i++) {
+			const cash = out[i];
+			const loan = arrived[i];
+			if (cash && loan && loan.amountCents > 0 && -cash.amountCents >= loan.amountCents) continue;
+			for (const row of [cash, loan]) if (row) issues.push(issueOf("noPartner", row));
+		}
 	}
 	return issues;
 }

@@ -1076,6 +1076,12 @@ button.ne-mobile-calculator-done {
   display: inline;
 }
 
+.ne-field-hint {
+  margin: -4px 0 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 .ne-error {
   color: var(--text-error);
   font-size: 13px;

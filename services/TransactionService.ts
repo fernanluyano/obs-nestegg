@@ -7,7 +7,7 @@ import { entryProblem, transferProblem, type EntryProblem } from "../domain/entr
 import { normalizeTags } from "../domain/names";
 import { accountsOf } from "../snapshot/queries";
 import {
-	isPartnerRow, sameTransaction, transferEntries, type TransactionDraft, type TransferInput,
+	isPartnerRow, sameLoanLeg, sameTransaction, transferEntries, type TransactionDraft, type TransferInput,
 } from "../domain/transactions";
 import type { LedgerEntry, Transaction } from "../domain/types";
 import { patchProps } from "../notes/frontmatter";
@@ -228,7 +228,7 @@ export class TransactionService {
 		const paired = new Set<number>();
 		entries.forEach((entry, i) => {
 			if (entry.fromTo === "" || paired.has(i)) return;
-			const partner = this.findPartner(entry);
+			const partner = this.partnerOf(entry);
 			if (!partner) return;
 			paired.add(i);
 			const at = rows.findIndex((r, k) => k !== i && !paired.has(k) && r.account === partner.account && sameTransaction(r, partner));
@@ -268,7 +268,7 @@ export class TransactionService {
 	// Removes the row and, for a transfer row, its partner in the other account's file.
 	private async removePair(entry: LedgerEntry): Promise<LedgerEntry[]> {
 		const removed: LedgerEntry[] = [entry];
-		const partner = entry.fromTo === "" ? undefined : this.findPartner(entry);
+		const partner = this.partnerOf(entry);
 		await this.remove(entry);
 		if (partner) {
 			try {
@@ -282,14 +282,26 @@ export class TransactionService {
 		return removed;
 	}
 
-	private findPartner(row: LedgerEntry): LedgerEntry | undefined {
-		for (const m of this.store.snapshot.months) {
-			if (m.account !== row.fromTo) continue;
-			for (const tx of m.transactions) {
-				const candidate: LedgerEntry = { ...tx, account: m.account };
-				if (isPartnerRow(row, candidate) && !sameTransaction(candidate, row)) return candidate;
-			}
+	private rowsOf(account: string, month?: string): LedgerEntry[] {
+		return this.store.snapshot.months
+			.filter((m) => m.account === account && (month === undefined || m.month === month))
+			.flatMap((m) => m.transactions.map((tx): LedgerEntry => ({ ...tx, account: m.account })));
+	}
+
+	// The other half of a transfer row, if it is in the vault. A loan payment's halves differ in
+	// amount, so they are found by date and merchant, and two payments that agree on both are told
+	// apart by their place in the file: the nth row on one side goes with the nth on the other.
+	partnerOf(row: LedgerEntry): LedgerEntry | undefined {
+		if (row.fromTo === "") return undefined;
+		if (this.store.index.typeOf(row.subcategory) !== "debt") {
+			return this.rowsOf(row.fromTo).find((c) => isPartnerRow(row, c) && !sameTransaction(c, row));
 		}
-		return undefined;
+		const month = monthOf(row.date);
+		const nth = this.rowsOf(row.account, month).filter((r) => sameLoanLeg(r, row)).findIndex((r) => sameTransaction(r, row));
+		const theirs = this.rowsOf(row.fromTo, month).filter(
+			(c) => c.fromTo === row.account && c.date === row.date && c.subcategory === row.subcategory && c.merchant === row.merchant,
+		);
+		const partner = theirs[nth];
+		return partner && isPartnerRow(row, partner, true) ? partner : undefined;
 	}
 }

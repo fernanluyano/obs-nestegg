@@ -69,6 +69,16 @@ describe("transferProblem", () => {
 		expect(transferProblem(transfer({ subcategory: LOAN_PAYMENT, to: "Card" }), ctx)).toBe("debtToNonLoan");
 	});
 
+	it("accepts interest on a loan payment, zero or more, and nowhere else", () => {
+		const payment = { subcategory: LOAN_PAYMENT, to: "Mortgage" };
+		expect(transferProblem(transfer({ ...payment, interestCents: 14374 }), ctx)).toBeNull();
+		expect(transferProblem(transfer({ ...payment, interestCents: 0 }), ctx)).toBeNull();
+		expect(transferProblem(transfer({ ...payment, interestCents: -1 }), ctx)).toBe("invalidInterest");
+		expect(transferProblem(transfer({ ...payment, interestCents: 1.5 }), ctx)).toBe("invalidInterest");
+		expect(transferProblem(transfer({ to: "Savings", interestCents: 100 }), ctx)).toBe("interestOnNonLoan");
+		expect(transferProblem(transfer({ to: "Savings", interestCents: 0 }), ctx)).toBeNull();
+	});
+
 	it("keeps a debt payment on the loan its subcategory is linked to", () => {
 		const accounts = [...ctx.accounts, account({ name: "Car", accountType: "loan", loanKind: "car", paymentSubcategory: LOAN_PAYMENT })];
 		const linked = { ...ctx, accounts };

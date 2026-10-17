@@ -1,5 +1,5 @@
 import { percentPaid, type PayoffChart } from '../domain/loans'
-import { formatPercent, type GrowthPoint } from '../domain/growth'
+import { formatChange, formatPercent, type GrowthPoint } from '../domain/growth'
 import { formatCents } from '../domain/money'
 import { formatYearMonth, t, tn } from '../labels'
 import {
@@ -199,6 +199,9 @@ export interface NetWorthChartPoint {
   assetsCents: number
   liabilitiesCents: number
   netCents: number
+  changeCents: number | null // net worth against the previous month
+  changeRatio: number | null
+  yoyRatio: number | null
 }
 
 // Shared by the chart lines and the legend above it, so a dot always matches its line.
@@ -252,6 +255,13 @@ export function drawNetWorthChart(
               return data[idx].tooltipLabel
             },
             label: (ctx) => `${ctx.dataset.label ?? ''}: ${formatCents(ctx.raw as number)}`,
+            footer: (items) => {
+              const point = data[items[0].dataIndex]
+              return [
+                `${t('networth.net')} ${t('cash.monthOverMonth')}: ${formatChange(point.changeCents, point.changeRatio)}`,
+                `${t('networth.net')} ${t('cash.yearOverYear')}: ${formatPercent(point.yoyRatio)}`,
+              ]
+            },
           },
         },
       },
@@ -315,10 +325,7 @@ export function drawCashChart(container: HTMLElement, data: CashChartPoint[]): C
             label: (ctx) => `${t('cash.title')}: ${formatCents(ctx.raw as number)}`,
             afterLabel: (ctx) => {
               const point = data[ctx.dataIndex]
-              const change = point.changeCents === null
-                ? 'n/a'
-                : `${point.changeCents > 0 ? '+' : ''}${formatCents(point.changeCents)} (${formatPercent(point.changeRatio)})`
-              return [`${t('cash.monthOverMonth')}: ${change}`, `${t('cash.yearOverYear')}: ${formatPercent(point.yoyRatio)}`]
+              return [`${t('cash.monthOverMonth')}: ${formatChange(point.changeCents, point.changeRatio)}`, `${t('cash.yearOverYear')}: ${formatPercent(point.yoyRatio)}`]
             },
           },
         },

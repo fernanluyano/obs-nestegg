@@ -21,7 +21,7 @@ const ctx: FormContext = { accounts, categories, index: buildCategoryIndex(categ
 
 const form = (over: Partial<TransactionFormState> = {}): TransactionFormState => ({
   date: '2026-05-03', type: 'expense', account: 'Cash Main', fromAccount: '', toAccount: '',
-  subcategory: 'Groceries', merchant: '', note: '', tags: [], amount: '12.50', isRefund: false, ...over,
+  subcategory: 'Groceries', merchant: '', note: '', tags: [], amount: '12.50', interest: '', isRefund: false, ...over,
 })
 
 const transferForm = (over: Partial<TransactionFormState> = {}) =>
@@ -31,7 +31,7 @@ describe('initialFormState', () => {
   it('defaults to an expense dated today on the default account', () => {
     expect(initialFormState({}, '2026-10-04', ctx)).toEqual({
       date: '2026-10-04', type: 'expense', account: 'Cash Main', fromAccount: '', toAccount: '',
-      subcategory: '', merchant: '', note: '', tags: [], amount: '', isRefund: false,
+      subcategory: '', merchant: '', note: '', tags: [], amount: '', interest: '', isRefund: false,
     })
   })
 
@@ -88,6 +88,43 @@ describe('formFromEntry', () => {
   it('copies the tags', () => {
     const e = entry()
     expect(formFromEntry(e, ctx.index).tags).not.toBe(e.tags)
+  })
+
+  // $763.48 left the cash account, $143.74 of it interest, so the loan went down by $619.74.
+  describe('a loan payment', () => {
+    const cash = entry({ account: 'Cash Main', subcategory: LOAN_PAYMENT, amountCents: -76348, fromTo: 'Mortgage', merchant: 'CCU FL', note: 'autopay' })
+    const loan = entry({
+      account: 'Mortgage', subcategory: LOAN_PAYMENT, amountCents: 61974, fromTo: 'Cash Main', merchant: 'CCU FL',
+      note: 'autopay; does not include the interest amount of 143.74, principal only',
+    })
+    const expected = { type: 'debt', fromAccount: 'Cash Main', toAccount: 'Mortgage', amount: '619.74', interest: '143.74', note: 'autopay' }
+
+    it('reads the principal and the interest the same from either row, and drops the automatic note', () => {
+      expect(formFromEntry(cash, ctx.index, loan)).toMatchObject(expected)
+      expect(formFromEntry(loan, ctx.index, cash)).toMatchObject(expected)
+    })
+
+    it('reads no interest when the other row is missing', () => {
+      expect(formFromEntry(loan, ctx.index)).toMatchObject({ type: 'debt', amount: '619.74', interest: '0.00' })
+      expect(formFromEntry(cash, ctx.index)).toMatchObject({ type: 'debt', amount: '763.48', interest: '0.00' })
+    })
+
+    it('reads a payment with no interest as zero interest', () => {
+      const even = entry({ account: 'Mortgage', subcategory: LOAN_PAYMENT, amountCents: 76348, fromTo: 'Cash Main' })
+      expect(formFromEntry(even, ctx.index, { ...cash, merchant: even.merchant })).toMatchObject({ amount: '763.48', interest: '0.00' })
+    })
+
+    it('keeps no interest on a plain transfer', () => {
+      expect(formFromEntry(entry({ subcategory: 'Account transfer', amountCents: -5000, fromTo: 'Savings' }), ctx.index).interest).toBe('')
+    })
+  })
+})
+
+describe('resetFormForType and the interest', () => {
+  it('keeps the interest for a loan payment and clears it for any other type', () => {
+    const withInterest = form({ type: 'debt', interest: '5.00' })
+    expect(resetFormForType(withInterest, 'debt', ctx).interest).toBe('5.00')
+    expect(resetFormForType(withInterest, 'expense', ctx).interest).toBe('')
   })
 })
 
@@ -298,12 +335,23 @@ describe('validateTransactionForm', () => {
     expect(error(transferForm({ toAccount: 'Card' }))).toBeNull()
   })
 
+  it('asks a loan payment for its interest, zero allowed, and nothing else for it', () => {
+    const payment = { toAccount: 'Mortgage', interest: '143.74' }
+    expect(error(debtForm(payment))).toBeNull()
+    expect(error(debtForm({ ...payment, interest: '0' }))).toBeNull()
+    expect(error(debtForm({ ...payment, interest: '' }))).toBe('err.interestRequired')
+    expect(error(debtForm({ ...payment, interest: 'abc' }))).toBe('err.interestInvalid')
+    expect(error(debtForm({ ...payment, interest: '-1' }))).toBe('err.interestInvalid')
+    expect(error(debtForm({ ...payment, interest: '1.234' }))).toBe('err.interestInvalid')
+    expect(error(transferForm({ interest: '' }))).toBeNull()
+  })
+
   it('keeps transfers and debt payments apart', () => {
     expect(error(transferForm({ toAccount: 'Mortgage' }))).toBe('err.transferToLoan')
-    expect(error(debtForm({ toAccount: 'Mortgage' }))).toBeNull()
-    expect(error(debtForm({ toAccount: 'Savings' }))).toBe('err.debtToNonLoan')
-    expect(error(debtForm({ toAccount: 'Card' }))).toBe('err.debtToNonLoan')
-    expect(error(debtForm({ toAccount: 'Mortgage', fromAccount: 'Card' }))).toBe('err.fromMustBeCash')
+    expect(error(debtForm({ toAccount: 'Mortgage', interest: '0' }))).toBeNull()
+    expect(error(debtForm({ toAccount: 'Savings', interest: '0' }))).toBe('err.debtToNonLoan')
+    expect(error(debtForm({ toAccount: 'Card', interest: '0' }))).toBe('err.debtToNonLoan')
+    expect(error(debtForm({ toAccount: 'Mortgage', fromAccount: 'Card', interest: '0' }))).toBe('err.fromMustBeCash')
   })
 
   it('refuses a plain expense or income on a loan', () => {
@@ -332,10 +380,19 @@ describe('buildDraft', () => {
     expect(buildDraft(transferForm({ tags: ['X'] }))).toEqual({
       kind: 'transfer',
       input: {
-        date: '2026-05-03', merchant: '', subcategory: 'Account transfer', cents: 1250,
+        date: '2026-05-03', merchant: '', subcategory: 'Account transfer', cents: 1250, interestCents: 0,
         note: '', tags: ['x'], from: 'Cash Main', to: 'Savings',
       },
     })
+  })
+
+  it('builds a loan payment from its principal and interest', () => {
+    const draft = buildDraft(debtForm({ toAccount: 'Mortgage', amount: '619.74', interest: '143.74' }))
+    expect(draft).toMatchObject({ kind: 'transfer', input: { cents: 61974, interestCents: 14374, to: 'Mortgage' } })
+  })
+
+  it('ignores the interest field on anything but a loan payment', () => {
+    expect(buildDraft(transferForm({ interest: '5.00' }))).toMatchObject({ input: { cents: 1250, interestCents: 0 } })
   })
 
   it('treats an unparsable amount as zero rather than throwing', () => {

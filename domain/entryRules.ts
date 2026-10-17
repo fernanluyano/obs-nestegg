@@ -17,7 +17,9 @@ export type EntryProblem =
 	| "debtToNonLoan"
 	| "wrongDebtAccount"
 	| "loanTransfersOnly"
-	| "unexpectedFromTo";
+	| "unexpectedFromTo"
+	| "invalidInterest"
+	| "interestOnNonLoan";
 
 export interface RuleContext {
 	accounts: Account[];
@@ -53,6 +55,8 @@ export function transferProblem(input: TransferInput, ctx: RuleContext): EntryPr
 	const basic = dateAndAmount(input.date, input.cents);
 	if (basic) return basic;
 	if (input.cents <= 0) return "amountNotPositive";
+	const interest = input.interestCents ?? 0;
+	if (!Number.isSafeInteger(interest) || interest < 0) return "invalidInterest";
 	const from = accountType(ctx, input.from);
 	const to = accountType(ctx, input.to);
 	if (!from || !to) return "unknownAccount";
@@ -62,6 +66,7 @@ export function transferProblem(input: TransferInput, ctx: RuleContext): EntryPr
 	if (isLiability(from)) return "fromMustBeCash";
 	if (type === "transfer") {
 		if (to === "loan") return "transferToLoan";
+		if (interest > 0) return "interestOnNonLoan";
 	} else {
 		if (to !== "loan") return "debtToNonLoan";
 		const linked = ctx.accounts.find((a) => a.paymentSubcategory === input.subcategory);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cagr, formatPercent, growthPoints, percentChange, yearToDateRatio } from "../../domain/growth";
+import { cagr, formatChange, formatPercent, growthPoints, percentChange, yearToDateRatio } from "../../domain/growth";
 
 describe("percentChange", () => {
 	it("is the change over the starting value", () => {
@@ -38,6 +38,39 @@ describe("formatPercent", () => {
 
 	it("says n/a when undefined", () => {
 		expect(formatPercent(null)).toBe("n/a");
+	});
+});
+
+describe("formatChange", () => {
+	it("shows the amount with its percent, signed", () => {
+		expect(formatChange(43318, 0.0231)).toBe("+433.18 (+2.3%)");
+		expect(formatChange(-366851, -0.06123)).toBe("-3,668.51 (-6.1%)");
+		expect(formatChange(0, 0)).toBe("0.00 (0.0%)");
+	});
+
+	it("keeps the amount when the percent is not defined, and says n/a with nothing to compare with", () => {
+		expect(formatChange(500, null)).toBe("+5.00 (n/a)");
+		expect(formatChange(null, null)).toBe("n/a");
+	});
+});
+
+// A real net worth series, in cents: July to October 2026 month ends.
+describe("net worth growth, with known numbers", () => {
+	const months = ["2026-07", "2026-08", "2026-09", "2026-10"];
+	const values = [5991155, 5624304, 6293480, 6196531]; // 59,911.55  56,243.04  62,934.80  61,965.31
+
+	it("gives month over month for each month after the first", () => {
+		const [jul, aug, sep, oct] = growthPoints(months, values, 0, 0);
+		expect(formatChange(jul.changeCents, jul.changeRatio)).toBe("n/a");
+		expect(formatChange(aug.changeCents, aug.changeRatio)).toBe("-3,668.51 (-6.1%)"); // 56,243.04 vs 59,911.55
+		expect(formatChange(sep.changeCents, sep.changeRatio)).toBe("+6,691.76 (+11.9%)"); // 62,934.80 vs 56,243.04
+		expect(formatChange(oct.changeCents, oct.changeRatio)).toBe("-969.49 (-1.5%)"); // 61,965.31 vs 62,934.80
+	});
+
+	it("gives the year to date from July, with no year over year or CAGR under a year", () => {
+		expect(formatPercent(yearToDateRatio(months, values, 0))).toBe("+3.4%"); // 61,965.31 vs 59,911.55
+		expect(growthPoints(months, values, 0, 0).every((p) => p.yoyRatio === null)).toBe(true);
+		expect(cagr(values[0], values[3], 3)).toBeNull();
 	});
 });
 

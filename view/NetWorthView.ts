@@ -3,7 +3,7 @@ import type { Ledger } from '../services/Ledger'
 import { activeAssets, assetsByType } from '../snapshot/assetQueries'
 import type { AssetRecord } from '../snapshot/snapshot'
 import { cashOnHandTimeline, cashStartMonth, creditCardDebts, loanDebts, netWorthStartMonth, netWorthTimeline } from '../snapshot/queries'
-import { cagr, formatPercent, growthPoints, yearToDateRatio } from '../domain/growth'
+import { cagr, formatChange, formatPercent, growthPoints, yearToDateRatio } from '../domain/growth'
 import { currentYearMonth } from '../utils'
 import { t, tn, formatMonthLabel, formatYearMonth } from '../labels'
 import { latestValuation } from '../domain/assets'
@@ -80,16 +80,27 @@ export class NetWorthView extends ItemView {
 
   private renderNetWorth(contentEl: HTMLElement) {
     contentEl.createEl('h2', { text: t('networth.title'), cls: 'ne-section-title' })
-    const months = getMonthRange(this.monthsOfHistory(netWorthStartMonth(this.ledger.snapshot)))
+    const start = netWorthStartMonth(this.ledger.snapshot)
+    const shown = this.monthsOfHistory(start)
+    // A year of lead-in months, so the first month shown still has a previous month and a year ago.
+    const months = getMonthRange(shown + 12)
     const timeline = netWorthTimeline(this.ledger.snapshot, months)
-    const points = months.map(ym => ({
-      monthLabel: formatMonthLabel(ym),
-      tooltipLabel: formatYearMonth(ym, 'short'),
-      assetsCents: timeline.get(ym)?.assetsCents ?? 0,
-      liabilitiesCents: timeline.get(ym)?.liabilitiesCents ?? 0,
-      netCents: timeline.get(ym)?.netCents ?? 0,
+    const values = months.map(ym => timeline.get(ym)?.netCents ?? 0)
+    const firstData = Math.max(0, start ? months.indexOf(start) : 0)
+    const points = growthPoints(months, values, 12, firstData).map(growth => ({
+      monthLabel: formatMonthLabel(growth.month),
+      tooltipLabel: formatYearMonth(growth.month, 'short'),
+      assetsCents: timeline.get(growth.month)?.assetsCents ?? 0,
+      liabilitiesCents: timeline.get(growth.month)?.liabilitiesCents ?? 0,
+      netCents: growth.cents,
+      changeCents: growth.changeCents,
+      changeRatio: growth.changeRatio,
+      yoyRatio: growth.yoyRatio,
     }))
     const now = points[points.length - 1]
+    const [cy, cm] = currentYearMonth().split('-').map(Number)
+    const [sy, sm] = (start ?? currentYearMonth()).split('-').map(Number)
+    const rate = cagr(values[firstData], values[values.length - 1], (cy - sy) * 12 + (cm - sm))
 
     const byType = new Map([...assetsByType(this.ledger.snapshot)].map(([type, cents]) => [t(`label.assetType.${type}`), cents]))
     const wrap = contentEl.createDiv('ne-assets-charts' + (byType.size > 0 ? '' : ' is-single'))
@@ -108,6 +119,18 @@ export class NetWorthView extends ItemView {
       item.createSpan('ne-account-dot').style.background = color
       item.createSpan({ text: label, cls: 'ne-networth-legend-label' })
       item.createSpan({ text: formatCents(cents), cls: 'ne-networth-legend-value' })
+    }
+
+    const growth = card.createDiv('ne-networth-legend')
+    for (const [label, value] of [
+      [t('cash.monthOverMonth'), formatChange(now.changeCents, now.changeRatio)],
+      [t('cash.yearToDate'), formatPercent(yearToDateRatio(months, values, firstData))],
+      [t('cash.yearOverYear'), formatPercent(now.yoyRatio)],
+      [t('cash.cagr'), formatPercent(rate)],
+    ] as const) {
+      const item = growth.createDiv('ne-networth-legend-item')
+      item.createSpan({ text: label, cls: 'ne-networth-legend-label' })
+      item.createSpan({ text: value, cls: 'ne-networth-legend-value' })
     }
 
     this.charts.push(drawNetWorthChart(card.createDiv('ne-chart-wrap'), points))
@@ -173,9 +196,7 @@ export class NetWorthView extends ItemView {
     const header = card.createDiv('ne-card-header-row')
     header.createEl('div', { text: t('cash.title'), cls: 'ne-card-title' })
 
-    const change = now.changeCents === null
-      ? 'n/a'
-      : `${now.changeCents > 0 ? '+' : ''}${formatCents(now.changeCents)} (${formatPercent(now.changeRatio)})`
+    const change = formatChange(now.changeCents, now.changeRatio)
     const stats = card.createDiv('ne-networth-legend')
     for (const [label, value] of [
       [t('cash.title'), formatCents(now.cents)],
