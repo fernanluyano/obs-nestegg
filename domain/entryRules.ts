@@ -17,7 +17,10 @@ export type EntryProblem =
 	| "debtToNonLoan"
 	| "wrongDebtAccount"
 	| "loanTransfersOnly"
-	| "unexpectedFromTo";
+	| "investingNoTransactions"
+	| "unexpectedFromTo"
+	| "invalidInterest"
+	| "interestOnNonLoan";
 
 export interface RuleContext {
 	accounts: Account[];
@@ -42,6 +45,7 @@ export function entryProblem(entry: LedgerEntry, ctx: RuleContext): EntryProblem
 	if (!type) return "unknownSubcategory";
 	if (isTransferLike(type)) return "subcategoryIsTransfer";
 	if (owner === "loan") return "loanTransfersOnly";
+	if (owner === "investing") return "investingNoTransactions";
 	if (entry.fromTo !== "") return "unexpectedFromTo";
 	return null;
 }
@@ -53,15 +57,19 @@ export function transferProblem(input: TransferInput, ctx: RuleContext): EntryPr
 	const basic = dateAndAmount(input.date, input.cents);
 	if (basic) return basic;
 	if (input.cents <= 0) return "amountNotPositive";
+	const interest = input.interestCents ?? 0;
+	if (!Number.isSafeInteger(interest) || interest < 0) return "invalidInterest";
 	const from = accountType(ctx, input.from);
 	const to = accountType(ctx, input.to);
 	if (!from || !to) return "unknownAccount";
 	const type = ctx.index.typeOf(input.subcategory);
 	if (!type) return "unknownSubcategory";
 	if (!isTransferLike(type)) return "subcategoryNotTransfer";
+	if (from === "investing" || to === "investing") return "investingNoTransactions";
 	if (isLiability(from)) return "fromMustBeCash";
 	if (type === "transfer") {
 		if (to === "loan") return "transferToLoan";
+		if (interest > 0) return "interestOnNonLoan";
 	} else {
 		if (to !== "loan") return "debtToNonLoan";
 		const linked = ctx.accounts.find((a) => a.paymentSubcategory === input.subcategory);

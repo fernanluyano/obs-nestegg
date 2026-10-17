@@ -1,6 +1,6 @@
 import { Platform } from 'obsidian'
 import { t } from '../../labels'
-import type { TransactionType } from '../../domain/types'
+import { takesTransactions, type TransactionType } from '../../domain/types'
 import { accountDropdownLabels, categoryDropdownLabels, renderMultiDropdown } from './dropdown'
 import type { FilterHost } from './FilterHost'
 import { availableCategories, emptyFilters, monthDateBounds, pruneCategories, toggle } from './filters'
@@ -32,7 +32,7 @@ export function categoryDropdown(container: HTMLElement, host: FilterHost, panel
 export function accountDropdown(container: HTMLElement, host: FilterHost, panelState: { open: boolean }): void {
   renderMultiDropdown(container, {
     ...accountDropdownLabels(),
-    options: host.accounts.filter(a => a.active).map(a => a.name),
+    options: host.accounts.filter(a => a.active && takesTransactions(a.accountType)).map(a => a.name),
     selected: host.filters.accounts, panelState,
     onChange: () => host.refreshList(), register: host.register,
   })

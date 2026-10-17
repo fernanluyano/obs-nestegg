@@ -3,8 +3,10 @@ import { isHexColor, nextAccountColor } from "../domain/colors";
 import { isIsoDate } from "../domain/dates";
 import { bucketsTotal } from "../domain/buckets";
 import { nameProblem } from "../domain/names";
-import type { Account, AccountType, LoanKind } from "../domain/types";
+import { latestValuation, valuationProblem, type Valuation } from "../domain/assets";
+import { isInvesting, type Account, type AccountType, type LoanKind } from "../domain/types";
 import { buildAccountNote, unbalancedTagPatch } from "../notes/accountNote";
+import { readValuations, removeValuationRow, upsertValuationRow } from "../notes/assetNote";
 import { clearBuckets } from "../notes/bucketTable";
 import { patchProps, type Props } from "../notes/frontmatter";
 import { accountPath } from "../notes/paths";
@@ -83,12 +85,14 @@ export class AccountService {
 
 		if (input.color !== undefined && !isHexColor(input.color)) throw new LedgerError("The color is not a valid #rrggbb color");
 		this.checkDebtFields(input.accountType, input);
+		if (isInvesting(input.accountType)) this.checkEntry({ date: input.enteredBalanceAsOf, valueCents: input.enteredBalanceCents });
 
 		const account: Account = {
 			...input,
 			color: (input.color ?? nextAccountColor(accountsOf(this.store.snapshot).map((a) => a.color))).toLowerCase(),
 			active: true, includeInNetAsset: true, balanceCents: input.enteredBalanceCents,
 			...(input.accountType === "cash" ? { availableCents: input.enteredBalanceCents } : {}),
+			...(isInvesting(input.accountType) ? { valuations: [{ date: input.enteredBalanceAsOf, valueCents: input.enteredBalanceCents, note: "" }] } : {}),
 		};
 		await this.store.port.create(accountPath(input.name), buildAccountNote(account));
 		await this.store.reload();
@@ -103,6 +107,9 @@ export class AccountService {
 		if (patch.color !== undefined && !isHexColor(patch.color)) throw new LedgerError("The color is not a valid #rrggbb color");
 
 		if ("accountType" in patch) throw new LedgerError("An account's type cannot be changed; delete it and create a new one");
+		if (isInvesting(account.accountType) && (patch.enteredBalanceCents !== undefined || patch.enteredBalanceAsOf !== undefined)) {
+			throw new LedgerError("An investing account's balance comes from its entries; add or edit an entry instead");
+		}
 
 		const next = { ...account, ...patch };
 		this.checkDebtFields(next.accountType, next);
@@ -118,6 +125,47 @@ export class AccountService {
 			...(touchesFlag ? unbalancedTagPatch(c, Boolean(patch.unbalancedCents)) : {}),
 		}));
 		await this.store.reload();
+	}
+
+	private checkEntry(entry: Pick<Valuation, "date" | "valueCents">): void {
+		const problem = valuationProblem(entry);
+		if (problem === "invalidDate") throw new LedgerError("The entry date is not a valid date");
+		if (problem === "invalidValue") throw new LedgerError("The value must be a whole number of cents, zero or more");
+	}
+
+	// Writes the entries table and, in the same write, the entered balance and its date: always the
+	// latest entry, so the cached properties and the Accounts list stay right without a replay.
+	private async writeEntries(name: string, edit: (content: string) => string): Promise<void> {
+		const account = this.require(name);
+		if (!isInvesting(account.accountType)) throw new LedgerError("Only an investing account has entries");
+		await this.store.port.modify(this.pathOf(name), (content) => {
+			const next = edit(content);
+			const latest = latestValuation(readValuations(next).valuations);
+			if (!latest) throw new LedgerError("An investing account needs at least one entry");
+			return patchProps(next, { enteredBalanceCents: latest.valueCents, enteredBalanceAsOf: latest.date, balanceCents: latest.valueCents });
+		});
+		await this.store.reload();
+	}
+
+	// An entry for a date that already has one replaces it; otherwise it is added in date order.
+	async addEntry(name: string, entry: Valuation): Promise<void> {
+		this.checkEntry(entry);
+		await this.writeEntries(name, (c) => upsertValuationRow(c, { ...entry, note: entry.note.trim() }));
+	}
+
+	// Edits the entry dated `date`, its date included. Moving it onto a date that has another entry is refused.
+	async editEntry(name: string, date: string, entry: Valuation): Promise<void> {
+		this.checkEntry(entry);
+		const record = this.store.snapshot.accounts.find((a) => a.account.name === name);
+		if (record && entry.date !== date && record.account.valuations?.some((v) => v.date === entry.date)) {
+			throw new LedgerError(`There is already an entry dated ${entry.date}`);
+		}
+		await this.writeEntries(name, (c) => upsertValuationRow(removeValuationRow(c, date), { ...entry, note: entry.note.trim() }));
+	}
+
+	// The last entry cannot be removed: the account would have no value at all.
+	async removeEntry(name: string, date: string): Promise<void> {
+		await this.writeEntries(name, (c) => removeValuationRow(c, date));
 	}
 
 	// Wires a debt payment subcategory to the one loan its payments go to, or to none. A

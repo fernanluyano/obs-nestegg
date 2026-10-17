@@ -12,6 +12,7 @@ const ctx = {
 		account({ name: "Savings" }),
 		account({ name: "Card", accountType: "creditCard" }),
 		account({ name: "Mortgage", accountType: "loan", loanKind: "mortgage" }),
+		account({ name: "Brokerage", accountType: "investing" }),
 	],
 	index: buildCategoryIndex(defaultCategories()),
 };
@@ -24,6 +25,14 @@ const entry = (over: Partial<LedgerEntry> = {}): LedgerEntry => ({
 const transfer = (over: Partial<TransferInput> = {}): TransferInput => ({
 	date: "2026-10-03", merchant: "", subcategory: "Account transfer", cents: 500,
 	note: "", tags: [], from: "Cash Main", to: "Savings", ...over,
+});
+
+describe("investing accounts", () => {
+	it("take no rows, no transfers in and no transfers out", () => {
+		expect(entryProblem(entry({ account: "Brokerage" }), ctx)).toBe("investingNoTransactions");
+		expect(transferProblem(transfer({ to: "Brokerage" }), ctx)).toBe("investingNoTransactions");
+		expect(transferProblem(transfer({ from: "Brokerage", to: "Savings" }), ctx)).toBe("investingNoTransactions");
+	});
 });
 
 describe("entryProblem", () => {
@@ -67,6 +76,16 @@ describe("transferProblem", () => {
 		expect(transferProblem(transfer({ subcategory: CREDIT_CARD_PAYMENT, to: "Mortgage" }), ctx)).toBe("transferToLoan");
 		expect(transferProblem(transfer({ subcategory: LOAN_PAYMENT, to: "Savings" }), ctx)).toBe("debtToNonLoan");
 		expect(transferProblem(transfer({ subcategory: LOAN_PAYMENT, to: "Card" }), ctx)).toBe("debtToNonLoan");
+	});
+
+	it("accepts interest on a loan payment, zero or more, and nowhere else", () => {
+		const payment = { subcategory: LOAN_PAYMENT, to: "Mortgage" };
+		expect(transferProblem(transfer({ ...payment, interestCents: 14374 }), ctx)).toBeNull();
+		expect(transferProblem(transfer({ ...payment, interestCents: 0 }), ctx)).toBeNull();
+		expect(transferProblem(transfer({ ...payment, interestCents: -1 }), ctx)).toBe("invalidInterest");
+		expect(transferProblem(transfer({ ...payment, interestCents: 1.5 }), ctx)).toBe("invalidInterest");
+		expect(transferProblem(transfer({ to: "Savings", interestCents: 100 }), ctx)).toBe("interestOnNonLoan");
+		expect(transferProblem(transfer({ to: "Savings", interestCents: 0 }), ctx)).toBeNull();
 	});
 
 	it("keeps a debt payment on the loan its subcategory is linked to", () => {

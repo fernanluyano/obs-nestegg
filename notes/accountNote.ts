@@ -1,7 +1,8 @@
 import { loanFieldProblem } from "../domain/accounts";
 import { DEFAULT_ACCOUNT_COLOR, isHexColor } from "../domain/colors";
 import { isIsoDate } from "../domain/dates";
-import { ACCOUNT_TYPES, isLiability, LOAN_KINDS, type Account, type AccountType, type LoanKind } from "../domain/types";
+import { ACCOUNT_TYPES, isInvesting, isLiability, LOAN_KINDS, type Account, type AccountType, type LoanKind } from "../domain/types";
+import { valuationBody } from "./assetNote";
 import { bool, buildNote, int, list, parseProps, str, type Props, type RawProps } from "./frontmatter";
 import { NOTE_TAGS, UNBALANCED_TAG } from "./kinds";
 
@@ -122,6 +123,7 @@ export function unbalancedTagPatch(content: string, unbalanced: boolean): Props 
 	return { tags: unbalanced ? [...others, UNBALANCED_TAG] : others };
 }
 
+// An investing account keeps its dated entries in the body; every other account has no body.
 export function buildAccountNote(account: Account): string {
-	return buildNote(accountProps(account), "");
+	return buildNote(accountProps(account), isInvesting(account.accountType) ? valuationBody(account.valuations ?? []) : "");
 }

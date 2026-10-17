@@ -11,7 +11,7 @@ import { ConfirmModal } from '../../modal/ConfirmModal'
 import type { Ledger } from '../../services/Ledger'
 import { checkBalance } from '../../wizard/model'
 
-const ACCOUNT_TYPES: AccountType[] = ['cash', 'creditCard', 'loan']
+const ACCOUNT_TYPES: AccountType[] = ['cash', 'creditCard', 'loan', 'investing']
 
 const PLAN_ERRORS: Record<'term' | 'start' | 'interest' | 'original', LabelKey> = {
   term: 'err.loanTermInvalid',
@@ -84,8 +84,9 @@ export function renderAddAccountForm(container: HTMLElement, { app, ledger, run 
   renderColorSwatches(field(t('settings.accountColor')), color, (picked) => { color = picked })
 
   const warning = card.createDiv({ text: t('settings.debtNegativeWarning'), cls: 'ne-debt-warning' })
-  card.createDiv({ text: t('settings.cashBalanceHint'), cls: 'ne-balance-hint' })
+  const hint = card.createDiv({ text: t('settings.cashBalanceHint'), cls: 'ne-balance-hint' })
   const updateHint = () => {
+    hint.setText(t(type === 'investing' ? 'investing.noValueHint' : 'settings.cashBalanceHint'))
     warning.toggle(isLiability(type))
     loanFields.toggle(type === 'loan')
   }

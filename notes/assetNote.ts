@@ -2,7 +2,7 @@ import { ASSET_TYPES, sortValuations, valuationProblem, type Asset, type AssetTy
 import { DEFAULT_ACCOUNT_COLOR, isHexColor } from "../domain/colors";
 import { isIsoDate } from "../domain/dates";
 import { formatRow } from "../table/cells";
-import { addRow, replaceRow } from "../table/edit";
+import { addRow, removeRow, replaceRow } from "../table/edit";
 import { parseTable } from "../table/parse";
 import { serializeTable } from "../table/serialize";
 import type { ParsedTable } from "../table/types";
@@ -85,10 +85,15 @@ export function readValuations(content: string): { valuations: Valuation[]; issu
 	return { valuations: sortValuations(valuations), issues };
 }
 
-export function buildAssetNote(asset: Asset, valuations: Valuation[]): string {
+// The note body: a blank line, then the table, sorted by date.
+export function valuationBody(valuations: Valuation[]): string {
 	const header = [`| ${VALUATION_COLUMNS.join(" | ")} |`, `|${VALUATION_COLUMNS.map(() => "---").join("|")}|`];
 	const rows = sortValuations(valuations).map((v) => formatRow(cellsOf(v)));
-	return buildNote(assetProps(asset), `\n${[...header, ...rows].join("\n")}\n`);
+	return `\n${[...header, ...rows].join("\n")}\n`;
+}
+
+export function buildAssetNote(asset: Asset, valuations: Valuation[]): string {
+	return buildNote(assetProps(asset), valuationBody(valuations));
 }
 
 function checkValuation(valuation: Valuation): void {
@@ -106,6 +111,15 @@ function editableTable(content: string): ParsedTable | null {
 		throw new AssetEditError(`Refusing to edit valuations with unreadable rows (line ${issues[0]?.line ?? table.issues[0].line})`);
 	}
 	return table;
+}
+
+// Drops the row dated `date`; a date with no row is refused rather than ignored.
+export function removeValuationRow(content: string, date: string): string {
+	const table = editableTable(content);
+	const at = table ? table.rows.findIndex((row) => row.cells[0] === date) : -1;
+	if (!table || at < 0) throw new AssetEditError(`There is no entry dated ${date}`);
+	removeRow(table, at);
+	return serializeTable(table);
 }
 
 // A row for the date is replaced, otherwise the row is added; the table stays sorted by date.

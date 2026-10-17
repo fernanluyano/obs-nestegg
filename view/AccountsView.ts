@@ -8,6 +8,7 @@ import { AddAccountModal } from '../modal/AddAccountModal'
 import { bucketRowModel } from '../modal/bucketState'
 import { BucketsModal } from '../modal/BucketsModal'
 import { openAccountEdit, openBalanceCorrection } from '../modal/editAccountFlow'
+import { InvestingEntriesModal } from '../modal/InvestingEntriesModal'
 import type { Ledger } from '../services/Ledger'
 import { accountBalances, bucketsOf } from '../snapshot/queries'
 import { loanScheduleText } from './accounts/loanScheduleText'
@@ -117,8 +118,13 @@ export class AccountsView extends ItemView {
         actions.createEl('button', { text: t('buckets.button') })
           .addEventListener('click', () => new BucketsModal(this.app, this.ledger, account.name, (a) => this.runChecked(a)).open())
       }
-      actions.createEl('button', { text: t('accounts.correctBalance') })
-        .addEventListener('click', () => openBalanceCorrection(this.app, this.ledger, account, (a) => this.run(a)))
+      if (account.accountType === 'investing') {
+        actions.createEl('button', { text: t('investing.entries') })
+          .addEventListener('click', () => new InvestingEntriesModal(this.app, this.ledger, account.name, (a, n) => this.runChecked(a, n)).open())
+      } else {
+        actions.createEl('button', { text: t('accounts.correctBalance') })
+          .addEventListener('click', () => openBalanceCorrection(this.app, this.ledger, account, (a) => this.run(a)))
+      }
       actions.createEl('button', { text: t('ui.edit') })
         .addEventListener('click', () => openAccountEdit(this.app, this.ledger, account, (a) => this.run(a)))
       if (buckets.length > 0) this.renderBucketDetails(entry, buckets)

@@ -1,6 +1,9 @@
+import { valueAt } from "./assets";
 import { isIsoDate } from "./dates";
 import { parseCents } from "./money";
-import { isLiability, LOAN_KINDS, type Account, type AccountBalance, type AccountType, type Transaction } from "./types";
+import { isInvesting, isLiability, LOAN_KINDS, type Account, type AccountBalance, type AccountType, type Transaction } from "./types";
+
+const LAST_DATE = "9999-12-31";
 
 // A typed balance is stored as typed: cash is zero or more, and a debt is zero or less, so what
 // is owed is entered negative. Catches the likeliest slip, typing a debt as a positive amount.
@@ -81,6 +84,7 @@ function sumAmounts(transactions: Transaction[], keep: (date: string) => boolean
 // Balance at the end of `date`, replaying forward or backward from the entered checkpoint,
 // so a correction dated mid-history still yields the right balance on both sides of it.
 export function balanceAt(account: Account, transactions: Transaction[], date: string): number {
+	if (isInvesting(account.accountType)) return valueAt(account.valuations ?? [], date);
 	const asOf = account.enteredBalanceAsOf;
 	if (date >= asOf) {
 		const delta = sumAmounts(transactions, (d) => d > asOf && d <= date);
@@ -92,6 +96,7 @@ export function balanceAt(account: Account, transactions: Transaction[], date: s
 
 // Current balance: the entered balance plus everything dated after it, with no upper bound.
 export function currentBalance(account: Account, transactions: Transaction[]): number {
+	if (isInvesting(account.accountType)) return valueAt(account.valuations ?? [], LAST_DATE);
 	return account.enteredBalanceCents + sumAmounts(transactions, (d) => d > account.enteredBalanceAsOf);
 }
 

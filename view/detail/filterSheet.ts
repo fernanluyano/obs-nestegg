@@ -4,7 +4,7 @@ import { dateRangeInputs, TYPE_OPTIONS } from './controls'
 import type { FilterHost } from './FilterHost'
 import { availableCategories, cloneFilters, emptyFilters, pruneCategories, toggle } from './filters'
 import { renderPills, type PillOption } from './pills'
-import type { TransactionType } from '../../domain/types'
+import { takesTransactions, type TransactionType } from '../../domain/types'
 
 function section(sheet: HTMLElement, label: string): HTMLElement {
   const sec = sheet.createDiv('ne-filter-section')
@@ -30,7 +30,7 @@ function buildBody(sheet: HTMLElement, host: FilterHost, rerender: () => void): 
     })
   }
 
-  const accounts = host.accounts.filter(a => a.active)
+  const accounts = host.accounts.filter(a => a.active && takesTransactions(a.accountType))
   if (accounts.length > 0) {
     const options = accounts.map((a): PillOption => ({ value: a.name, label: a.name, colorKey: a.accountType === 'cash' ? 'cash' : 'credit' }))
     renderPills(section(sheet, t('detail.filterAccount')).createDiv('ne-pill-group'), options, filters.accounts, {

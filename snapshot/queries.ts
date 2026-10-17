@@ -5,8 +5,8 @@ import { DEFAULT_TAGS } from "../domain/defaults";
 import { loanDebt, type LoanDebt } from "../domain/loans";
 import { summarize } from "../domain/transactions";
 import type { CategoryIndex } from "../domain/categories";
-import { isLiability, type Account, type AccountBalance, type LedgerEntry, type MonthSummary, type TransactionType } from "../domain/types";
-import { assetsTimeline } from "./assetQueries";
+import { isInvesting, isLiability, type Account, type AccountBalance, type LedgerEntry, type MonthSummary, type TransactionType } from "../domain/types";
+import { assetsByType, assetsTimeline } from "./assetQueries";
 import { accountTransactions, categoryIndexOf, entriesOf, type Snapshot } from "./snapshot";
 
 export function accountsOf(snapshot: Snapshot): Account[] {
@@ -112,7 +112,7 @@ export function netWorthTimeline(snapshot: Snapshot, months: string[]): Map<stri
 // Cash on hand at each month end: the cash accounts that count toward net assets, with no asset
 // notes and no debt.
 export function cashOnHandTimeline(snapshot: Snapshot, months: string[]): Map<string, number> {
-	const cash = accountsOf(snapshot).filter((a) => a.includeInNetAsset && !isLiability(a.accountType));
+	const cash = accountsOf(snapshot).filter((a) => a.includeInNetAsset && a.accountType === "cash");
 	return new Map(
 		months.map((month) => [
 			month,
@@ -124,19 +124,39 @@ export function cashOnHandTimeline(snapshot: Snapshot, months: string[]): Map<st
 // The earliest month any counted cash account has data: its entered balance or a transaction.
 export function cashStartMonth(snapshot: Snapshot): string | null {
 	const dates = accountsOf(snapshot)
-		.filter((a) => a.includeInNetAsset && !isLiability(a.accountType))
+		.filter((a) => a.includeInNetAsset && a.accountType === "cash")
 		.flatMap((a) => [a.enteredBalanceAsOf, ...accountTransactions(snapshot, a.name).map((tx) => tx.date)]);
 	if (dates.length === 0) return null;
 	return monthOf(dates.reduce((min, d) => (d < min ? d : min)));
 }
 
-// The earliest month net worth has any data behind it: an account's entered balance or transaction,
-// or an active asset's valuation. Null when nothing was ever entered.
+// Everything counted as an asset, by what it is: one entry per asset type, then investing. The keys
+// are label keys, so the view needs no change when a type is added. Empty slices are left out.
+export function assetsBreakdown(snapshot: Snapshot): Map<string, number> {
+	const slices = new Map<string, number>([...assetsByType(snapshot)].map(([type, cents]) => [`label.assetType.${type}`, cents]));
+	const investing = investingTotal(snapshot);
+	if (investing && investing.cents > 0) slices.set("investing.title", investing.cents);
+	return slices;
+}
+
+// What the active investing accounts are worth now, all added together; null when there are none.
+export function investingTotal(snapshot: Snapshot): { cents: number; count: number } | null {
+	const accounts = accountBalances(snapshot).filter(({ account }) => account.active && isInvesting(account.accountType));
+	if (accounts.length === 0) return null;
+	return { cents: accounts.reduce((sum, a) => sum + a.balanceCents, 0), count: accounts.length };
+}
+
+// The earliest month net worth has any data behind it: an account's entered balance or transaction
+// (an investing account's first entry), or an active asset's valuation. Null when nothing was ever entered.
 export function netWorthStartMonth(snapshot: Snapshot): string | null {
 	const dates = [
 		...accountsOf(snapshot)
 			.filter((a) => a.includeInNetAsset)
-			.flatMap((a) => [a.enteredBalanceAsOf, ...accountTransactions(snapshot, a.name).map((tx) => tx.date)]),
+			.flatMap((a) =>
+				isInvesting(a.accountType)
+					? (a.valuations ?? []).map((v) => v.date)
+					: [a.enteredBalanceAsOf, ...accountTransactions(snapshot, a.name).map((tx) => tx.date)],
+			),
 		...snapshot.assets.filter((r) => r.asset.active).flatMap((r) => r.valuations.map((v) => v.date)),
 	];
 	if (dates.length === 0) return null;

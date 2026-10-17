@@ -9,6 +9,7 @@ import { detectDuplicateMonths, detectMalformedRows, detectMonthTotals } from ".
 import { detectInTransit, detectInvalidNotes, detectPathMismatches } from "../../validation/noteIssues";
 import { detectTransferIssues } from "../../validation/transferIssues";
 import { categoryIndexOf } from "../../snapshot/snapshot";
+import { LOAN_PAYMENT } from "../../domain/defaults";
 import {
 	account, accountInput, category, categoryInput, inputOf, monthInput, settingsInput, tx, vaultInputs,
 } from "../helpers/fixtures";
@@ -174,6 +175,53 @@ describe("transfer issues", () => {
 
 	it("flags a transfer to an account that does not exist", () => {
 		expect(run([{ ...out, fromTo: "Ghost" }], []).map((i) => i.problem)).toEqual(["noPartner"]);
+	});
+});
+
+// The real car loan payment: $763.48 left the cash account, $143.74 of it interest.
+describe("loan payment issues", () => {
+	const cashRow = tx({ date: "2026-08-03", subcategory: LOAN_PAYMENT, merchant: "CCU FL", amountCents: -76348, fromTo: "Car" });
+	const loanRow = tx({ date: "2026-08-03", subcategory: LOAN_PAYMENT, merchant: "CCU FL", amountCents: 61974, fromTo: "Cash Main" });
+	const accounts = [account(), account({ name: "Car", accountType: "loan", loanKind: "car", enteredBalanceCents: -2895839, balanceCents: -2895839 })];
+	const run = (cash: typeof cashRow[], loan: typeof cashRow[]) =>
+		detectTransferIssues(snap(vaultInputs({ accounts, months: [monthInput("Cash Main", "2026-08", cash), monthInput("Car", "2026-08", loan)] })));
+	const problems = (cash: typeof cashRow[], loan: typeof cashRow[]) => run(cash, loan).map((i) => `${i.account}:${i.problem}`).sort();
+
+	it("accepts a payment whose rows differ by the interest, and one with no interest", () => {
+		expect(run([cashRow], [loanRow])).toEqual([]);
+		expect(run([cashRow], [{ ...loanRow, amountCents: 76348 }])).toEqual([]);
+	});
+
+	it("flags both rows when the loan row is bigger than what left the cash account", () => {
+		expect(problems([cashRow], [{ ...loanRow, amountCents: 76349 }])).toEqual(["Car:noPartner", "Cash Main:noPartner"]);
+	});
+
+	it("flags both rows when the date or merchant differ, or one side is missing", () => {
+		expect(problems([cashRow], [{ ...loanRow, merchant: "Other" }])).toEqual(["Car:noPartner", "Cash Main:noPartner"]);
+		expect(problems([cashRow], [{ ...loanRow, date: "2026-08-04" }])).toHaveLength(2);
+		expect(problems([cashRow], [])).toEqual(["Cash Main:noPartner"]);
+		expect(problems([], [loanRow])).toEqual(["Car:noPartner"]);
+	});
+
+	it("pairs two payments on the same day in file order, and flags a third that has no match", () => {
+		const second = { ...cashRow, amountCents: -50000 };
+		const secondLoan = { ...loanRow, amountCents: 50000 };
+		expect(run([cashRow, second], [loanRow, secondLoan])).toEqual([]);
+		expect(problems([cashRow, second], [loanRow])).toEqual(["Cash Main:noPartner"]);
+	});
+
+	it("pairs by order even when that makes the first cash row smaller than the first loan row", () => {
+		// Cash rows in file order are 100 then 700, loan rows 600 then 100. The first pair, 100 against 600, cannot be
+		// one payment; the second, 700 against 100, can, so only the first pair is flagged.
+		const flagged = problems(
+			[{ ...cashRow, amountCents: -10000 }, { ...cashRow, amountCents: -70000 }],
+			[{ ...loanRow, amountCents: 60000 }, { ...loanRow, amountCents: 10000 }],
+		);
+		expect(flagged).toEqual(["Car:noPartner", "Cash Main:noPartner"]);
+	});
+
+	it("flags a loan row with zero principal", () => {
+		expect(problems([cashRow], [{ ...loanRow, amountCents: 0 }])).toHaveLength(2);
 	});
 });
 

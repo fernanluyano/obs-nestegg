@@ -140,6 +140,21 @@ export class MobileTransactionModal extends TransactionModal {
     }
   }
 
+  private addMobileInterestRow() {
+    const row = this.mobileRowsEl.createDiv('ne-mobile-row')
+    row.createEl('label', { cls: 'ne-mobile-row-label', text: t('modal.interest') })
+    const input = row.createEl('input', { type: 'text', cls: 'ne-mobile-note-input', placeholder: '0.00' })
+    input.inputMode = 'decimal'
+    input.value = this.form.interest
+    input.addEventListener('input', () => {
+      this.update({ interest: input.value })
+      this.updateTotalPaid()
+    })
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur() })
+    this.totalPaidEl = this.mobileRowsEl.createDiv({ cls: 'ne-mobile-refund-hint-row' })
+    this.updateTotalPaid()
+  }
+
   private renderMobileRows() {
     this.mobileRowsEl.empty()
     const ctx = this.context()
@@ -161,6 +176,9 @@ export class MobileTransactionModal extends TransactionModal {
       })
       block.createDiv({ cls: 'ne-mobile-refund-hint-row', text: t('modal.isRefund.hint') })
     }
+
+    // A loan payment has a second amount: the hero amount is the principal, this row is the interest.
+    if (form.type === 'debt') this.addMobileInterestRow()
 
     // Date Picker
     let dateInput!: HTMLInputElement
@@ -440,6 +458,7 @@ export class MobileTransactionModal extends TransactionModal {
     const isEmpty = this.form.amount === ''
     this.mobileAmountEl.textContent = formatMobileHeroAmount(this.form.amount, this.form.isRefund)
     this.mobileAmountEl.toggleClass('is-empty', isEmpty)
+    this.updateTotalPaid()
   }
 
   private updateCalculatorTitle() {

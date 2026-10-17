@@ -1,5 +1,5 @@
 import { monthEndKey } from "../domain/dates";
-import type { Account } from "../domain/types";
+import { takesTransactions, type Account } from "../domain/types";
 import type { Snapshot } from "./snapshot";
 
 export interface AccountMonth {
@@ -74,7 +74,7 @@ function balanceThrough(snapshot: Snapshot, cache: MonthDeltaCache, account: Acc
 }
 
 // Active accounts only, in snapshot order: archived accounts never show up in the balances.
-const activeOf = (snapshot: Snapshot): Account[] => snapshot.accounts.map((a) => a.account).filter((a) => a.active);
+const activeOf = (snapshot: Snapshot): Account[] => snapshot.accounts.map((a) => a.account).filter((a) => a.active && takesTransactions(a.accountType));
 
 // The accounts whose balances are listed: the chosen ones, or every active account when none is chosen.
 export function balanceAccounts(snapshot: Snapshot, chosen: string[]): string[] {

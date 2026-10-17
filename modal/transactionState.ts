@@ -4,7 +4,7 @@ import { transferProblem, entryProblem, type EntryProblem } from '../domain/entr
 import { isIsoDate } from '../domain/dates'
 import { centsToDecimal, parseCents } from '../domain/money'
 import { normalizeTag, normalizeTags } from '../domain/names'
-import { signedAmount, splitAmount, type TransactionDraft } from '../domain/transactions'
+import { interestOf, signedAmount, splitAmount, stripInterestNote, type TransactionDraft } from '../domain/transactions'
 import { isLiability, isTransferLike, type Account, type Category, type LedgerEntry, type TransactionModalParams, type TransactionType } from '../domain/types'
 import { TAG_MAX_LENGTH, validateTag } from '../utils'
 
@@ -19,7 +19,8 @@ export interface TransactionFormState {
   merchant: string
   note: string
   tags: string[]
-  amount: string       // raw input string (not parsed yet)
+  amount: string       // raw input string (not parsed yet); for a loan payment, the principal
+  interest: string     // loan payments only: raw input, what was paid on top of the principal
   isRefund: boolean
 }
 
@@ -46,17 +47,25 @@ export function initialFormState(params: TransactionModalParams, today: string, 
     note: params.note ?? '',
     tags: params.tags ? [...params.tags] : [],
     amount: params.amountCents != null ? centsToDecimal(params.amountCents) : '',
+    interest: '',
     isRefund: false,
   }
 }
 
 // A transfer row's sign says which way the money went: negative means this account sent it.
-export function formFromEntry(entry: LedgerEntry, index: CategoryIndex): TransactionFormState {
+// A loan payment is two rows of different size, so its form is read from both: the principal is the
+// loan row and the interest is what the cash row holds beyond it. `partner` is the other row, if any.
+export function formFromEntry(entry: LedgerEntry, index: CategoryIndex, partner?: LedgerEntry): TransactionFormState {
   const isTransfer = entry.fromTo !== ''
   const known = index.typeOf(entry.subcategory)
   const type: TransactionType = isTransfer ? (known === 'debt' ? 'debt' : 'transfer') : (known ?? 'expense')
-  const { cents, isRefund } = splitAmount(type, entry.amountCents)
   const sent = entry.amountCents < 0
+  const [cashRow, loanRow] = sent ? [entry, partner] : [partner, entry]
+  const loanPayment = type === 'debt' && loanRow !== undefined
+  const { cents, isRefund } = loanPayment
+    ? { cents: loanRow.amountCents, isRefund: false }
+    : splitAmount(type, entry.amountCents)
+  const interest = loanPayment && cashRow ? interestOf(cashRow, loanRow) : 0
   return {
     date: entry.date,
     type,
@@ -65,9 +74,10 @@ export function formFromEntry(entry: LedgerEntry, index: CategoryIndex): Transac
     toAccount: isTransfer ? (sent ? entry.fromTo : entry.account) : '',
     subcategory: entry.subcategory,
     merchant: entry.merchant,
-    note: entry.note,
+    note: stripInterestNote(entry.note),
     tags: [...entry.tags],
     amount: centsToDecimal(cents),
+    interest: type === 'debt' ? centsToDecimal(interest) : '',
     isRefund,
   }
 }
@@ -86,7 +96,7 @@ export function categoryChoices(categories: Category[], type: TransactionType): 
 
 // A loan takes transfers only, and a card cannot receive income.
 export function accountChoices(accounts: Account[], type: TransactionType): Account[] {
-  return activeAccounts(accounts).filter(a => a.accountType !== 'loan' && !(type === 'income' && a.accountType === 'creditCard'))
+  return activeAccounts(accounts).filter(a => a.accountType !== 'loan' && a.accountType !== 'investing' && !(type === 'income' && a.accountType === 'creditCard'))
 }
 
 // The account a debt payment subcategory is tied to, or '' when it is not tied to any (or the
@@ -101,8 +111,8 @@ export function debtTargetAccount(state: TransactionFormState, accounts: Account
 export function transferAccountCandidates(
   active: Account[], state: TransactionFormState,
 ): { fromCandidates: Account[]; toCandidates: Account[] } {
-  const cash = active.filter(a => !isLiability(a.accountType))
-  if (state.type !== 'debt') return { fromCandidates: cash, toCandidates: active.filter(a => a.accountType !== 'loan') }
+  const cash = active.filter(a => a.accountType === 'cash')
+  if (state.type !== 'debt') return { fromCandidates: cash, toCandidates: active.filter(a => a.accountType === 'cash' || a.accountType === 'creditCard') }
   const tied = debtTargetAccount(state, active)
   return { fromCandidates: cash, toCandidates: active.filter(a => a.accountType === 'loan' && (!tied || a.name === tied)) }
 }
@@ -129,6 +139,7 @@ export function resetFormForType(state: TransactionFormState, type: TransactionT
     ...state,
     type,
     isRefund: type === 'expense' ? state.isRefund : false,
+    interest: type === 'debt' ? state.interest : '',
     account: isPlain ? state.account : '',
     fromAccount: isPlain ? '' : state.fromAccount,
     toAccount: isPlain ? '' : state.toAccount,
@@ -176,6 +187,8 @@ export type ValidationErrorKey =
   | 'err.amountRequired'
   | 'err.amountPositive'
   | 'err.amountInvalid'
+  | 'err.interestRequired'
+  | 'err.interestInvalid'
   | 'err.accountRequired'
   | 'err.fromAccountRequired'
   | 'err.toAccountRequired'
@@ -187,6 +200,7 @@ export type ValidationErrorKey =
   | 'err.debtToNonLoan'
   | 'err.wrongDebtAccount'
   | 'err.loanTransfersOnly'
+  | 'err.investingNoTransactions'
   | 'err.sameAccount'
 
 export type ValidationResult =
@@ -201,6 +215,11 @@ export function validateTransactionForm(state: TransactionFormState, ctx: FormCo
   const cents = parseCents(state.amount)
   if (cents === null) return fail('err.amountInvalid')
   if (cents <= 0) return fail('err.amountPositive')
+  if (state.type === 'debt') {
+    if (state.interest === '') return fail('err.interestRequired')
+    const interest = parseCents(state.interest)
+    if (interest === null || interest < 0) return fail('err.interestInvalid')
+  }
 
   if (isTransferLike(state.type)) {
     if (!state.fromAccount) return fail('err.fromAccountRequired')
@@ -219,6 +238,8 @@ export function validateTransactionForm(state: TransactionFormState, ctx: FormCo
 const PROBLEM_MESSAGES: Record<EntryProblem, ValidationErrorKey> = {
   invalidDate: 'err.invalidDate',
   invalidAmount: 'err.amountInvalid',
+  invalidInterest: 'err.interestInvalid',
+  interestOnNonLoan: 'err.subcategoryWrongType',
   amountNotPositive: 'err.amountPositive',
   unknownAccount: 'err.accountRequired',
   unknownSubcategory: 'err.subcategoryUnknown',
@@ -231,6 +252,7 @@ const PROBLEM_MESSAGES: Record<EntryProblem, ValidationErrorKey> = {
   debtToNonLoan: 'err.debtToNonLoan',
   wrongDebtAccount: 'err.wrongDebtAccount',
   loanTransfersOnly: 'err.loanTransfersOnly',
+  investingNoTransactions: 'err.investingNoTransactions',
 }
 
 function buildTransferInput(state: TransactionFormState) {
@@ -239,6 +261,7 @@ function buildTransferInput(state: TransactionFormState) {
     merchant: state.merchant,
     subcategory: state.subcategory,
     cents: parseCents(state.amount) ?? 0,
+    interestCents: state.type === 'debt' ? parseCents(state.interest) ?? 0 : 0,
     note: state.note,
     tags: normalizeTags(state.tags),
     from: state.fromAccount,

@@ -1076,6 +1076,12 @@ button.ne-mobile-calculator-done {
   display: inline;
 }
 
+.ne-field-hint {
+  margin: -4px 0 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 .ne-error {
   color: var(--text-error);
   font-size: 13px;
@@ -1437,6 +1443,46 @@ button.ne-mobile-calculator-done {
 .ne-badge-bank       { background: var(--ne-bank-tint); color: var(--ne-bank); }
 .ne-badge-creditCard { background: var(--ne-credit-tint); color: var(--ne-credit); }
 .ne-badge-loan       { background: var(--ne-credit-tint); color: var(--ne-credit); }
+.ne-badge-investing  { background: var(--ne-bank-tint); color: var(--ne-bank); }
+
+.ne-entries-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 40vh;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.ne-entries-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ne-entries-row.is-editing {
+  background: var(--background-modifier-hover);
+}
+
+.ne-entries-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.ne-entries-value {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.ne-entries-note {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
 
 .ne-wallet-name {
   color: var(--text-normal);

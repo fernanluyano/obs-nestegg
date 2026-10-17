@@ -26,6 +26,7 @@ export interface AccountRecord {
 	account: Account;
 	buckets: Bucket[]; // cash accounts only; always empty for the others
 	bucketIssues: RowIssue[];
+	valuationIssues: RowIssue[]; // investing accounts only; always empty for the others
 }
 
 export interface AssetRecord {
@@ -113,7 +114,11 @@ export function buildSnapshot(inputs: NoteInput[]): Snapshot {
 				const parsed = parseAccountProps(props);
 				if (parsed.ok) {
 					const { buckets, issues } = parsed.account.accountType === "cash" ? readBuckets(content) : { buckets: [], issues: [] };
-					snapshot.accounts.push({ path, account: parsed.account, buckets, bucketIssues: issues });
+					if (parsed.account.accountType === "investing") {
+						const { valuations, issues: valuationIssues } = readValuations(content);
+						parsed.account.valuations = valuations;
+						snapshot.accounts.push({ path, account: parsed.account, buckets, bucketIssues: issues, valuationIssues });
+					} else snapshot.accounts.push({ path, account: parsed.account, buckets, bucketIssues: issues, valuationIssues: [] });
 				} else snapshot.invalid.push({ path, kind, reason: parsed.reason });
 				break;
 			}

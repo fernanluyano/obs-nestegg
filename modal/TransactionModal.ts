@@ -1,7 +1,8 @@
 import { App, Modal, Notice, setIcon } from 'obsidian'
 import { todayString } from '../domain/dates'
 import { isTransferLike, type LedgerEntry, type TransactionModalParams, type TransactionType } from '../domain/types'
-import { t } from '../labels'
+import { formatCents, parseCents } from '../domain/money'
+import { t, tn } from '../labels'
 import type { Ledger } from '../services/Ledger'
 import { knownMerchants, suggestedTags } from '../snapshot/queries'
 import { ConfirmModal } from './ConfirmModal'
@@ -18,6 +19,7 @@ export class TransactionModal extends Modal {
   private fieldsEl!: HTMLElement
   private typeTabsEl!: HTMLElement
   private amountPrefixEl: HTMLElement | null = null
+  protected totalPaidEl: HTMLElement | null = null
   private busy = false
   private pendingTag = ''
 
@@ -31,7 +33,9 @@ export class TransactionModal extends Modal {
   ) {
     super(app)
     const ctx = this.context()
-    this.form = editing ? formFromEntry(editing, ctx.index) : initialFormState(params, todayString(), ctx)
+    this.form = editing
+      ? formFromEntry(editing, ctx.index, ledger.transactions.partnerOf(editing))
+      : initialFormState(params, todayString(), ctx)
   }
 
   protected context(): FormContext {
@@ -138,6 +142,7 @@ export class TransactionModal extends Modal {
   private renderFields(autoFocus = true) {
     this.fieldsEl.empty()
     this.amountPrefixEl = null
+    this.totalPaidEl = null
     this.pendingTag = '' // the tag box is rebuilt empty
     const { form } = this
     const ctx = this.context()
@@ -216,9 +221,40 @@ export class TransactionModal extends Modal {
     return input
   }
 
+  // A loan payment has two amounts: the principal, which lowers the loan, and the interest on top of it.
+  private buildInterestRow() {
+    const row = this.fieldsEl.createDiv('ne-field-row')
+    row.createEl('label', { text: t('modal.interest'), cls: 'ne-field-label' })
+    const wrapper = row.createDiv('ne-amount-field-wrapper ne-field-input')
+    const input = wrapper.createEl('input', { type: 'number', placeholder: '0.00' })
+    input.value = this.form.interest
+    input.setAttribute('min', '0')
+    input.setAttribute('step', '0.01')
+    input.setAttribute('enterkeyhint', 'done')
+    input.addEventListener('input', () => {
+      this.update({ interest: input.value })
+      this.updateTotalPaid()
+    })
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return
+      e.preventDefault()
+      void this.handleConfirm()
+    })
+    this.totalPaidEl = this.fieldsEl.createDiv({ cls: 'ne-field-hint' })
+    this.updateTotalPaid()
+  }
+
+  protected updateTotalPaid() {
+    if (!this.totalPaidEl) return
+    const principal = parseCents(this.form.amount)
+    const interest = parseCents(this.form.interest)
+    const known = principal !== null && interest !== null
+    this.totalPaidEl.setText(known ? tn('modal.totalPaid', { total: formatCents(principal + interest) }) : '')
+  }
+
   private buildAmountRow(autoFocus: boolean) {
     const row = this.fieldsEl.createDiv('ne-field-row')
-    row.createEl('label', { text: t('modal.amount'), cls: 'ne-field-label' })
+    row.createEl('label', { text: this.form.type === 'debt' ? t('modal.principal') : t('modal.amount'), cls: 'ne-field-label' })
     const wrapper = row.createDiv('ne-amount-field-wrapper ne-field-input')
     this.amountPrefixEl = wrapper.createSpan({ cls: 'ne-amount-prefix', text: '+' })
     const input = wrapper.createEl('input', { type: 'number', placeholder: '0.00' })
@@ -229,6 +265,7 @@ export class TransactionModal extends Modal {
     input.addEventListener('input', () => {
       this.update({ amount: input.value })
       this.updateAmountPrefix()
+      this.updateTotalPaid()
     })
     input.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return
@@ -237,6 +274,7 @@ export class TransactionModal extends Modal {
       else void this.handleConfirm()
     })
     this.updateAmountPrefix()
+    if (this.form.type === 'debt') this.buildInterestRow()
     if (autoFocus) setTimeout(() => input.focus(), 50) // wait for modal open animation to complete
   }
 

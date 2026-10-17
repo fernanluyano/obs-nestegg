@@ -3,10 +3,13 @@ import { buildCategoryIndex } from "../../domain/categories";
 import { defaultCategories } from "../../domain/defaults";
 import {
 	findTransactionIndex,
+	interestOf,
 	isPartnerRow,
+	sameLoanLeg,
 	sameTransaction,
 	signedAmount,
 	splitAmount,
+	stripInterestNote,
 	summarize,
 	transferEntries,
 	typeOf,
@@ -110,6 +113,80 @@ describe("signedAmount / splitAmount", () => {
 		expect(splitAmount("expense", 500)).toEqual({ cents: 500, isRefund: true });
 		expect(splitAmount("income", 500)).toEqual({ cents: 500, isRefund: false });
 		expect(splitAmount("transfer", -500)).toEqual({ cents: 500, isRefund: false });
+	});
+});
+
+// A real car loan payment: $763.48 left the cash account, of which $143.74 was interest, so the
+// loan went down by the $619.74 principal only.
+describe("a loan payment with interest", () => {
+	const input = {
+		date: "2026-08-03", merchant: "CCU FL", subcategory: "Ioniq Loan",
+		cents: 61974, interestCents: 14374, note: "", tags: ["need"], from: "Fidelity", to: "Ioniq 5",
+	};
+
+	it("takes principal plus interest out of the cash account and puts only the principal on the loan", () => {
+		const [cash, loan] = transferEntries(input);
+		expect(cash).toMatchObject({ account: "Fidelity", amountCents: -76348, fromTo: "Ioniq 5" });
+		expect(loan).toMatchObject({ account: "Ioniq 5", amountCents: 61974, fromTo: "Fidelity" });
+		expect(interestOf(cash, loan)).toBe(14374);
+	});
+
+	it("notes the interest on the loan row only, after the user's own note", () => {
+		const [cash, loan] = transferEntries(input);
+		expect(cash.note).toBe("");
+		expect(loan.note).toBe("does not include the interest amount of 143.74, principal only");
+		const [, withNote] = transferEntries({ ...input, note: "autopay" });
+		expect(withNote.note).toBe("autopay; does not include the interest amount of 143.74, principal only");
+	});
+
+	it("takes the automatic note back off, and only that note", () => {
+		const [, loan] = transferEntries({ ...input, note: "autopay" });
+		expect(stripInterestNote(loan.note)).toBe("autopay");
+		expect(stripInterestNote(transferEntries(input)[1].note)).toBe("");
+		expect(stripInterestNote("does not include the interest amount of 1,143.74, principal only")).toBe("");
+		expect(stripInterestNote("my own words")).toBe("my own words");
+		expect(stripInterestNote("interest amount of 1.00 is in here")).toBe("interest amount of 1.00 is in here");
+	});
+
+	it("writes equal opposite rows and no note when there is no interest", () => {
+		const [cash, loan] = transferEntries({ ...input, interestCents: 0, note: "x" });
+		expect(cash.amountCents).toBe(-61974);
+		expect(loan.amountCents).toBe(61974);
+		expect(loan.note).toBe("x");
+		expect(transferEntries({ ...input, interestCents: undefined })[0].amountCents).toBe(-61974);
+	});
+
+	it("pairs by date and merchant when the amounts differ, from either row", () => {
+		const [cash, loan] = transferEntries(input);
+		expect(isPartnerRow(cash, loan, true)).toBe(true);
+		expect(isPartnerRow(loan, cash, true)).toBe(true);
+		expect(isPartnerRow(cash, loan)).toBe(false); // a plain transfer still needs exact opposites
+	});
+
+	it("rejects a loan row that is not this payment's", () => {
+		const [cash, loan] = transferEntries(input);
+		expect(isPartnerRow(cash, { ...loan, merchant: "Other" }, true)).toBe(false);
+		expect(isPartnerRow(cash, { ...loan, date: "2026-08-04" }, true)).toBe(false);
+		expect(isPartnerRow(cash, { ...loan, subcategory: "Other" }, true)).toBe(false);
+		expect(isPartnerRow(cash, { ...loan, fromTo: "Nobody" }, true)).toBe(false);
+		expect(isPartnerRow(cash, { ...loan, account: "Nobody" }, true)).toBe(false);
+	});
+
+	it("rejects a loan row bigger than what left the cash account, or with the wrong sign", () => {
+		const [cash, loan] = transferEntries(input);
+		expect(isPartnerRow(cash, { ...loan, amountCents: 76349 }, true)).toBe(false);
+		expect(isPartnerRow(cash, { ...loan, amountCents: 76348 }, true)).toBe(true); // no interest
+		expect(isPartnerRow(cash, { ...loan, amountCents: -61974 }, true)).toBe(false);
+		expect(isPartnerRow(cash, { ...loan, amountCents: 0 }, true)).toBe(false);
+	});
+
+	it("tells two payments on the same side apart only by their place in the file", () => {
+		const [cash, loan] = transferEntries(input);
+		expect(sameLoanLeg(cash, { ...cash, amountCents: -1000 })).toBe(true);
+		expect(sameLoanLeg(cash, loan)).toBe(false);
+		expect(sameLoanLeg(cash, { ...cash, date: "2026-08-04" })).toBe(false);
+		expect(sameLoanLeg(cash, { ...cash, merchant: "Other" })).toBe(false);
+		expect(sameLoanLeg(cash, { ...cash, account: "Other" })).toBe(false);
 	});
 });
 

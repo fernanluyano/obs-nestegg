@@ -5,6 +5,9 @@ export const ACCOUNT_COLORS: readonly string[] = [
 	"#12a594", "#f5c518", "#d6409f", "#6e56cf", "#8b8d98",
 ];
 
+// The color of the combined Investing card on the Net worth tab, which is not an account or asset of its own.
+export const INVESTING_CARD_COLOR = "#30a46c";
+
 // What an account note without a usable color falls back to (the palette's gray).
 export const DEFAULT_ACCOUNT_COLOR = "#8b8d98";
 
