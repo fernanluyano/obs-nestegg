@@ -8,13 +8,12 @@ import { stepMonth, isAfterCurrentMonth } from '../utils'
 import { NESTEGG_ICON } from '../plugin/icon'
 import { BUDGET_VIEW_TYPE } from './BudgetView'
 import { DASHBOARD_VIEW_TYPE } from './DashboardView'
-import { ASSET_VIEW_TYPE } from './AssetView'
+import { NETWORTH_VIEW_TYPE } from './NetWorthView'
 import { ACCOUNTS_VIEW_TYPE } from './AccountsView'
-import { DEBT_VIEW_TYPE } from './DebtView'
 import { DETAIL_VIEW_TYPE } from './DetailView'
 import { openOrRevealView } from './openView'
 
-export type ActiveView = 'dashboard' | 'asset' | 'accounts' | 'debt' | 'detail' | 'budget'
+export type ActiveView = 'dashboard' | 'networth' | 'accounts' | 'detail' | 'budget'
 
 export type SharedHeaderOptions = {
   view: ItemView
@@ -33,14 +32,14 @@ export function renderSharedHeader(container: HTMLElement, opts: SharedHeaderOpt
   // Marks the view as a themed surface (see paletteVars and the token block in styles.css).
   container.addClass('ne-scope')
   const monthState = opts.yearMonth ? { yearMonth: opts.yearMonth } : undefined
-  const items: NavItem[] = [
+  const unsorted: NavItem[] = [
     { id: 'dashboard', label: t('ui.overview'), icon: 'layout-dashboard', targetType: DASHBOARD_VIEW_TYPE },
     { id: 'detail',    label: t('ui.detail'),   icon: 'list',             targetType: DETAIL_VIEW_TYPE, state: monthState },
     { id: 'budget',    label: t('ui.budget'),   icon: 'pie-chart',        targetType: BUDGET_VIEW_TYPE, state: monthState },
     { id: 'accounts',  label: t('ui.accounts'), icon: 'wallet',           targetType: ACCOUNTS_VIEW_TYPE },
-    { id: 'debt',      label: t('ui.debt'),     icon: 'credit-card',      targetType: DEBT_VIEW_TYPE },
-    { id: 'asset',     label: t('ui.asset'),    icon: 'home',             targetType: ASSET_VIEW_TYPE },
+    { id: 'networth',  label: t('ui.netWorth'), icon: 'landmark',         targetType: NETWORTH_VIEW_TYPE },
   ]
+  const items = unsorted.sort((a, b) => a.label.localeCompare(b.label))
 
   const nav = container.createEl('nav', { cls: 'ne-nav' })
   const brand = nav.createDiv('ne-nav-brand')

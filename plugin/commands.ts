@@ -7,7 +7,7 @@ import { ValidationModal } from '../modal/ValidationModal'
 import type { Ledger } from '../services/Ledger'
 import { SetupWizard } from '../wizard/SetupWizard'
 import { NESTEGG_ICON } from './icon'
-import { openAccounts, openAssets, openBudget, openDashboard, openDebt, openDetail } from './views'
+import { openAccounts, openBudget, openDashboard, openDetail, openNetWorth } from './views'
 
 export function openSetupWizard(plugin: Plugin, ledger: Ledger): void {
   new SetupWizard(plugin.app, ledger).open()
@@ -33,10 +33,9 @@ export async function runValidation(plugin: Plugin, ledger: Ledger, showNoticeIf
 
 export function registerCommands(plugin: Plugin, ledger: Ledger): void {
   plugin.addRibbonIcon(NESTEGG_ICON, 'Nestegg', () => { void openDashboard(plugin) })
-  plugin.addCommand({ id: 'open-dashboard', name: 'Open finance overview', callback: () => { void openDashboard(plugin) } })
-  plugin.addCommand({ id: 'open-asset', name: 'Open assets', callback: () => { void openAssets(plugin) } })
+  plugin.addCommand({ id: 'open-dashboard', name: 'Open expenses history', callback: () => { void openDashboard(plugin) } })
+  plugin.addCommand({ id: 'open-networth', name: 'Open net worth', callback: () => { void openNetWorth(plugin) } })
   plugin.addCommand({ id: 'open-accounts', name: 'Open accounts', callback: () => { void openAccounts(plugin) } })
-  plugin.addCommand({ id: 'open-debt', name: 'Open liabilities', callback: () => { void openDebt(plugin) } })
   plugin.addCommand({ id: 'open-detail', name: 'Open transactions', callback: () => { void openDetail(plugin) } })
   plugin.addCommand({ id: 'open-budget', name: 'Open budget', callback: () => { void openBudget(plugin) } })
   plugin.addCommand({ id: 'add-transaction', name: 'Add transaction', callback: () => openTransactionModal(plugin, ledger) })

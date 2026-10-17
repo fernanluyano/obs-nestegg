@@ -31,10 +31,11 @@ const strings = {
     'ui.search': 'Search',
     'ui.noMatches': 'No matches',
 
-    'dashboard.title': 'Finance overview',
+    'dashboard.title': 'Expenses History',
     'dash.income': 'Income',
     'dash.expense': 'Expense',
     'dash.balance': 'Balance',
+    'dash.surplus': 'Surplus',
     'dash.expenseByCategory': 'Expense by category',
     'dash.expenseByTag': 'Expense by tag',
     'dash.tags': 'Tags',
@@ -64,9 +65,11 @@ const strings = {
     'detail.filterUntagged': 'No tags',
     'detail.filterDone': 'Done',
 
-    'trend.3m': '3 Months',
-    'trend.6m': '6 Months',
-    'trend.12m': '12 Months',
+    'cash.title': 'Cash on hand',
+    'cash.monthOverMonth': 'vs previous month',
+    'cash.yearToDate': 'Year to date',
+    'cash.yearOverYear': 'Year over year',
+    'cash.cagr': 'CAGR (all history)',
     'trend.monthlyIncomeExpense': 'Monthly income & expense',
 
     'modal.addTitle': 'Add transaction',
@@ -293,7 +296,11 @@ const strings = {
 
     // Asset view
     'asset.title': 'Assets',
-    'ui.asset': 'Assets',
+    'ui.netWorth': 'Net worth',
+    'networth.title': 'Net worth',
+    'networth.assets': 'Assets',
+    'networth.liabilities': 'Liabilities',
+    'networth.net': 'Net worth',
     'ui.accounts': 'Accounts',
     'accounts.correctBalance': 'Correct balance',
     'correction.title': 'Correct balance: {name}',
@@ -340,7 +347,6 @@ const strings = {
     'accounts.loanEnded': 'Term ended {end}',
 
     // Liabilities view
-    'ui.debt': 'Liabilities',
     'debt.title': 'Liabilities',
     'debt.totalDebt': 'Total debt',
     'debt.loans': 'Loans',
@@ -361,7 +367,7 @@ const strings = {
     'debt.payoffTimeline': 'Payoff timeline: {kind}',
     'debt.tooltipPaid': '{text} ({percent}% paid)',
     'debt.monthsShort': '{months} mo',
-    'ui.overview': 'Overview',
+    'ui.overview': 'Expenses History',
     'assets.empty': 'No assets yet. Add a house, a car, gold or anything else you own.',
     'assets.add': 'Add asset',
     'assets.addValuation': 'Add valuation',

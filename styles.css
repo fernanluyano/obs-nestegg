@@ -1158,10 +1158,6 @@ button.ne-mobile-calculator-done {
   margin-bottom: 0;
 }
 
-.ne-card-header-row .ne-range-row {
-  margin-bottom: 0;
-}
-
 /* Chart legend (rect + label, horizontal) */
 
 /* Navigation arrow buttons (month navigation) */
@@ -1323,6 +1319,8 @@ button.ne-mobile-calculator-done {
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
+
+.ne-nav-item { justify-content: flex-start; }
 
 .ne-nav-item:hover:not(.is-active),
 .ne-nav-setup:hover {
@@ -2215,116 +2213,6 @@ button.ne-pill {
 .ne-metric-value.positive { color: var(--ne-income); }
 .ne-metric-value.negative { color: var(--ne-expense); }
 
-/* Overview headline panel */
-.ne-hero {
-  margin: 4px var(--ne-gutter) 16px;
-  padding: 22px 24px;
-  border-radius: var(--ne-radius-lg);
-  border: 1px solid color-mix(in srgb, var(--ne-hero-color) 30%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--ne-hero-color) 20%, transparent), color-mix(in srgb, var(--ne-hero-color) 4%, transparent)),
-    var(--ne-surface);
-}
-
-.ne-hero.positive { --ne-hero-color: var(--ne-income); }
-.ne-hero.negative { --ne-hero-color: var(--ne-expense); }
-
-.ne-hero-label {
-  font-size: var(--font-ui-smaller);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-}
-
-.ne-hero-value {
-  margin: 4px 0 16px;
-  font-size: clamp(34px, 7vw, 52px);
-  font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-  color: var(--ne-hero-color);
-}
-
-.ne-hero-bar {
-  height: 8px;
-  border-radius: 4px;
-  background: var(--ne-income-tint-strong);
-  overflow: hidden;
-}
-
-.ne-hero-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  background: var(--ne-expense);
-}
-
-.ne-hero-sides {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 32px;
-  margin-top: 14px;
-}
-
-.ne-hero-side {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.ne-hero-dot {
-  align-self: center;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.ne-hero-dot.income { background: var(--ne-income); }
-.ne-hero-dot.expense { background: var(--ne-expense); }
-
-.ne-hero-side-label {
-  font-size: var(--font-ui-small);
-  color: var(--text-muted);
-}
-
-.ne-hero-side-value {
-  font-size: var(--font-ui-medium);
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-}
-
-.ne-range-row {
-  display: flex;
-  gap: 5px;
-  margin-bottom: 16px;
-}
-
-/* Range selection tabs (3 / 6 / 12 months) */
-.ne-range-btn {
-  background: transparent;
-  border: 1px solid var(--ne-hairline);
-  box-shadow: none;
-  height: auto;
-  border-radius: 999px;
-  padding: 4px 13px;
-  font-size: var(--font-ui-smaller);
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: background 0.1s, color 0.1s;
-}
-
-.ne-range-btn:hover:not(.is-active) {
-  background: var(--ne-surface-hover);
-}
-
-.ne-range-btn.is-active {
-  background: var(--ne-accent-tint-strong);
-  color: var(--text-normal);
-  border-color: transparent;
-  font-weight: 600;
-}
-
 /* Chart tooltip */
 
 /* ── Settings ── */
@@ -3035,7 +2923,6 @@ select.ne-add-wallet-input {
 .ne-action-btn:focus-visible,
 .ne-nav-btn:focus-visible,
 .ne-pill:focus-visible,
-.ne-range-btn:focus-visible,
 .ne-cat-toggle:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
@@ -3230,6 +3117,41 @@ select.ne-add-wallet-input {
 
 @media (max-width: 700px) {
   .ne-assets-charts { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Net worth tab: one heading per section, and the legend with each line's current value */
+.ne-section-title {
+  margin: 24px var(--ne-gutter) 0;
+  font-size: var(--font-ui-medium);
+  font-weight: 650;
+}
+
+.ne-networth-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin-bottom: 12px;
+}
+
+.ne-networth-legend-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ne-networth-legend-item .ne-account-dot {
+  align-self: center;
+}
+
+.ne-networth-legend-label {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.ne-networth-legend-value {
+  font-size: var(--font-ui-medium);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 
 .ne-asset-card-actions {

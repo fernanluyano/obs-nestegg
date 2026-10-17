@@ -1,11 +1,12 @@
 import { balanceAt, currentBalance, netAssetCents } from "../domain/accounts";
 import { bucketsTotal, type Bucket } from "../domain/buckets";
-import { monthEndKey } from "../domain/dates";
+import { monthEndKey, monthOf } from "../domain/dates";
 import { DEFAULT_TAGS } from "../domain/defaults";
 import { loanDebt, type LoanDebt } from "../domain/loans";
 import { summarize } from "../domain/transactions";
 import type { CategoryIndex } from "../domain/categories";
-import type { Account, AccountBalance, LedgerEntry, MonthSummary, TransactionType } from "../domain/types";
+import { isLiability, type Account, type AccountBalance, type LedgerEntry, type MonthSummary, type TransactionType } from "../domain/types";
+import { assetsTimeline } from "./assetQueries";
 import { accountTransactions, categoryIndexOf, entriesOf, type Snapshot } from "./snapshot";
 
 export function accountsOf(snapshot: Snapshot): Account[] {
@@ -80,6 +81,66 @@ export function netAssetTimeline(snapshot: Snapshot, months: string[]): Map<stri
 			return [month, netAssetCents(balances)];
 		}),
 	);
+}
+
+export interface NetWorthPoint {
+	assetsCents: number; // cash accounts plus the active asset notes
+	liabilitiesCents: number; // credit cards plus loans, positive; a card in credit makes it smaller
+	netCents: number;
+}
+
+// Net worth at each month end. Accounts follow the same includeInNetAsset rule as netAssetTimeline,
+// which stays accounts only; the asset notes join here and nowhere else.
+export function netWorthTimeline(snapshot: Snapshot, months: string[]): Map<string, NetWorthPoint> {
+	const counted = accountsOf(snapshot).filter((a) => a.includeInNetAsset);
+	const notes = assetsTimeline(snapshot, months);
+	return new Map(
+		months.map((month) => {
+			let cash = 0;
+			let owed = 0;
+			for (const account of counted) {
+				const balance = balanceAt(account, accountTransactions(snapshot, account.name), monthEndKey(month));
+				if (isLiability(account.accountType)) owed -= balance;
+				else cash += balance;
+			}
+			const assetsCents = cash + (notes.get(month) ?? 0);
+			return [month, { assetsCents, liabilitiesCents: owed, netCents: assetsCents - owed }];
+		}),
+	);
+}
+
+// Cash on hand at each month end: the cash accounts that count toward net assets, with no asset
+// notes and no debt.
+export function cashOnHandTimeline(snapshot: Snapshot, months: string[]): Map<string, number> {
+	const cash = accountsOf(snapshot).filter((a) => a.includeInNetAsset && !isLiability(a.accountType));
+	return new Map(
+		months.map((month) => [
+			month,
+			cash.reduce((sum, account) => sum + balanceAt(account, accountTransactions(snapshot, account.name), monthEndKey(month)), 0),
+		]),
+	);
+}
+
+// The earliest month any counted cash account has data: its entered balance or a transaction.
+export function cashStartMonth(snapshot: Snapshot): string | null {
+	const dates = accountsOf(snapshot)
+		.filter((a) => a.includeInNetAsset && !isLiability(a.accountType))
+		.flatMap((a) => [a.enteredBalanceAsOf, ...accountTransactions(snapshot, a.name).map((tx) => tx.date)]);
+	if (dates.length === 0) return null;
+	return monthOf(dates.reduce((min, d) => (d < min ? d : min)));
+}
+
+// The earliest month net worth has any data behind it: an account's entered balance or transaction,
+// or an active asset's valuation. Null when nothing was ever entered.
+export function netWorthStartMonth(snapshot: Snapshot): string | null {
+	const dates = [
+		...accountsOf(snapshot)
+			.filter((a) => a.includeInNetAsset)
+			.flatMap((a) => [a.enteredBalanceAsOf, ...accountTransactions(snapshot, a.name).map((tx) => tx.date)]),
+		...snapshot.assets.filter((r) => r.asset.active).flatMap((r) => r.valuations.map((v) => v.date)),
+	];
+	if (dates.length === 0) return null;
+	return monthOf(dates.reduce((min, d) => (d < min ? d : min)));
 }
 
 // Sums by category for one type. Expense totals are negated, so refunds net the total down and a

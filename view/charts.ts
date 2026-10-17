@@ -1,4 +1,5 @@
 import { percentPaid, type PayoffChart } from '../domain/loans'
+import { formatPercent, type GrowthPoint } from '../domain/growth'
 import { formatCents } from '../domain/money'
 import { formatYearMonth, t, tn } from '../labels'
 import {
@@ -122,6 +123,8 @@ export function drawIncExpChart(
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      // Hovering anywhere in a month shows both bars and the surplus, not just the bar under the cursor.
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
           position: 'top',
@@ -133,6 +136,10 @@ export function drawIncExpChart(
             label: (ctx) => {
               const label = ctx.dataset.label ?? ''
               return `${label}: ${formatK(ctx.raw as number)}`
+            },
+            footer: (items) => {
+              const month = data[items[0].dataIndex]
+              return `${t('dash.surplus')}: ${formatCents(month.income - month.expense)}`
             },
           },
         },
@@ -184,43 +191,57 @@ export function drawIncExpChart(
   return new Chart(canvas, cfg)
 }
 
-// ─── Total value of assets line chart ─────────────────────────────────────────
+// ─── Net worth line chart: assets, liabilities and their difference ───────────
 
-export interface ValuePoint {
+export interface NetWorthChartPoint {
   monthLabel: string
   tooltipLabel: string
-  valueCents: number
+  assetsCents: number
+  liabilitiesCents: number
+  netCents: number
 }
 
-export function drawAssetsChart(
+// Shared by the chart lines and the legend above it, so a dot always matches its line.
+export function netWorthColors() {
+  const colors = getThemeColors()
+  return { assets: colors.income, liabilities: colors.expense, net: colors.net }
+}
+
+export function drawNetWorthChart(
   container: HTMLElement,
-  data: ValuePoint[],
+  data: NetWorthChartPoint[],
 ): Chart {
   const colors = getThemeColors()
+  const lines = netWorthColors()
 
   const canvas = container.createEl('canvas')
+
+  const line = (label: string, color: string, values: number[]) => ({
+    label,
+    data: values,
+    borderColor: color,
+    pointBackgroundColor: color,
+    pointRadius: 4,
+    pointHoverRadius: 6,
+    fill: false,
+    tension: 0.3,
+    spanGaps: false,
+  })
 
   const cfg: ChartConfiguration<'line'> = {
     type: 'line',
     data: {
       labels: data.map(d => d.monthLabel),
       datasets: [
-        {
-          label: t('assets.totalValue'),
-          data: data.map(d => d.valueCents),
-          borderColor: colors.net,
-          pointBackgroundColor: colors.net,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          fill: false,
-          tension: 0.3,
-          spanGaps: false,
-        },
+        line(t('networth.assets'), lines.assets, data.map(d => d.assetsCents)),
+        line(t('networth.liabilities'), lines.liabilities, data.map(d => d.liabilitiesCents)),
+        line(t('networth.net'), lines.net, data.map(d => d.netCents)),
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
         datalabels: { display: false },
@@ -230,7 +251,75 @@ export function drawAssetsChart(
               const idx = items[0].dataIndex
               return data[idx].tooltipLabel
             },
-            label: (ctx) => `${t('assets.totalValue')}: ${formatCents(ctx.raw as number)}`,
+            label: (ctx) => `${ctx.dataset.label ?? ''}: ${formatCents(ctx.raw as number)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          border: { display: false },
+          grid: { display: false },
+          ticks: { color: colors.muted },
+        },
+        y: {
+          border: { display: false },
+          grid: { color: colors.grid },
+          ticks: {
+            color: colors.muted,
+            callback: (v) => formatK(v as number),
+          },
+        },
+      },
+    },
+  }
+
+  return new Chart(canvas, cfg)
+}
+
+// ─── Cash on hand line chart ──────────────────────────────────────────────────
+
+export interface CashChartPoint extends GrowthPoint {
+  monthLabel: string
+  tooltipLabel: string
+}
+
+export function drawCashChart(container: HTMLElement, data: CashChartPoint[]): Chart {
+  const colors = getThemeColors()
+  const canvas = container.createEl('canvas')
+
+  const cfg: ChartConfiguration<'line'> = {
+    type: 'line',
+    data: {
+      labels: data.map(d => d.monthLabel),
+      datasets: [{
+        label: t('cash.title'),
+        data: data.map(d => d.cents),
+        borderColor: colors.income,
+        pointBackgroundColor: colors.income,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        fill: false,
+        tension: 0.3,
+        spanGaps: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        datalabels: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => data[items[0].dataIndex].tooltipLabel,
+            label: (ctx) => `${t('cash.title')}: ${formatCents(ctx.raw as number)}`,
+            afterLabel: (ctx) => {
+              const point = data[ctx.dataIndex]
+              const change = point.changeCents === null
+                ? 'n/a'
+                : `${point.changeCents > 0 ? '+' : ''}${formatCents(point.changeCents)} (${formatPercent(point.changeRatio)})`
+              return [`${t('cash.monthOverMonth')}: ${change}`, `${t('cash.yearOverYear')}: ${formatPercent(point.yoyRatio)}`]
+            },
           },
         },
       },
