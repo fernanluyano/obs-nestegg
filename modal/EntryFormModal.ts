@@ -297,7 +297,7 @@ export class EntryFormModal extends Modal {
     if (required) caption.createSpan({ text: '*', cls: 'ne-field-required', attr: { 'aria-hidden': 'true' } })
     const control = buildControl()
     control.addClass('ne-field-input')
-    if (control instanceof HTMLSelectElement) row.createDiv('ne-select-wrapper').appendChild(control)
+    if (control.instanceOf(HTMLSelectElement)) row.createDiv('ne-select-wrapper').appendChild(control)
     else row.appendChild(control)
   }
 

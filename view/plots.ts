@@ -456,7 +456,7 @@ export function drawPieWithLegend(
       row.addEventListener('click', () => onSliceClick(keyFor(slice)))
     }
     const dot = row.createSpan({ cls: 'ne-legend-dot' })
-    dot.setCssProps({ 'background-color': sliceColors[i] })
+    dot.setCssProps({ '--ne-dot-color': sliceColors[i] })
     row.createSpan({ text: slice.label, cls: 'ne-legend-name' })
     row.createSpan({ text: formatCents(slice.value), cls: 'ne-legend-amt' })
     row.createSpan({ text: `${percentOf(slice.value)}%`, cls: 'ne-legend-pct' })

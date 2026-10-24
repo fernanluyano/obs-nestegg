@@ -1,6 +1,6 @@
 {
 	"name": "nestegg",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"description": "Personal finance in your vault: budgeting, transactions, accounts and net worth, and long-term investments.",
 	"main": "main.js",
 	"scripts": {

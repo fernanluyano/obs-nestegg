@@ -93,11 +93,11 @@ export class MobileEntryFormModal extends EntryFormModal {
   }
 
   private trackTextFocus() {
-    const isTextField = (node: EventTarget | null): node is HTMLElement =>
-      node instanceof HTMLElement && node.matches(SELECTOR_TEXT_FIELDS)
+    const isTextField = (node: Node | null): node is HTMLElement =>
+      node !== null && node.instanceOf(HTMLElement) && node.matches(SELECTOR_TEXT_FIELDS)
 
     this.contentEl.addEventListener('focusin', (event) => {
-      if (isTextField(event.target)) this.contentEl.addClass('ne-phone-text-focus')
+      if (isTextField(event.target as Node | null)) this.contentEl.addClass('ne-phone-text-focus')
     })
 
     this.contentEl.addEventListener('focusout', () => {
