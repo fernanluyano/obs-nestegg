@@ -30,7 +30,6 @@ export default defineConfig({
 				"view/debtRows.ts",
 				"view/detail/filters.ts",
 				"view/detail/selection.ts",
-				"wizard/model.ts",
 			],
 			// Files that drive the Obsidian API directly aren't unit tested per this project's
 			// convention (see CLAUDE.md): everything else, including the services, runs against an

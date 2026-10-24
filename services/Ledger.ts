@@ -5,6 +5,7 @@ import { AssetService } from "./AssetService";
 import { BucketService } from "./BucketService";
 import { BudgetService } from "./BudgetService";
 import { CategoryService } from "./CategoryService";
+import { LedgerError } from "./errors";
 import { LedgerStore } from "./LedgerStore";
 import { seedVault, isEmptyVault } from "./seed";
 import { SettingsService } from "./SettingsService";
@@ -67,6 +68,13 @@ export class Ledger {
 		if (this.hasUsableDefault()) return;
 		const next = this.snapshot.accounts.find((a) => a.account.active && a.account.accountType === "cash");
 		await this.settings.update({ defaultAccount: next?.account.name ?? "" });
+	}
+
+	// Only an active cash account can be the default, whichever screen asks.
+	async setDefaultAccount(name: string): Promise<void> {
+		const usable = this.snapshot.accounts.some((a) => a.account.name === name && a.account.active && a.account.accountType === "cash");
+		if (!usable) throw new LedgerError("The default account must be an active cash account");
+		await this.settings.update({ defaultAccount: name });
 	}
 
 	reload(): Promise<Snapshot> {

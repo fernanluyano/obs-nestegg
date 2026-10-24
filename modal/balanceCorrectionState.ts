@@ -1,9 +1,8 @@
-import { balanceSignProblem, currentBalance } from '../domain/accounts'
+import { balanceSignProblem, BALANCE_SIGN_MESSAGES, currentBalance } from '../domain/accounts'
 import { isIsoDate } from '../domain/dates'
 import { parseCents } from '../domain/money'
 import type { Account, AccountType, Transaction } from '../domain/types'
 import type { LabelKey } from '../labels'
-import { BALANCE_SIGN_MESSAGES } from '../wizard/model'
 
 export interface CorrectionForm {
   balance: string

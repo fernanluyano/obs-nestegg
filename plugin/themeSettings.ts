@@ -1,6 +1,7 @@
-import { Plugin, PluginSettingTab, Setting } from 'obsidian'
+import { Notice, Plugin, PluginSettingTab, Setting } from 'obsidian'
 import { DEFAULT_THEME, THEMES, parseTheme, themeCss, themeName, type ThemeId } from '../domain/themes'
-import { t } from '../labels'
+import { t, tn } from '../labels'
+import type { Ledger } from '../services/Ledger'
 
 // Display preferences live in the plugin's own data.json, not in the vault: they are per device
 // (a phone and a desktop can differ) and hold no finance data.
@@ -19,13 +20,29 @@ function applyTheme(theme: ThemeId): void {
 }
 
 class NesteggSettingTab extends PluginSettingTab {
-  constructor(plugin: Plugin, private current: () => ThemeId, private choose: (theme: ThemeId) => Promise<void>) {
+  constructor(
+    plugin: Plugin,
+    private ledger: Ledger,
+    private current: () => ThemeId,
+    private choose: (theme: ThemeId) => Promise<void>,
+  ) {
     super(plugin.app, plugin)
   }
 
   display(): void {
     const { containerEl } = this
     containerEl.empty()
+    // Unlike the theme this lives in the vault's settings note, so it follows the data, not the device.
+    new Setting(containerEl)
+      .setName(t('settings.autoValidate'))
+      .setDesc(t('settings.autoValidateDesc'))
+      .addToggle(toggle => toggle
+        .setValue(this.ledger.settings.current.autoValidateOnLoad)
+        .onChange((value) => {
+          this.ledger.settings.update({ autoValidateOnLoad: value }).catch((e: unknown) => {
+            new Notice(tn('notice.actionFailed', { reason: e instanceof Error ? e.message : String(e) }))
+          })
+        }))
     new Setting(containerEl)
       .setName(t('theme.setting'))
       .setDesc(t('theme.settingDesc'))
@@ -37,12 +54,12 @@ class NesteggSettingTab extends PluginSettingTab {
   }
 }
 
-export async function registerThemeSettings(plugin: Plugin): Promise<void> {
+export async function registerThemeSettings(plugin: Plugin, ledger: Ledger): Promise<void> {
   const stored = ((await plugin.loadData()) ?? {}) as StoredPrefs
   let theme = parseTheme(stored.theme ?? DEFAULT_THEME)
   applyTheme(theme)
 
-  plugin.addSettingTab(new NesteggSettingTab(plugin, () => theme, async (next) => {
+  plugin.addSettingTab(new NesteggSettingTab(plugin, ledger, () => theme, async (next) => {
     theme = next
     applyTheme(theme)
     await plugin.saveData({ ...stored, theme })

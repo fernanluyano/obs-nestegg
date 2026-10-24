@@ -6,7 +6,7 @@ import type { VaultPort } from "../storage/VaultPort";
 
 // First run: a vault with no Nestegg notes at all gets the starter categories. The settings note
 // is deliberately not created here: it appears when the first cash account is added, and its
-// absence is what tells the plugin to show the setup wizard. Anything less than empty is left
+// absence is what tells the plugin to open the Accounts tab at startup. Anything less than empty is left
 // alone, so a user who deleted a category on purpose never has it come back.
 export function isEmptyVault(snapshot: Snapshot): boolean {
 	return (

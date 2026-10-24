@@ -1,9 +1,9 @@
 import { TRANSACTION_TYPES, type TransactionType } from '../../domain/types'
 import { t, tn } from '../../labels'
-import { runAction, type WizardContext } from '../WizardContext'
+import { runAction, type ActionContext } from '../actionContext'
 import { renderAddRow, renderCategoryBlock } from './categoryBlock'
 
-export function renderCategories(container: HTMLElement, ctx: WizardContext): void {
+export function renderCategoriesEditor(container: HTMLElement, ctx: ActionContext): void {
   container.createEl('p', { text: t('wizard.categories.intro') })
   container.createEl('p', { text: t('wizard.categories.rewriteWarning'), cls: 'ne-wizard-callout' })
 

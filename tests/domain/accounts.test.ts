@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balanceAt, balanceSignProblem, currentBalance, loanFieldProblem, loanSchedule, netAssetCents, parsePlanFields } from "../../domain/accounts";
+import { balanceAt, balanceSignProblem, checkBalance, currentBalance, loanFieldProblem, loanSchedule, netAssetCents, parsePlanFields } from "../../domain/accounts";
 import { transferEntries } from "../../domain/transactions";
 import type { Account, Transaction } from "../../domain/types";
 
@@ -111,6 +111,33 @@ describe("loanSchedule", () => {
 		expect(loanSchedule({ termMonths: 60 }, "2026-10-07")).toBeNull();
 		expect(loanSchedule({ startDate: "2025-05-01" }, "2026-10-07")).toBeNull();
 		expect(loanSchedule({}, "2026-10-07")).toBeNull();
+	});
+});
+
+describe("checkBalance", () => {
+	it("requires the balance to be entered, but accepts zero", () => {
+		expect(checkBalance("", "cash")).toEqual({ ok: false, message: "err.balanceRequired" });
+		expect(checkBalance("   ", "cash")).toEqual({ ok: false, message: "err.balanceRequired" });
+		expect(checkBalance("0", "cash")).toEqual({ ok: true, cents: 0 });
+		expect(checkBalance("0.00", "loan")).toEqual({ ok: true, cents: 0 });
+	});
+
+	it("parses to cents from the digits", () => {
+		expect(checkBalance("1234.50", "cash")).toEqual({ ok: true, cents: 123450 });
+		expect(checkBalance("1.15", "cash")).toEqual({ ok: true, cents: 115 });
+	});
+
+	it("rejects text, too many decimals and a negative cash balance", () => {
+		expect(checkBalance("abc", "cash")).toEqual({ ok: false, message: "err.amountInvalid" });
+		expect(checkBalance("1.234", "cash")).toEqual({ ok: false, message: "err.amountInvalid" });
+		expect(checkBalance("-5", "cash")).toEqual({ ok: false, message: "err.balanceNegative" });
+	});
+
+	it("takes a debt as typed, negative, and rejects it positive", () => {
+		for (const type of ["creditCard", "loan"] as const) {
+			expect(checkBalance("-3000", type)).toEqual({ ok: true, cents: -300000 });
+			expect(checkBalance("3000", type)).toEqual({ ok: false, message: "err.debtBalancePositive" });
+		}
 	});
 });
 

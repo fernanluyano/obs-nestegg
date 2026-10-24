@@ -1260,8 +1260,7 @@ button.ne-keypad-done {
   gap: 2px;
 }
 
-.ne-nav-item,
-.ne-nav-setup {
+.ne-nav-item {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1284,8 +1283,7 @@ button.ne-keypad-done {
   justify-content: flex-start;
 }
 
-.ne-nav-item:hover:not(.is-active),
-.ne-nav-setup:hover {
+.ne-nav-item:hover:not(.is-active) {
   color: var(--text-normal);
   background: var(--ne-surface-hover);
 }
@@ -1311,12 +1309,6 @@ button.ne-keypad-done {
   height: 18px;
 }
 
-.ne-nav-setup {
-  margin-top: 14px;
-  padding-top: 11px;
-  border-top: 1px solid var(--ne-hairline);
-  border-radius: 0 0 var(--ne-radius-sm) var(--ne-radius-sm);
-}
 
 /* Top bar: page title, month stepper and the primary action */
 .ne-topbar {
@@ -2578,8 +2570,7 @@ select.ne-add-wallet-input {
     gap: 2px;
   }
 
-  .ne-nav-item,
-  .ne-nav-setup {
+  .ne-nav-item {
     flex: 1 0 64px;
     flex-direction: column;
     justify-content: center;
@@ -2591,10 +2582,6 @@ select.ne-add-wallet-input {
     border-radius: var(--ne-radius-md);
     font-size: 10.5px;
     text-align: center;
-  }
-
-  .ne-nav-setup {
-    flex: 0 0 64px;
   }
 
   .ne-nav-item-icon svg {
@@ -2620,8 +2607,13 @@ select.ne-add-wallet-input {
     font-weight: 400;
   }
 
-  .ne-add-label {
+  .ne-add-label,
+  .ne-manage-label {
     display: none;
+  }
+
+  .ne-manage-btn {
+    padding: 8px 10px;
   }
 
   /* Keeps the last card and row clear of the floating button. The nav comes first in the DOM, so
@@ -2909,19 +2901,44 @@ select.ne-add-wallet-input {
   flex: 0 0 auto;
 }
 
-.ne-wizard-container .modal {
+.ne-categories-container .modal {
   width: min(720px, 94vw);
 }
 
-.ne-wizard-body {
+.ne-categories-body {
   max-height: 60vh;
   overflow-y: auto;
   padding-right: 4px;
 }
 
-.ne-wizard-footer {
-  justify-content: flex-end;
-  margin-top: 12px;
+/* Secondary top bar action, next to the filled "Add transaction" */
+.ne-manage-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: auto;
+  padding: 8px 14px;
+  border: 1px solid var(--ne-hairline);
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: var(--font-ui-small);
+  font-weight: 600;
+  color: var(--text-normal);
+  background: var(--ne-surface);
+  cursor: pointer;
+}
+
+.ne-manage-btn:hover {
+  background: var(--ne-surface-hover);
+}
+
+.ne-manage-icon {
+  display: flex;
+}
+
+.ne-manage-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .ne-wizard-callout {
@@ -2949,12 +2966,6 @@ select.ne-add-wallet-input {
 .ne-accounts-add {
   max-width: 960px;
   padding: 0 var(--ne-gutter) 20px;
-}
-
-.ne-wizard-note {
-  padding: 8px 12px;
-  border-radius: 4px;
-  background: var(--background-secondary);
 }
 
 /* ── Transactions: select mode and the bulk bar ── */

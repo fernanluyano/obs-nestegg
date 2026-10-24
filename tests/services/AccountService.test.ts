@@ -177,6 +177,21 @@ describe("Ledger.addAccount / archiveAccount", () => {
 		await ledger.archiveAccount("Cash Main");
 		expect(ledger.settings.current.defaultAccount).toBe("");
 	});
+
+	it("lets the default be changed to another active cash account", async () => {
+		const { ledger } = await loadedLedger();
+		await ledger.setDefaultAccount("Savings");
+		expect(ledger.settings.current.defaultAccount).toBe("Savings");
+	});
+
+	it("refuses a default that is a credit card, archived or unknown, leaving the default as it was", async () => {
+		const { ledger } = await loadedLedger();
+		await ledger.archiveAccount("Savings");
+		for (const name of ["Card", "Savings", "Gone"]) {
+			await expect(ledger.setDefaultAccount(name)).rejects.toThrow(LedgerError);
+		}
+		expect(ledger.settings.current.defaultAccount).toBe("Cash Main");
+	});
 });
 
 describe("account color", () => {

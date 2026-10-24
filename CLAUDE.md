@@ -42,8 +42,8 @@ Layers, from pure to Obsidian-bound; each folder mirrors a spec folder under `te
 - `storage/` — `VaultPort` (what the plugin needs from the vault), `loader`, folder cleanup, and `ObsidianVault` (the only file that touches the vault API)
 - `services/` — `Ledger` facade and the services that write (transactions, accounts, categories, settings, validation fixes); run against `tests/helpers/memoryVault.ts`
 - `plugin/` — wiring only: views, commands, startup
-- `wizard/` — the setup wizard, the only place to manage accounts, categories and finance preferences (the plugin settings tab holds just the per-device colour theme, stored in `data.json`, never in the vault; themes are data in `domain/themes.ts`, so adding one is a single entry); `wizard/model.ts` holds the pure rules (mandatory pieces, rename impact), `steps/` one file per step
-- `view/`, `modal/` — Obsidian UI; keep logic in the pure modules beside them (`view/detail/filters.ts`, `modal/entryDraft.ts`, `modal/tagSheetState.ts`)
+- `view/`, `modal/` — Obsidian UI; keep logic in the pure modules beside them (`view/detail/filters.ts`, `modal/entryDraft.ts`, `modal/tagSheetState.ts`). There is no setup wizard: accounts (add, edit, archive, delete, default account) are managed in the Accounts tab (`view/accounts/accountManagement.ts`) and categories in a fold at the bottom of the Budget tab (`view/budget/`). The pure rules live in `snapshot/setupRules.ts` (mandatory pieces: a cash account, non-empty categories, a cash default; the last cash account can't be removed) and `snapshot/renameImpact.ts`. An empty vault opens the Accounts tab at startup
+- Plugin settings tab: the per-device colour theme (stored in `data.json`, never in the vault; themes are data in `domain/themes.ts`, so adding one is a single entry) and *Validate data on startup* (stored in the vault's `Settings.md`)
 - `main.ts` — plugin entry point, registered in `manifest.json` by `id`; stays tiny
 - `labels.ts` — the English string table
 - `styles.css` — plugin styles, loaded automatically by Obsidian
@@ -62,7 +62,7 @@ Code, tests and docs are done; what is left is checking by hand, because the UI 
 - Transactions page: filters (desktop panel and phone sheet), search, select mode and bulk delete/reassign.
 - Overview, Budget, Accounts and Net worth pages: charts render, the pies are clickable, light and dark themes, a narrow window.
 - Investing accounts: add, edit and delete entries, the last-entry guard, and the account showing up in the net worth chart and breakdown.
-- Setup wizard on an empty vault, and **Validate data** with a damaged note.
+- An empty vault (opens the Accounts tab with the cash-account callout), managing accounts in the Accounts tab and categories in the Budget tab, and **Validate data** with a damaged note.
 - Read the README against the app once; its feature list was written from the code, not from running it.
 - Last: `make build` and `make test` green, then `make release`.
 

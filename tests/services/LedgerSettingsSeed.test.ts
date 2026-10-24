@@ -36,7 +36,7 @@ describe("isEmptyVault / seedVault", () => {
 });
 
 describe("Ledger.load", () => {
-	it("seeds a brand-new vault with the starter categories, leaving settings and accounts to the wizard", async () => {
+	it("seeds a brand-new vault with the starter categories, leaving settings and accounts to the user", async () => {
 		const ledger = new Ledger(new MemoryVault());
 		await ledger.load();
 		expect(ledger.snapshot.settings).toBeNull();

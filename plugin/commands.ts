@@ -5,13 +5,8 @@ import { EntryFormModal } from '../modal/EntryFormModal'
 import { MobileEntryFormModal } from '../modal/MobileEntryFormModal'
 import { IssueReviewModal } from '../modal/IssueReviewModal'
 import type { Ledger } from '../services/Ledger'
-import { SetupWizard } from '../wizard/SetupWizard'
 import { NESTEGG_ICON } from './icon'
 import { openAccounts, openBudget, openOverview, openTransactions, openNetWorth } from './views'
-
-export function openSetupWizard(plugin: Plugin, ledger: Ledger): void {
-  new SetupWizard(plugin.app, ledger).open()
-}
 
 export function refreshViews(plugin: Plugin): void {
   plugin.app.workspace.trigger('nestegg:refresh')
@@ -39,7 +34,6 @@ export function registerCommands(plugin: Plugin, ledger: Ledger): void {
   plugin.addCommand({ id: 'open-detail', name: 'Open transactions', callback: () => { void openTransactions(plugin) } })
   plugin.addCommand({ id: 'open-budget', name: 'Open budget', callback: () => { void openBudget(plugin) } })
   plugin.addCommand({ id: 'add-transaction', name: 'Add transaction', callback: () => openTransactionModal(plugin, ledger) })
-  plugin.addCommand({ id: 'setup', name: 'Set up accounts and categories', callback: () => openSetupWizard(plugin, ledger) })
   plugin.addCommand({ id: 'validate-data', name: 'Validate data', callback: () => { void runValidation(plugin, ledger, true) } })
   plugin.addCommand({ id: 'refresh', name: 'Refresh views', callback: () => { void ledger.reload().then(() => refreshViews(plugin)) } })
 }

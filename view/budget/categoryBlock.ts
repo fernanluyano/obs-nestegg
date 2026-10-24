@@ -5,9 +5,9 @@ import { t, tn, type LabelKey } from '../../labels'
 import { ConfirmDialog } from '../../modal/ConfirmDialog'
 import { SubcategoryPickModal } from '../../modal/SubcategoryPickModal'
 import { TextPromptModal } from '../../modal/TextPromptModal'
+import { categoryRenameImpact, migrationImpact, subcategoryRenameImpact, type RenameImpact } from '../../snapshot/renameImpact'
 import { subcategoryTypeLocked, subcategoryUsage } from '../../snapshot/queries'
-import { categoryRenameImpact, migrationImpact, subcategoryRenameImpact, type RenameImpact } from '../model'
-import { runAction, type WizardContext } from '../WizardContext'
+import { runAction, type ActionContext } from '../actionContext'
 
 function iconButton(parent: HTMLElement, text: string, onClick: () => void): void {
   parent.createEl('button', { text, cls: 'ne-tag-remove' }).addEventListener('click', onClick)
@@ -15,7 +15,7 @@ function iconButton(parent: HTMLElement, text: string, onClick: () => void): voi
 
 // Asks for the new name, then explains what the rename rewrites before doing it.
 function promptRename(
-  ctx: WizardContext,
+  ctx: ActionContext,
   promptKey: LabelKey,
   confirmKey: LabelKey,
   from: string,
@@ -29,7 +29,7 @@ function promptRename(
   }).open()
 }
 
-export function renderCategoryBlock(container: HTMLElement, ctx: WizardContext, category: Category): void {
+export function renderCategoryBlock(container: HTMLElement, ctx: ActionContext, category: Category): void {
   const { ledger } = ctx
   const block = container.createDiv('ne-category-block')
   const head = block.createDiv('ne-category-head')
@@ -64,7 +64,7 @@ export function renderCategoryBlock(container: HTMLElement, ctx: WizardContext, 
 
 // Changes the subcategory's type after a confirmation. It stays locked while transactions use it;
 // a declined change puts the selector back as it was.
-function renderTypeSelect(chip: HTMLElement, ctx: WizardContext, sub: Subcategory): void {
+function renderTypeSelect(chip: HTMLElement, ctx: ActionContext, sub: Subcategory): void {
   const { ledger, app } = ctx
   const select = chip.createEl('select', { cls: 'dropdown ne-category-type' })
   for (const type of TRANSACTION_TYPES) select.createEl('option', { value: type, text: t(`label.type.${type}`) })
@@ -91,7 +91,7 @@ function renderTypeSelect(chip: HTMLElement, ctx: WizardContext, sub: Subcategor
 
 // Picks the loan this debt payment subcategory pays; that is what ties it to the loan and makes it
 // show up in the budget. There is no "none": until a loan is chosen the placeholder is shown.
-function renderPaymentAccount(chip: HTMLElement, ctx: WizardContext, sub: string): void {
+function renderPaymentAccount(chip: HTMLElement, ctx: ActionContext, sub: string): void {
   const { ledger } = ctx
   const loans = ledger.snapshot.accounts.map(a => a.account).filter(a => a.active && a.accountType === 'loan')
   const select = chip.createEl('select', { cls: 'dropdown ne-category-type', attr: { title: t('wizard.paysAccount') } })
@@ -105,7 +105,7 @@ function renderPaymentAccount(chip: HTMLElement, ctx: WizardContext, sub: string
   })
 }
 
-function renderSubcategory(tags: HTMLElement, ctx: WizardContext, category: Category, sub: Subcategory): void {
+function renderSubcategory(tags: HTMLElement, ctx: ActionContext, category: Category, sub: Subcategory): void {
   const { ledger } = ctx
   const chip = tags.createDiv('ne-category-tag')
   chip.createEl('span', { text: sub.name })
@@ -128,7 +128,7 @@ function renderSubcategory(tags: HTMLElement, ctx: WizardContext, category: Cate
 // Unused subcategories are deleted after a plain confirm. Used ones first ask where their
 // transactions should point; the removal then moves them and deletes in one go.
 function confirmDelete(
-  ctx: WizardContext,
+  ctx: ActionContext,
   removed: string[],
   confirmKey: LabelKey,
   title: string,

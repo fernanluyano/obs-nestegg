@@ -11,6 +11,7 @@ import { openAccountEdit, openBalanceCorrection } from '../modal/editAccountFlow
 import { InvestingEntriesModal } from '../modal/InvestingEntriesModal'
 import type { Ledger } from '../services/Ledger'
 import { accountBalances, bucketsOf } from '../snapshot/queries'
+import { renderArchivedAccounts, renderCashAccountNeeded, renderDefaultAccount, renderRemoveButton } from './accounts/accountManagement'
 import { loanScheduleText } from './accounts/loanScheduleText'
 import { buildCard } from './panels'
 import { drawPageHeader } from './PageHeader'
@@ -76,6 +77,8 @@ export class AccountsView extends ItemView {
     contentEl.addClass('ne-asset')
     drawPageHeader(contentEl, { owner: this, ledger: this.ledger, page: 'accounts', month: null })
 
+    const ctx = { app: this.app, ledger: this.ledger }
+    renderCashAccountNeeded(contentEl, ctx)
     const card = buildCard(contentEl, { title: t('accounts.title') })
     const balances = accountBalances(this.ledger.snapshot).filter(b => b.account.active)
     if (balances.length === 0) {
@@ -127,8 +130,11 @@ export class AccountsView extends ItemView {
       }
       actions.createEl('button', { text: t('ui.edit') })
         .addEventListener('click', () => openAccountEdit(this.app, this.ledger, account, (a) => this.run(a)))
+      renderRemoveButton(actions, ctx, account)
       if (buckets.length > 0) this.renderBucketDetails(entry, buckets)
     }
+    renderDefaultAccount(card, ctx)
+    renderArchivedAccounts(contentEl, ctx)
 
     contentEl.createDiv('ne-accounts-add').createEl('button', { text: t('settings.addAccount'), cls: 'mod-cta' })
       .addEventListener('click', () => new AddAccountModal(this.app, this.ledger, (action, notice) => this.runChecked(action, notice)).open())

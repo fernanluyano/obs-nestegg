@@ -12,6 +12,26 @@ export function balanceSignProblem(type: AccountType, cents: number): "cashNegat
 	return cents < 0 ? "cashNegative" : null;
 }
 
+export const BALANCE_SIGN_MESSAGES = {
+	cashNegative: "err.balanceNegative",
+	debtPositive: "err.debtBalancePositive",
+} as const;
+
+export type BalanceCheck =
+	| { ok: true; cents: number }
+	| { ok: false; message: "err.balanceRequired" | "err.amountInvalid" | "err.balanceNegative" | "err.debtBalancePositive" };
+
+// The balance must be typed in: blank is rejected, zero is fine. Cash is not negative and a debt
+// is not positive.
+export function checkBalance(text: string, type: AccountType): BalanceCheck {
+	if (text.trim() === "") return { ok: false, message: "err.balanceRequired" };
+	const cents = parseCents(text);
+	if (cents === null) return { ok: false, message: "err.amountInvalid" };
+	const problem = balanceSignProblem(type, cents);
+	if (problem) return { ok: false, message: BALANCE_SIGN_MESSAGES[problem] };
+	return { ok: true, cents };
+}
+
 // Three decimals, because mortgage rates are quoted like 4.875.
 const INTEREST_RE = /^\d+(\.\d{1,3})?$/;
 

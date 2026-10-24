@@ -2,8 +2,8 @@ import { Events, ItemView, Platform, setIcon } from 'obsidian'
 import type { Ledger } from '../services/Ledger'
 import { EntryFormModal } from '../modal/EntryFormModal'
 import { MobileEntryFormModal } from '../modal/MobileEntryFormModal'
+import { CategoriesModal } from '../modal/CategoriesModal'
 import { t } from '../labels'
-import { SetupWizard } from '../wizard/SetupWizard'
 import { shiftMonth, isFutureMonth } from '../helpers'
 import { NESTEGG_ICON } from '../plugin/icon'
 import { BUDGET_VIEW_TYPE } from './BudgetView'
@@ -66,11 +66,6 @@ export function drawPageHeader(parent: HTMLElement, options: PageHeaderOptions):
     }
   }
 
-  const setupButton = nav.createEl('button', { cls: 'ne-nav-setup' })
-  setIcon(setupButton.createSpan('ne-nav-item-icon'), 'settings')
-  setupButton.createSpan({ text: t('ui.setup'), cls: 'ne-nav-item-label' })
-  setupButton.addEventListener('click', () => new SetupWizard(owner.app, ledger).open())
-
   const topBar = parent.createDiv('ne-topbar')
   topBar.createEl('h1', { text: links.find(link => link.id === page)?.label ?? '', cls: 'ne-topbar-title' })
 
@@ -93,6 +88,15 @@ export function drawPageHeader(parent: HTMLElement, options: PageHeaderOptions):
     })
   } else {
     monthBox.addClass('is-empty')
+  }
+
+  if (page !== 'detail' && page !== 'budget') return
+
+  if (page === 'budget') {
+    const manage = topBar.createEl('button', { cls: 'ne-manage-btn', attr: { 'aria-label': t('budget.manageCategories') } })
+    setIcon(manage.createSpan('ne-manage-icon'), 'tags')
+    manage.createSpan({ text: t('budget.manageCategories'), cls: 'ne-manage-label' })
+    manage.addEventListener('click', () => new CategoriesModal(owner.app, ledger).open())
   }
 
   const addButton = topBar.createEl('button', {

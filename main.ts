@@ -15,7 +15,7 @@ export default class NesteggPlugin extends Plugin {
 
     // Registrations stay synchronous so the ribbon and commands survive a slow vault load.
     registerIcon()
-    void registerThemeSettings(this)
+    void registerThemeSettings(this, this.ledger)
     registerViews(this, this.ledger)
     registerCommands(this, this.ledger)
 

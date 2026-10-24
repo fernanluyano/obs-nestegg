@@ -4,13 +4,13 @@ import { t, tn } from '../labels'
 import { LedgerError } from '../services/errors'
 import type { Ledger } from '../services/Ledger'
 import { accountTransactions } from '../snapshot/snapshot'
-import { accountRenameImpact } from '../wizard/model'
+import { accountRenameImpact } from '../snapshot/renameImpact'
 import { AccountEditModal } from './AccountEditModal'
 import { BalanceCorrectionModal } from './BalanceCorrectionModal'
 import { ConfirmDialog } from './ConfirmDialog'
 
 // Opens the edit modal for an account; `run` executes the resulting ledger change and owns
-// refreshing and error reporting, so the wizard and the Accounts tab share this flow.
+// refreshing and error reporting, so every caller shares this flow.
 export function openAccountEdit(
   app: App, ledger: Ledger, account: Account, run: (action: () => Promise<void>) => Promise<void>,
 ): void {

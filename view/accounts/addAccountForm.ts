@@ -1,5 +1,5 @@
 import { App, Notice } from 'obsidian'
-import { parsePlanFields } from '../../domain/accounts'
+import { checkBalance, parsePlanFields } from '../../domain/accounts'
 import { nextAccountColor } from '../../domain/colors'
 import { todayString } from '../../domain/dates'
 import { formatCents } from '../../domain/money'
@@ -9,7 +9,6 @@ import { t, tn, type LabelKey } from '../../labels'
 import { renderColorSwatches } from '../../modal/ColorSwatches'
 import { ConfirmDialog } from '../../modal/ConfirmDialog'
 import type { Ledger } from '../../services/Ledger'
-import { checkBalance } from '../../wizard/model'
 
 const ACCOUNT_TYPES: AccountType[] = ['cash', 'creditCard', 'loan', 'investing']
 
