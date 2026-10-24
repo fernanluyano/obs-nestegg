@@ -405,9 +405,8 @@ export function drawPieWithLegend(
   // A fixed-size wrapper lets Chart.js stay responsive while keeping a stable size, so touch
   // coordinates come out right on mobile.
   const canvasBox = wrap.createDiv('ne-pie-canvas-wrap')
-  canvasBox.style.width  = `${size}px`
-  canvasBox.style.height = `${size}px`
-  if (onSliceClick) canvasBox.setCssProps({ cursor: 'pointer' })
+  canvasBox.setCssProps({ width: `${size}px`, height: `${size}px` })
+  if (onSliceClick) canvasBox.addClass('is-clickable')
   const canvas = canvasBox.createEl('canvas')
 
   const chart = new Chart(canvas, {
@@ -453,14 +452,14 @@ export function drawPieWithLegend(
   slices.forEach((slice, i) => {
     const row = legend.createDiv('ne-legend-item')
     if (onSliceClick) {
-      row.setCssProps({ cursor: 'pointer' })
+      row.addClass('is-clickable')
       row.addEventListener('click', () => onSliceClick(keyFor(slice)))
     }
-    const dot = row.createEl('span', { cls: 'ne-legend-dot' })
+    const dot = row.createSpan({ cls: 'ne-legend-dot' })
     dot.setCssProps({ 'background-color': sliceColors[i] })
-    row.createEl('span', { text: slice.label, cls: 'ne-legend-name' })
-    row.createEl('span', { text: formatCents(slice.value), cls: 'ne-legend-amt' })
-    row.createEl('span', { text: `${percentOf(slice.value)}%`, cls: 'ne-legend-pct' })
+    row.createSpan({ text: slice.label, cls: 'ne-legend-name' })
+    row.createSpan({ text: formatCents(slice.value), cls: 'ne-legend-amt' })
+    row.createSpan({ text: `${percentOf(slice.value)}%`, cls: 'ne-legend-pct' })
   })
 
   return chart

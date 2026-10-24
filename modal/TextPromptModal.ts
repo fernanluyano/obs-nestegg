@@ -24,7 +24,7 @@ export class TextPromptModal extends Modal {
     const row = contentEl.createDiv('ne-btn-row')
     row.createEl('button', { text: t('ui.save'), cls: 'mod-cta' }).addEventListener('click', () => void this.submit())
     row.createEl('button', { text: t('ui.cancel') }).addEventListener('click', () => this.close())
-    setTimeout(() => { input.focus(); input.select() }, 50)
+    window.setTimeout(() => { input.focus(); input.select() }, 50)
   }
 
   private async submit() {

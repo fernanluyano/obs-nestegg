@@ -71,7 +71,7 @@ export class AddValuationModal extends Modal {
       })
     }
     // Selected, so typing a new value replaces the suggestion.
-    setTimeout(() => { valueInput.focus(); valueInput.select() }, 50)
+    window.setTimeout(() => { valueInput.focus(); valueInput.select() }, 50)
   }
 
   onClose() {

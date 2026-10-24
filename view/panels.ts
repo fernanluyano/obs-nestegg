@@ -24,12 +24,12 @@ export function buildMetricTile(
     tile.addClass('ne-metric--hero')
     if (variant !== 'neutral') tile.addClass(variant)
   }
-  tile.createEl('div', { text: label, cls: 'ne-metric-label' })
-  tile.createEl('div', {
+  tile.createDiv({ text: label, cls: 'ne-metric-label' })
+  tile.createDiv({
     text: metricText(cents, variant, signed),
     cls: variant === 'neutral' ? 'ne-metric-value' : `ne-metric-value ${variant}`,
   })
-  if (hint) tile.createEl('div', { text: hint, cls: 'ne-metric-hint' })
+  if (hint) tile.createDiv({ text: hint, cls: 'ne-metric-hint' })
   return tile
 }
 
@@ -45,6 +45,6 @@ export function buildCard(parent: HTMLElement, spec: CardSpec = {}): HTMLElement
   if (elevation === 'raised') classes.push('ne-card--raised')
   if (className) classes.push(className)
   const card = parent.createDiv(classes.join(' '))
-  if (title) card.createEl('div', { text: title, cls: 'ne-card-title' })
+  if (title) card.createDiv({ text: title, cls: 'ne-card-title' })
   return card
 }

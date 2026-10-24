@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_THEME, THEMES, THEME_IDS, isThemeId, paletteVars, parseTheme, themeCss, themeName } from "../../domain/themes";
+import { DEFAULT_THEME, allThemesCss,THEMES, THEME_IDS, isThemeId, paletteVars, parseTheme, themeCss, themeName } from "../../domain/themes";
 
 describe("themes", () => {
 	it("lists every theme once, starting with the one that follows Obsidian", () => {
@@ -46,7 +48,12 @@ describe("themes", () => {
 	it("emits one scoped rule per preset and nothing for the default", () => {
 		expect(themeCss(DEFAULT_THEME)).toBe("");
 		const css = themeCss("nord");
-		expect(css.startsWith(".ne-scope {")).toBe(true);
+		expect(css.startsWith('body[data-nestegg-theme="nord"] .ne-scope {')).toBe(true);
 		expect(css).toContain("--background-primary: #2e3440;");
+	});
+
+	it("ships every preset's rule in styles.css", () => {
+		const stylesheet = readFileSync(fileURLToPath(new URL("../../styles.css", import.meta.url)), "utf8");
+		expect(stylesheet).toContain(allThemesCss());
 	});
 });

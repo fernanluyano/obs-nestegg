@@ -13,7 +13,7 @@ export interface RenamePlan {
 
 export interface PlanContext {
 	snapshot: Snapshot;
-	read(path: string): Promise<string>;
+	read: (path: string) => Promise<string>;
 }
 
 export class RenameError extends Error {}

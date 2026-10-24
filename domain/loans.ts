@@ -77,7 +77,7 @@ export function loanDebt(account: Account, balanceCents: number, today: string):
 	const owedCents = Math.max(0, -balanceCents);
 	const schedule = loanSchedule(account, today);
 	const projectable = owedCents > 0 && account.interest !== undefined && schedule !== null;
-	const months = projectable ? Math.max(1, schedule!.monthsLeft) : 0;
+	const months = projectable ? Math.max(1, schedule.monthsLeft) : 0;
 	const extraCents = account.extraPaymentCents ?? 0;
 	const baseline = projectable ? projectLoan(owedCents, account.interest!, months) : null;
 	return {

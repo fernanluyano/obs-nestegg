@@ -1,5 +1,5 @@
-import { Notice, Plugin, PluginSettingTab, Setting } from 'obsidian'
-import { DEFAULT_THEME, THEMES, parseTheme, themeCss, themeName, type ThemeId } from '../domain/themes'
+import { Notice, Plugin, PluginSettingTab, Setting, type SettingDefinitionItem } from 'obsidian'
+import { DEFAULT_THEME, THEMES, THEME_ATTRIBUTE, parseTheme, themeName, type ThemeId } from '../domain/themes'
 import { t, tn } from '../labels'
 import type { Ledger } from '../services/Ledger'
 
@@ -9,14 +9,10 @@ interface StoredPrefs {
   theme?: string
 }
 
-const STYLE_ID = 'nestegg-theme'
-
+// The palettes themselves are static rules in styles.css, switched on by this body attribute.
 function applyTheme(theme: ThemeId): void {
-  let el = document.getElementById(STYLE_ID)
-  if (!el) {
-    el = document.head.createEl('style', { attr: { id: STYLE_ID } })
-  }
-  el.textContent = themeCss(theme)
+  if (theme === DEFAULT_THEME) document.body.removeAttribute(THEME_ATTRIBUTE)
+  else document.body.setAttribute(THEME_ATTRIBUTE, theme)
 }
 
 class NesteggSettingTab extends PluginSettingTab {
@@ -29,6 +25,38 @@ class NesteggSettingTab extends PluginSettingTab {
     super(plugin.app, plugin)
   }
 
+  // Obsidian 1.13+ renders (and indexes for search) these definitions and never calls display();
+  // display() below is the fallback for older versions, which the manifest still supports.
+  getSettingDefinitions(): SettingDefinitionItem[] {
+    return [
+      {
+        name: t('settings.autoValidate'),
+        desc: t('settings.autoValidateDesc'),
+        control: { type: 'toggle', key: 'autoValidate' },
+      },
+      {
+        name: t('theme.setting'),
+        desc: t('theme.settingDesc'),
+        control: { type: 'dropdown', key: 'theme', options: Object.fromEntries(THEMES.map(({ id }) => [id, themeName(id)])) },
+      },
+    ]
+  }
+
+  getControlValue(key: string): unknown {
+    return key === 'theme' ? this.current() : this.ledger.settings.current.autoValidateOnLoad
+  }
+
+  async setControlValue(key: string, value: unknown): Promise<void> {
+    if (key === 'theme') await this.choose(parseTheme(value))
+    else this.saveAutoValidate(value === true)
+  }
+
+  private saveAutoValidate(value: boolean): void {
+    this.ledger.settings.update({ autoValidateOnLoad: value }).catch((e: unknown) => {
+      new Notice(tn('notice.actionFailed', { reason: e instanceof Error ? e.message : String(e) }))
+    })
+  }
+
   display(): void {
     const { containerEl } = this
     containerEl.empty()
@@ -38,11 +66,7 @@ class NesteggSettingTab extends PluginSettingTab {
       .setDesc(t('settings.autoValidateDesc'))
       .addToggle(toggle => toggle
         .setValue(this.ledger.settings.current.autoValidateOnLoad)
-        .onChange((value) => {
-          this.ledger.settings.update({ autoValidateOnLoad: value }).catch((e: unknown) => {
-            new Notice(tn('notice.actionFailed', { reason: e instanceof Error ? e.message : String(e) }))
-          })
-        }))
+        .onChange((value) => { this.saveAutoValidate(value) }))
     new Setting(containerEl)
       .setName(t('theme.setting'))
       .setDesc(t('theme.settingDesc'))
@@ -66,5 +90,5 @@ export async function registerThemeSettings(plugin: Plugin, ledger: Ledger): Pro
     plugin.app.workspace.trigger('nestegg:refresh')
   }))
 
-  plugin.register(() => { document.getElementById(STYLE_ID)?.remove() })
+  plugin.register(() => { document.body.removeAttribute(THEME_ATTRIBUTE) })
 }

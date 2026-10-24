@@ -41,9 +41,9 @@ export function renderMultiDropdown(container: HTMLElement, o: DropdownOptions):
     panel.empty()
     const item = (text: string, checked: boolean, onClick: () => void) => {
       const row = panel.createDiv('ne-cat-item')
-      const check = row.createEl('span', { cls: 'ne-cat-check' + (checked ? ' is-checked' : '') })
+      const check = row.createSpan({ cls: 'ne-cat-check' + (checked ? ' is-checked' : '') })
       if (checked) check.setText('✓')
-      row.createEl('span', { text })
+      row.createSpan({ text })
       row.addEventListener('click', (e) => { e.stopPropagation(); onClick(); buildItems(); updateLabel(); o.onChange() })
     }
     item(o.allLabel, o.selected.size === 0, () => o.selected.clear())

@@ -71,7 +71,7 @@ function addBarButton(bar: HTMLElement, label: string, emphasised: boolean, onCl
 }
 
 function slideIn(backdrop: HTMLElement): void {
-  requestAnimationFrame(() => backdrop.addClass('is-open'))
+  window.requestAnimationFrame(() => backdrop.addClass('is-open'))
 }
 
 export function openSheetFrame(options: SheetFrameOptions): SheetFrame {
@@ -88,7 +88,7 @@ export function openSheetFrame(options: SheetFrameOptions): SheetFrame {
   if (leading) addBarButton(bar, leading.label, false, () => leading.onClick(close))
   else bar.createSpan('ne-sheet-spacer')
 
-  const titleEl = bar.createEl('span', { cls: 'ne-sheet-title', text: title })
+  const titleEl = bar.createSpan({ cls: 'ne-sheet-title', text: title })
 
   if (trailing) addBarButton(bar, trailing.label, true, () => trailing.onClick(close))
   else bar.createSpan('ne-sheet-spacer')
@@ -174,7 +174,7 @@ export function openFilterPanel(options: FilterPanelOptions): () => void {
   sheet.createDiv('ne-sheet-handle')
   const bar = sheet.createDiv('ne-sheet-bar')
   addBarButton(bar, t('ui.cancel'), false, () => { onCancel(); close() })
-  bar.createEl('span', { cls: 'ne-sheet-title', text: title })
+  bar.createSpan({ cls: 'ne-sheet-title', text: title })
   addBarButton(bar, t('detail.filterDone'), true, () => { onDone(); close() })
 
   options.buildBody(sheet.createDiv('ne-filter-sheet-body'))

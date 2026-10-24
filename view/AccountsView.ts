@@ -83,6 +83,8 @@ export class AccountsView extends ItemView {
     const balances = accountBalances(this.ledger.snapshot).filter(b => b.account.active)
     if (balances.length === 0) {
       card.createEl('p', { text: t('settings.noActiveAccounts'), cls: 'ne-settings-empty' })
+    } else {
+      card.addClass('ne-tiles')
     }
     for (const { account, balanceCents } of balances) {
       const isDebt = isLiability(account.accountType)

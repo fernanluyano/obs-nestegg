@@ -125,9 +125,9 @@ export class EntryFormModal extends Modal {
     // Text inputs raise the keyboard, so the modal moves up; selects and dates lower it again.
     this.contentEl.addEventListener('focusin', (event) => {
       const focused = event.target as HTMLElement
-      if (focused instanceof HTMLInputElement && (focused.type === 'text' || focused.type === 'number')) {
+      if (focused.instanceOf(HTMLInputElement) && (focused.type === 'text' || focused.type === 'number')) {
         this.containerEl.addClass(KEYBOARD_OPEN_CLASS)
-      } else if (focused instanceof HTMLSelectElement || (focused instanceof HTMLInputElement && focused.type === 'date')) {
+      } else if (focused.instanceOf(HTMLSelectElement) || (focused.instanceOf(HTMLInputElement) && focused.type === 'date')) {
         this.containerEl.removeClass(KEYBOARD_OPEN_CLASS)
       }
     })
@@ -288,13 +288,13 @@ export class EntryFormModal extends Modal {
     })
     this.refreshPlusSign()
     if (this.draft.type === 'debt') this.addInterestRow()
-    if (focusAmount) setTimeout(() => input.focus(), FOCUS_DELAY_MS) // wait for the modal open animation
+    if (focusAmount) window.setTimeout(() => input.focus(), FOCUS_DELAY_MS) // wait for the modal open animation
   }
 
   private addLabelled(label: string, buildControl: () => HTMLElement, required = false) {
     const row = this.fieldsBox.createDiv('ne-field-row')
     const caption = row.createEl('label', { text: label, cls: 'ne-field-label' })
-    if (required) caption.createEl('span', { text: '*', cls: 'ne-field-required', attr: { 'aria-hidden': 'true' } })
+    if (required) caption.createSpan({ text: '*', cls: 'ne-field-required', attr: { 'aria-hidden': 'true' } })
     const control = buildControl()
     control.addClass('ne-field-input')
     if (control instanceof HTMLSelectElement) row.createDiv('ne-select-wrapper').appendChild(control)

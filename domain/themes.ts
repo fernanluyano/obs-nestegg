@@ -130,13 +130,22 @@ export function paletteVars(p: Palette): Record<string, string> {
 	};
 }
 
+// The body attribute the plugin sets to the chosen theme's id; following Obsidian sets none.
+export const THEME_ATTRIBUTE = "data-nestegg-theme";
+
 // The stylesheet text for a theme: one rule on .ne-scope, the class every Nestegg view and dialog
-// carries. Following Obsidian needs none.
+// carries, active while the body carries the theme's id. Following Obsidian needs none.
 export function themeCss(id: ThemeId): string {
 	const theme: Theme = THEMES.find((entry) => entry.id === id)!;
 	if (!theme.palette) return "";
 	const body = Object.entries(paletteVars(theme.palette))
 		.map(([name, value]) => `  ${name}: ${value};`)
 		.join("\n");
-	return `.ne-scope {\n${body}\n}\n`;
+	return `body[${THEME_ATTRIBUTE}="${id}"] .ne-scope {\n${body}\n}\n`;
+}
+
+// What the "Themes" block at the end of styles.css must contain. Obsidian only loads a static
+// styles.css, so a theme added to THEMES needs this block pasted there; a test fails until it is.
+export function allThemesCss(): string {
+	return THEME_IDS.map(themeCss).filter(Boolean).join("\n");
 }

@@ -3111,8 +3111,8 @@ select.ne-add-wallet-input {
   background: color-mix(in srgb, var(--text-normal) 4%, transparent);
 }
 
-.ne-budget-cols {
-  border-top: none !important;
+.ne-budget-body .ne-budget-cols {
+  border-top: none;
   font-size: var(--font-ui-smaller);
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -3420,7 +3420,7 @@ select.ne-add-wallet-input {
 }
 
 /* Accounts and assets are laid out as a grid of tiles instead of one long list. */
-.ne-asset > .ne-card:has(.ne-wallet-entry) {
+.ne-asset > .ne-card.ne-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 12px;
@@ -3428,8 +3428,8 @@ select.ne-add-wallet-input {
   padding: 16px;
 }
 
-.ne-asset > .ne-card:has(.ne-wallet-entry) > .ne-card-title,
-.ne-asset > .ne-card:has(.ne-wallet-entry) > .ne-settings-empty {
+.ne-asset > .ne-card.ne-tiles > .ne-card-title,
+.ne-asset > .ne-card.ne-tiles > .ne-settings-empty {
   grid-column: 1 / -1;
   margin-bottom: 0;
 }
@@ -3454,8 +3454,7 @@ select.ne-add-wallet-input {
   flex: 0 0 auto;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  column-gap: 8px;
-  row-gap: 2px;
+  gap: 2px 8px;
 }
 
 .ne-wallet-entry .ne-wallet-row-info > * {
@@ -3499,5 +3498,162 @@ select.ne-add-wallet-input {
   font-size: 12px;
   color: var(--text-muted);
   cursor: pointer;
+}
+
+.ne-scope .is-clickable {
+  cursor: pointer;
+}
+
+/* Themes: generated from THEMES in domain/themes.ts (allThemesCss); a test fails when this block
+ * and that list drift apart. Obsidian only loads this static file, so the palettes live here and
+ * the plugin switches one on with the data-nestegg-theme attribute on body. */
+body[data-nestegg-theme="xcode-dark"] .ne-scope {
+  --ne-scheme: dark;
+  --background-primary: #1f1f24;
+  --background-primary-alt: #2a2a30;
+  --background-secondary: #2a2a30;
+  --background-secondary-alt: #2a2a30;
+  --background-modifier-border: #3b3b44;
+  --background-modifier-border-hover: color-mix(in srgb, #3b3b44 70%, #dfdfe0);
+  --background-modifier-hover: color-mix(in srgb, #dfdfe0 8%, transparent);
+  --background-modifier-form-field: #1f1f24;
+  --text-normal: #dfdfe0;
+  --text-muted: #a0a1a7;
+  --text-faint: #7f8c98;
+  --text-on-accent: #1f1f24;
+  --text-error: #ff8170;
+  --text-warning: #ffa14f;
+  --text-success: #67b7a4;
+  --interactive-normal: color-mix(in srgb, #2a2a30 88%, #dfdfe0);
+  --interactive-hover: color-mix(in srgb, #2a2a30 78%, #dfdfe0);
+  --interactive-accent: #6bdfff;
+  --interactive-accent-hover: color-mix(in srgb, #6bdfff 85%, white);
+  --color-red: #ff8170;
+  --color-orange: #ffa14f;
+  --color-yellow: #d9c97c;
+  --color-green: #67b7a4;
+  --color-cyan: #6bdfff;
+  --color-blue: #4eb0cc;
+  --color-purple: #b281eb;
+}
+
+body[data-nestegg-theme="tokyo-night"] .ne-scope {
+  --ne-scheme: dark;
+  --background-primary: #1a1b26;
+  --background-primary-alt: #24283b;
+  --background-secondary: #24283b;
+  --background-secondary-alt: #24283b;
+  --background-modifier-border: #3b4261;
+  --background-modifier-border-hover: color-mix(in srgb, #3b4261 70%, #c0caf5);
+  --background-modifier-hover: color-mix(in srgb, #c0caf5 8%, transparent);
+  --background-modifier-form-field: #1a1b26;
+  --text-normal: #c0caf5;
+  --text-muted: #9aa5ce;
+  --text-faint: #565f89;
+  --text-on-accent: #1a1b26;
+  --text-error: #f7768e;
+  --text-warning: #ff9e64;
+  --text-success: #9ece6a;
+  --interactive-normal: color-mix(in srgb, #24283b 88%, #c0caf5);
+  --interactive-hover: color-mix(in srgb, #24283b 78%, #c0caf5);
+  --interactive-accent: #7aa2f7;
+  --interactive-accent-hover: color-mix(in srgb, #7aa2f7 85%, white);
+  --color-red: #f7768e;
+  --color-orange: #ff9e64;
+  --color-yellow: #e0af68;
+  --color-green: #9ece6a;
+  --color-cyan: #7dcfff;
+  --color-blue: #7aa2f7;
+  --color-purple: #bb9af7;
+}
+
+body[data-nestegg-theme="catppuccin-mocha"] .ne-scope {
+  --ne-scheme: dark;
+  --background-primary: #1e1e2e;
+  --background-primary-alt: #2a2b3c;
+  --background-secondary: #2a2b3c;
+  --background-secondary-alt: #2a2b3c;
+  --background-modifier-border: #45475a;
+  --background-modifier-border-hover: color-mix(in srgb, #45475a 70%, #cdd6f4);
+  --background-modifier-hover: color-mix(in srgb, #cdd6f4 8%, transparent);
+  --background-modifier-form-field: #1e1e2e;
+  --text-normal: #cdd6f4;
+  --text-muted: #a6adc8;
+  --text-faint: #6c7086;
+  --text-on-accent: #1e1e2e;
+  --text-error: #f38ba8;
+  --text-warning: #fab387;
+  --text-success: #a6e3a1;
+  --interactive-normal: color-mix(in srgb, #2a2b3c 88%, #cdd6f4);
+  --interactive-hover: color-mix(in srgb, #2a2b3c 78%, #cdd6f4);
+  --interactive-accent: #cba6f7;
+  --interactive-accent-hover: color-mix(in srgb, #cba6f7 85%, white);
+  --color-red: #f38ba8;
+  --color-orange: #fab387;
+  --color-yellow: #f9e2af;
+  --color-green: #a6e3a1;
+  --color-cyan: #94e2d5;
+  --color-blue: #89b4fa;
+  --color-purple: #cba6f7;
+}
+
+body[data-nestegg-theme="gruvbox-dark"] .ne-scope {
+  --ne-scheme: dark;
+  --background-primary: #282828;
+  --background-primary-alt: #32302f;
+  --background-secondary: #32302f;
+  --background-secondary-alt: #32302f;
+  --background-modifier-border: #504945;
+  --background-modifier-border-hover: color-mix(in srgb, #504945 70%, #ebdbb2);
+  --background-modifier-hover: color-mix(in srgb, #ebdbb2 8%, transparent);
+  --background-modifier-form-field: #282828;
+  --text-normal: #ebdbb2;
+  --text-muted: #bdae93;
+  --text-faint: #7c6f64;
+  --text-on-accent: #282828;
+  --text-error: #fb4934;
+  --text-warning: #fe8019;
+  --text-success: #b8bb26;
+  --interactive-normal: color-mix(in srgb, #32302f 88%, #ebdbb2);
+  --interactive-hover: color-mix(in srgb, #32302f 78%, #ebdbb2);
+  --interactive-accent: #fe8019;
+  --interactive-accent-hover: color-mix(in srgb, #fe8019 85%, white);
+  --color-red: #fb4934;
+  --color-orange: #fe8019;
+  --color-yellow: #fabd2f;
+  --color-green: #b8bb26;
+  --color-cyan: #8ec07c;
+  --color-blue: #83a598;
+  --color-purple: #d3869b;
+}
+
+body[data-nestegg-theme="nord"] .ne-scope {
+  --ne-scheme: dark;
+  --background-primary: #2e3440;
+  --background-primary-alt: #3b4252;
+  --background-secondary: #3b4252;
+  --background-secondary-alt: #3b4252;
+  --background-modifier-border: #4c566a;
+  --background-modifier-border-hover: color-mix(in srgb, #4c566a 70%, #eceff4);
+  --background-modifier-hover: color-mix(in srgb, #eceff4 8%, transparent);
+  --background-modifier-form-field: #2e3440;
+  --text-normal: #eceff4;
+  --text-muted: #c5cddb;
+  --text-faint: #7b88a1;
+  --text-on-accent: #2e3440;
+  --text-error: #bf616a;
+  --text-warning: #d08770;
+  --text-success: #a3be8c;
+  --interactive-normal: color-mix(in srgb, #3b4252 88%, #eceff4);
+  --interactive-hover: color-mix(in srgb, #3b4252 78%, #eceff4);
+  --interactive-accent: #88c0d0;
+  --interactive-accent-hover: color-mix(in srgb, #88c0d0 85%, white);
+  --color-red: #bf616a;
+  --color-orange: #d08770;
+  --color-yellow: #ebcb8b;
+  --color-green: #a3be8c;
+  --color-cyan: #8fbcbb;
+  --color-blue: #81a1c1;
+  --color-purple: #b48ead;
 }
 

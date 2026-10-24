@@ -105,10 +105,8 @@ export class TransactionsView extends ItemView {
   }
 
   private filterHost(): FilterHost {
-    const view = this
-    return {
-      get filters() { return view.filters },
-      set filters(next) { view.filters = next },
+    const host: FilterHost = {
+      filters: this.filters,
       entries: this.entries,
       index: this.ledger.store.index,
       accounts: this.ledger.snapshot.accounts.map(record => record.account),
@@ -117,6 +115,13 @@ export class TransactionsView extends ItemView {
       rerender: () => { void this.render() },
       register: (undo) => this.teardown.push(undo),
     }
+    // The controls read and replace host.filters, which must stay the view's own field.
+    Object.defineProperty(host, 'filters', {
+      get: () => this.filters,
+      set: (next: DetailFilters) => { this.filters = next },
+      enumerable: true,
+    })
+    return host
   }
 
   async render() {
@@ -209,8 +214,8 @@ export class TransactionsView extends ItemView {
 
     const { incomeCents, expenseCents } = subtotals(rows, index)
     this.totalsLine.empty()
-    this.totalsLine.createEl('span', { text: `${t('detail.subtotalExpense')}: ${formatCents(expenseCents)}`, cls: 'ne-subtotal-expense' })
-    this.totalsLine.createEl('span', { text: `${t('detail.subtotalIncome')}: ${formatCents(incomeCents)}`, cls: 'ne-subtotal-income' })
+    this.totalsLine.createSpan({ text: `${t('detail.subtotalExpense')}: ${formatCents(expenseCents)}`, cls: 'ne-subtotal-expense' })
+    this.totalsLine.createSpan({ text: `${t('detail.subtotalIncome')}: ${formatCents(incomeCents)}`, cls: 'ne-subtotal-income' })
   }
 
   private togglePick(key: string) {

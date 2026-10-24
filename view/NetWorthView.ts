@@ -109,7 +109,7 @@ export class NetWorthView extends ItemView {
     const wrap = contentEl.createDiv('ne-assets-charts' + (byType.size > 0 ? '' : ' is-single'))
     const card = buildCard(wrap)
     const header = card.createDiv('ne-card-header-row')
-    header.createEl('div', { text: t('networth.title'), cls: 'ne-card-title' })
+    header.createDiv({ text: t('networth.title'), cls: 'ne-card-title' })
 
     const colors = netWorthPalette()
     const legend = card.createDiv('ne-networth-legend')
@@ -197,7 +197,7 @@ export class NetWorthView extends ItemView {
 
     const card = buildCard(contentEl.createDiv('ne-assets-charts is-single'))
     const header = card.createDiv('ne-card-header-row')
-    header.createEl('div', { text: t('cash.title'), cls: 'ne-card-title' })
+    header.createDiv({ text: t('cash.title'), cls: 'ne-card-title' })
 
     const change = formatChange(now.changeCents, now.changeRatio)
     const stats = card.createDiv('ne-networth-legend')

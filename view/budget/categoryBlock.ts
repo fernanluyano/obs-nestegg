@@ -108,7 +108,7 @@ function renderPaymentAccount(chip: HTMLElement, ctx: ActionContext, sub: string
 function renderSubcategory(tags: HTMLElement, ctx: ActionContext, category: Category, sub: Subcategory): void {
   const { ledger } = ctx
   const chip = tags.createDiv('ne-category-tag')
-  chip.createEl('span', { text: sub.name })
+  chip.createSpan({ text: sub.name })
   renderTypeSelect(chip, ctx, sub)
   if (sub.type === 'debt') renderPaymentAccount(chip, ctx, sub.name)
   if (sub.name === miscName(category.name)) return // Misc follows its category: renamed and removed with it

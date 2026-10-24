@@ -109,7 +109,7 @@ export function createTagField(
     }
   })
   field.addEventListener('blur', () => {
-    setTimeout(() => menu.hide(), DROPDOWN_HIDE_DELAY_MS)
+    window.setTimeout(() => menu.hide(), DROPDOWN_HIDE_DELAY_MS)
     commit()
   })
 

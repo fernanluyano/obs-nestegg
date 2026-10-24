@@ -66,7 +66,7 @@ export class EditAssetModal extends Modal {
     nameInput.addEventListener('keydown', (e: Event) => {
       if ((e as KeyboardEvent).key === 'Enter') { e.preventDefault(); void submit() }
     })
-    setTimeout(() => { nameInput.focus(); nameInput.select() }, 50)
+    window.setTimeout(() => { nameInput.focus(); nameInput.select() }, 50)
   }
 
   onClose() {

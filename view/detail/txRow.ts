@@ -33,8 +33,8 @@ export function renderTxRow(
   setIcon(avatar, type ? TYPE_ICONS[type] : 'circle-dashed')
 
   const stack = row.createDiv('ne-tx-row-stack')
-  stack.createEl('div', { text: rowTitle(entry), cls: 'ne-tx-category' })
-  const accountEl = stack.createEl('div', { cls: 'ne-tx-wallet' })
+  stack.createDiv({ text: rowTitle(entry), cls: 'ne-tx-category' })
+  const accountEl = stack.createDiv({ cls: 'ne-tx-wallet' })
   if (type) accountEl.createSpan({ text: `${t(`label.type.${type}`)} · `, cls: 'ne-tx-type-text' })
   accountLabels(entry).forEach((name, i) => {
     if (i > 0) accountEl.appendText(' → ')
@@ -53,12 +53,12 @@ export function renderTxRow(
       chip.dataset['tag'] = tag
     }
   } else if (display.kind === 'note') {
-    line3.createEl('span', { text: display.text, cls: 'ne-tx-note' })
+    line3.createSpan({ text: display.text, cls: 'ne-tx-note' })
   } else {
-    line3.createEl('span', { text: '—', cls: 'ne-tx-empty' })
+    line3.createSpan({ text: '—', cls: 'ne-tx-empty' })
   }
 
   const amount = amountFigure(entry, type)
-  row.createEl('span', { text: amount.text, cls: amount.className })
+  row.createSpan({ text: amount.text, cls: amount.className })
   row.addEventListener('click', onClick)
 }

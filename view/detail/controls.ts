@@ -59,7 +59,7 @@ export function dateRangeInputs(row: HTMLElement, host: FilterHost, onChange: ()
     input.addEventListener('change', () => { set(input.value || null); onChange() })
   }
   make(host.filters.dateFrom ?? bounds.from, 'date-input-from', (v) => { host.filters.dateFrom = v })
-  row.createEl('span', { text: '─', cls: 'ne-date-sep' })
+  row.createSpan({ text: '─', cls: 'ne-date-sep' })
   make(host.filters.dateTo ?? bounds.to, 'date-input-to', (v) => { host.filters.dateTo = v })
 }
 

@@ -38,9 +38,9 @@ export function renderDayHeader(
 ): void {
   const header = container.createDiv('ne-day-header')
   header.dataset['testid'] = 'day-header'
-  header.createEl('span', { text: monthAndDay(date), cls: 'ne-day-date' })
+  header.createSpan({ text: monthAndDay(date), cls: 'ne-day-date' })
   const list = header.createDiv('ne-day-balances')
   for (const [account, cents] of balances ?? []) {
-    list.createEl('span', { text: formatCents(cents), cls: 'ne-day-amount' }).style.color = colorOf(colors, account)
+    list.createSpan({ text: formatCents(cents), cls: 'ne-day-amount' }).style.color = colorOf(colors, account)
   }
 }

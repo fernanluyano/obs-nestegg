@@ -13,5 +13,5 @@ export interface FilterHost {
   refreshList(): void
   // Rebuild the whole view, for changes that alter which controls exist.
   rerender(): void
-  register(cleanup: () => void): void
+  register: (cleanup: () => void) => void
 }

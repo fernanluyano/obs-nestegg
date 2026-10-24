@@ -43,7 +43,7 @@ export class IssueReviewModal extends Modal {
   private drawSections(parent: HTMLElement) {
     for (const [section, findings] of groupBySection(this.findings)) {
       const block = parent.createDiv('ne-validation-section')
-      block.createEl('span', { text: t(section), cls: 'ne-validation-section-label' })
+      block.createSpan({ text: t(section), cls: 'ne-validation-section-label' })
       for (const finding of findings) this.drawFinding(block, finding)
     }
   }

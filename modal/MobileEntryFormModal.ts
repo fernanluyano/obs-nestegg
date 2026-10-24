@@ -43,7 +43,7 @@ export class MobileEntryFormModal extends EntryFormModal {
     this.containerEl.addClass('ne-scope')
     this.buildScreen()
     // iOS focuses the first button on open; blur it once the animation is over.
-    setTimeout(() => (document.activeElement as HTMLElement)?.blur(), 100)
+    window.setTimeout(() => (document.activeElement as HTMLElement)?.blur(), 100)
   }
 
   private buildScreen() {
@@ -54,7 +54,7 @@ export class MobileEntryFormModal extends EntryFormModal {
 
     const topBar = contentEl.createDiv('ne-phone-top-bar')
     const closeButton = topBar.createEl('button', { cls: 'ne-phone-top-btn', text: '✕' })
-    const title = topBar.createEl('span', {
+    const title = topBar.createSpan({
       cls: 'ne-phone-top-title',
       text: this.target ? t('modal.editTitle') : t('modal.addTitle'),
     })
@@ -229,7 +229,7 @@ export class MobileEntryFormModal extends EntryFormModal {
 
     // Merchant: free text, with the known merchants offered as suggestions.
     const merchantRow = this.rowsBox.createDiv('ne-phone-row')
-    merchantRow.createEl('span', { cls: 'ne-phone-row-label', text: t('modal.merchant') })
+    merchantRow.createSpan({ cls: 'ne-phone-row-label', text: t('modal.merchant') })
     const merchantField = merchantRow.createEl('input', {
       type: 'text', cls: 'ne-phone-note-input', placeholder: t('modal.merchant'),
     })
@@ -245,7 +245,7 @@ export class MobileEntryFormModal extends EntryFormModal {
     // Tags: the chips (or a placeholder) in one row; a tap anywhere on it opens the multi-select sheet.
     const tagRow = this.rowsBox.createDiv('ne-phone-row')
     tagRow.dataset['testid'] = 'mobile-tag-row'
-    tagRow.createEl('span', { cls: 'ne-phone-row-label', text: t('modal.tags') })
+    tagRow.createSpan({ cls: 'ne-phone-row-label', text: t('modal.tags') })
     const tagHolder = tagRow.createDiv('ne-tag-input-wrapper')
     const tagChips = tagHolder.createDiv('ne-phone-tag-chips')
     tagChips.dataset['testid'] = 'mobile-tag-chips'
@@ -279,7 +279,7 @@ export class MobileEntryFormModal extends EntryFormModal {
     drawTagChips()
 
     const noteRow = this.rowsBox.createDiv('ne-phone-row')
-    noteRow.createEl('span', { cls: 'ne-phone-row-label', text: t('modal.note') })
+    noteRow.createSpan({ cls: 'ne-phone-row-label', text: t('modal.note') })
     const noteField = noteRow.createEl('input', {
       type: 'text',
       cls: 'ne-phone-note-input',
@@ -316,8 +316,8 @@ export class MobileEntryFormModal extends EntryFormModal {
     onRowTap?: () => void,
   ): HTMLElement {
     const row = parent.createDiv('ne-phone-row')
-    row.createEl('span', { cls: 'ne-phone-row-label', text: label })
-    const shown = row.createEl('span', { cls: 'ne-phone-row-value', text: shownValue })
+    row.createSpan({ cls: 'ne-phone-row-label', text: label })
+    const shown = row.createSpan({ cls: 'ne-phone-row-value', text: shownValue })
     row.appendChild(buildControl(shown))
     if (onRowTap) {
       row.addEventListener('click', () => {
@@ -340,9 +340,9 @@ export class MobileEntryFormModal extends EntryFormModal {
     const row = parent.createDiv('ne-phone-row ne-phone-choice-row')
     row.setAttribute('role', 'button')
     row.tabIndex = 0
-    const caption = row.createEl('span', { cls: 'ne-phone-row-label', text: label })
-    if (required) caption.createEl('span', { text: '*', cls: 'ne-field-required', attr: { 'aria-hidden': 'true' } })
-    const shown = row.createEl('span', { cls: 'ne-phone-row-value', text: shownValue })
+    const caption = row.createSpan({ cls: 'ne-phone-row-label', text: label })
+    if (required) caption.createSpan({ text: '*', cls: 'ne-field-required', attr: { 'aria-hidden': 'true' } })
+    const shown = row.createSpan({ cls: 'ne-phone-row-value', text: shownValue })
 
     const openSheet = () => {
       this.closeKeypad()

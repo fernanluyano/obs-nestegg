@@ -107,7 +107,7 @@ export class BucketsModal extends Modal {
     const buttons = editor.createDiv('ne-btn-row')
     buttons.createEl('button', { text: t('ui.save'), cls: 'mod-cta' }).addEventListener('click', submit)
     buttons.createEl('button', { text: t('ui.cancel') }).addEventListener('click', () => { this.editing = null; this.render() })
-    setTimeout(() => input.focus(), 50)
+    window.setTimeout(() => input.focus(), 50)
   }
 
   private async submitEditor(name: string, action: Action, value: string) {
@@ -120,8 +120,9 @@ export class BucketsModal extends Modal {
     }
     const amount = parseAmountText(value)
     if (!amount.ok) return void new Notice(t(amount.error))
-    const move = action === 'moveIn' ? buckets.moveIn : buckets.moveOut
-    return this.apply(() => move.call(buckets, this.account, name, amount.cents))
+    return this.apply(() => action === 'moveIn'
+      ? buckets.moveIn(this.account, name, amount.cents)
+      : buckets.moveOut(this.account, name, amount.cents))
   }
 
   private renderCreate(parent: HTMLElement) {

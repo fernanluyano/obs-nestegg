@@ -75,7 +75,7 @@ export function drawPageHeader(parent: HTMLElement, options: PageHeaderOptions):
     if (frozen) monthBox.addClass('is-disabled')
 
     const earlier = monthBox.createEl('button', { text: '‹', cls: 'ne-nav-btn', attr: { 'aria-label': t('ui.previousMonth') } })
-    monthBox.createEl('span', { text: month, cls: 'ne-month-label' })
+    monthBox.createSpan({ text: month, cls: 'ne-month-label' })
     const later = monthBox.createEl('button', { text: '›', cls: 'ne-nav-btn', attr: { 'aria-label': t('ui.nextMonth') } })
     earlier.disabled = frozen
     later.disabled = frozen || isFutureMonth(shiftMonth(month, 1))

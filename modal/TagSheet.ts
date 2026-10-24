@@ -24,7 +24,7 @@ export function openTagSheet(options: TagSheetOptions): () => void {
   const bar = sheet.createDiv('ne-sheet-bar')
   const cancelButton = bar.createEl('button', { cls: 'ne-sheet-btn', text: t('ui.cancel') })
   cancelButton.dataset['testid'] = 'tag-picker-cancel'
-  bar.createEl('span', { cls: 'ne-sheet-title', text: t('tagSheet.title') })
+  bar.createSpan({ cls: 'ne-sheet-title', text: t('tagSheet.title') })
   const doneButton = bar.createEl('button', {
     cls: 'ne-sheet-btn ne-sheet-btn--done',
     text: t('modal.done'),
@@ -150,7 +150,7 @@ export function openTagSheet(options: TagSheetOptions): () => void {
 
   drawChips()
   drawAddControls()
-  requestAnimationFrame(() => backdrop.addClass('is-open'))
+  window.requestAnimationFrame(() => backdrop.addClass('is-open'))
 
   return close
 }
