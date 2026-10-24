@@ -1,7 +1,7 @@
 import { setIcon } from 'obsidian'
 import type { TransactionType, LedgerEntry } from '../../domain/types'
 import { t } from '../../labels'
-import { buildAccountParts, buildAmountDisplay, buildLine3Display, buildTitleText } from '../detailRow'
+import { accountLabels, amountFigure, detailLine, rowTitle } from '../txRowText'
 
 const TYPE_ICONS: Record<TransactionType, string> = {
   expense: 'arrow-up-right',
@@ -33,10 +33,10 @@ export function renderTxRow(
   setIcon(avatar, type ? TYPE_ICONS[type] : 'circle-dashed')
 
   const stack = row.createDiv('ne-tx-row-stack')
-  stack.createEl('div', { text: buildTitleText(entry), cls: 'ne-tx-category' })
+  stack.createEl('div', { text: rowTitle(entry), cls: 'ne-tx-category' })
   const accountEl = stack.createEl('div', { cls: 'ne-tx-wallet' })
   if (type) accountEl.createSpan({ text: `${t(`label.type.${type}`)} · `, cls: 'ne-tx-type-text' })
-  buildAccountParts(entry).forEach((name, i) => {
+  accountLabels(entry).forEach((name, i) => {
     if (i > 0) accountEl.appendText(' → ')
     const part = accountEl.createSpan({ text: name })
     const color = colors.get(name)
@@ -44,7 +44,7 @@ export function renderTxRow(
   })
 
   const line3 = stack.createDiv('ne-tx-row-line3')
-  const display = buildLine3Display(entry)
+  const display = detailLine(entry)
   if (display.kind === 'tags') {
     const tagsEl = line3.createSpan('ne-tx-tags')
     for (const tag of display.tags) {
@@ -58,7 +58,7 @@ export function renderTxRow(
     line3.createEl('span', { text: '—', cls: 'ne-tx-empty' })
   }
 
-  const amount = buildAmountDisplay(entry, type)
+  const amount = amountFigure(entry, type)
   row.createEl('span', { text: amount.text, cls: amount.className })
   row.addEventListener('click', onClick)
 }

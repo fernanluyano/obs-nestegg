@@ -6,7 +6,7 @@ import { t, tn } from '../labels'
 import type { Ledger } from '../services/Ledger'
 import { findAccount } from '../snapshot/queries'
 import { parseValuationForm } from './assetState'
-import { ConfirmModal } from './ConfirmModal'
+import { ConfirmDialog } from './ConfirmDialog'
 
 // The dated values of one investing account: the list with Edit and Delete on every row, and a
 // form that adds a new entry or, after Edit, changes the chosen one.
@@ -62,7 +62,7 @@ export class InvestingEntriesModal extends Modal {
   private confirmDelete(entry: Valuation, count: number) {
     if (count <= 1) { new Notice(t('investing.lastEntry')); return }
     const message = tn('investing.confirmDelete', { date: entry.date, value: formatCents(entry.valueCents), name: this.account })
-    new ConfirmModal(this.app, message, async () => {
+    new ConfirmDialog(this.app, message, async () => {
       const done = await this.run(() => this.ledger.accounts.removeEntry(this.account, entry.date), tn('notice.entryDeleted', { name: this.account }))
       if (done && this.editing === entry.date) this.editing = null
       this.render()

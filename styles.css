@@ -1,18 +1,19 @@
-/* Design tokens. Every colour derives from the Obsidian variables in effect (its --color-*
- * palette and text/background tokens), so light, dark and community themes all carry through.
- * They live on body, not :root: the theme tokens are declared on body and are unreachable from
- * :root, which would make each var() reference invalid.
+/* Design tokens.
+ * Every colour is derived from the Obsidian variables currently in effect (the --color-* palette
+ * plus the text and background tokens), so light, dark and community themes all carry through.
+ * The tokens are declared on body rather than :root because Obsidian declares its own tokens on
+ * body; from :root those var() references would resolve to nothing.
  *
- * .ne-scope is every Nestegg view and dialog. A Nestegg theme (domain/themes.ts) overrides the
- * Obsidian variables on .ne-scope only, so the tokens are declared there as well: a custom
- * property resolves where it is declared, and would otherwise keep the body's values. */
+ * .ne-scope marks every Nestegg view and dialog. A Nestegg theme (domain/themes.ts) overrides the
+ * Obsidian variables on .ne-scope alone, so the tokens are declared there too: a custom property
+ * is resolved where it is declared and would otherwise keep the values computed on body. */
 body,
 .ne-scope {
-  /* Mixing in --text-normal darkens the hue on light themes and lightens it on dark ones,
-   * keeping money colours readable without a per-theme override. */
+  /* Blending in --text-normal darkens a hue on light themes and lightens it on dark ones, which
+   * keeps the money colours legible without a per-theme override. */
   --ne-ink-mix: 14%;
 
-  /* Money semantics */
+  /* What each kind of money is shown in */
   --ne-income:   color-mix(in srgb, var(--color-green)  calc(100% - var(--ne-ink-mix)), var(--text-normal));
   --ne-expense:  color-mix(in srgb, var(--color-orange) calc(100% - var(--ne-ink-mix)), var(--text-normal));
   --ne-bank:     color-mix(in srgb, var(--color-blue)   calc(100% - var(--ne-ink-mix)), var(--text-normal));
@@ -22,38 +23,36 @@ body,
   --ne-payment:  color-mix(in srgb, var(--color-purple) calc(100% - var(--ne-ink-mix)), var(--text-normal));
   --ne-refund:   color-mix(in srgb, var(--ne-income) 70%, var(--text-normal));
 
-  /* Tints: semi-transparent so a chip stays visible on a default, hovered or selected row. */
+  /* Translucent washes, so a chip stays visible on a plain, hovered or selected row */
   --ne-income-tint:   color-mix(in srgb, var(--ne-income)   16%, transparent);
   --ne-expense-tint:  color-mix(in srgb, var(--ne-expense)  16%, transparent);
   --ne-bank-tint:     color-mix(in srgb, var(--ne-bank)     16%, transparent);
   --ne-credit-tint:   color-mix(in srgb, var(--ne-credit)   16%, transparent);
   --ne-transfer-tint: color-mix(in srgb, var(--ne-transfer) 16%, transparent);
-  --ne-payment-tint:  color-mix(in srgb, var(--ne-payment)  16%, transparent);
   --ne-neutral-tint:  color-mix(in srgb, var(--text-normal) 12%, transparent);
 
-  /* Stronger tints for the active filter pill, which sits on sheet and header backgrounds. */
+  /* Heavier washes for the selected filter pill, which sits on sheet and header backgrounds */
   --ne-income-tint-strong:   color-mix(in srgb, var(--ne-income)   28%, transparent);
   --ne-expense-tint-strong:  color-mix(in srgb, var(--ne-expense)  28%, transparent);
-  --ne-bank-tint-strong:     color-mix(in srgb, var(--ne-bank)     28%, transparent);
   --ne-credit-tint-strong:   color-mix(in srgb, var(--ne-credit)   28%, transparent);
   --ne-transfer-tint-strong: color-mix(in srgb, var(--ne-transfer) 28%, transparent);
   --ne-cash-tint-strong:     color-mix(in srgb, var(--ne-cash)     28%, transparent);
   --ne-accent-tint:          color-mix(in srgb, var(--interactive-accent) 14%, transparent);
   --ne-accent-tint-strong:   color-mix(in srgb, var(--interactive-accent) 28%, transparent);
 
-  /* Surfaces: the view sits on --background-primary; cards lift one step above it. */
+  /* Surfaces: a view rests on --background-primary and its cards sit one step above it */
   --ne-surface: var(--background-secondary);
   --ne-surface-hover: var(--background-modifier-hover);
   --ne-hairline: var(--background-modifier-border);
 
-  /* Shape and rhythm */
+  /* Corners, spacing and the minimum touch target */
   --ne-radius-sm: 8px;
   --ne-radius-md: 12px;
   --ne-radius-lg: 16px;
   --ne-gutter: 20px;
   --ne-tap: 44px;
 
-  /* Elevation: kept minimal, cards are defined by their surface and hairline, not by shadow. */
+  /* Shadows are kept light: cards are set apart by surface and hairline instead */
   --ne-card-shadow: none;
   --ne-card-shadow-raised: 0 2px 10px rgba(0, 0, 0, 0.10);
   --ne-shadow-dropdown: 0 6px 18px rgba(0, 0, 0, 0.14);
@@ -67,39 +66,39 @@ body.is-mobile .ne-scope {
   --ne-gutter: 14px;
 }
 
-/* A themed view paints its own background; dialogs keep Obsidian's backdrop. */
+/* A themed view paints its own background; dialogs keep Obsidian's dimmed backdrop. */
 .view-content.ne-scope {
-  background: var(--background-primary);
   color: var(--text-normal);
+  background: var(--background-primary);
 }
 
-/* ── Plugin Styles ── */
+/* ── Selection behaviour ── */
 
-/* Allow text selection in all Nestegg views (Obsidian sets user-select: none on leaves) */
+/* Obsidian turns text selection off on workspace leaves; Nestegg's views switch it back on. */
 .ne-dashboard,
 .ne-detail,
 .ne-asset {
-  user-select: text;
   -webkit-user-select: text;
+  user-select: text;
 }
 
-/* Prevent native long-press copy/callout on interactive elements */
+/* Long-pressing a row or a chart must not open the native copy / callout menu. */
 .ne-tx-row,
 .ne-chart-wrap,
 .ne-pie-wrap,
 .ne-pie-canvas-wrap,
 canvas {
   -webkit-touch-callout: none;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
 }
 
-/* ── Modal ── */
+/* ── Entry form modal ── */
 
 @media (pointer: coarse) {
-  /* TransactionModal: keep modal at top once user starts interacting.
-     Class added by JS on first focusin — stays until modal closes.
-     Avoids layout jumping when switching between keyboard/picker fields (select, date). */
+  /* Once the user starts typing, the form stays pinned to the top. The class is added on the first
+     focusin and kept until the modal closes, so moving on to a select or date field does not make
+     the modal jump. */
   .modal-container.ne-modal-keyboard-open {
     align-items: flex-start;
     padding-top: 20px;
@@ -109,104 +108,104 @@ canvas {
     max-height: 55vh;
     overflow-y: auto;
   }
-
 }
 
-/* ── Mobile full-screen transaction modal ── */
+/* ── Phone entry form: full-screen ── */
 
-/* Tripled .ne-transaction-modal-container beats Obsidian's
+/* The container class is repeated three times in these two rules so they outrank Obsidian's
    body.is-phone .modal-container (0,2,1) and body.is-phone .modal-container .modal (0,3,1). */
-.ne-transaction-modal-container.ne-transaction-modal-container.ne-transaction-modal-container {
-  padding: 0;
+.ne-entry-form-container.ne-entry-form-container.ne-entry-form-container {
   align-items: stretch;
+  padding: 0;
 }
 
-.ne-transaction-modal-container.ne-transaction-modal-container.ne-transaction-modal-container .modal {
+.ne-entry-form-container.ne-entry-form-container.ne-entry-form-container .modal {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 100%;
   height: 100%;
   max-height: 100%;
-  border-radius: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  border-radius: 0;
 }
 
-.ne-transaction-modal-container .modal-close-button {
+.ne-entry-form-container .modal-close-button {
   display: none;
 }
 
-/* Hidden native date input used to trigger the mobile date picker on tap */
+/* A native date input kept out of sight; tapping the date row focuses it to raise the OS picker. */
 .ne-hidden-date-trigger {
   position: absolute;
-  opacity: 0;
   width: 0;
   height: 0;
+  opacity: 0;
   pointer-events: none;
 }
 
-.ne-mobile-content {
+.ne-phone-content {
+  position: relative;
   display: flex;
-  flex-direction: column;
   flex: 1;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  position: relative;
 }
 
-/* Top bar — safe area handled via padding-top only; height is auto to avoid double-offset */
-.ne-mobile-top-bar {
+/* Title bar. Only padding-top accounts for the safe area; the height stays automatic so the
+   inset is not counted twice. */
+.ne-phone-top-bar {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
-  padding: calc(env(safe-area-inset-top, 0px) + 8px) 8px 6px;
   min-height: 44px;
   max-height: calc(56px + env(safe-area-inset-top, 0px));
-  flex-shrink: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 8px 6px;
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-/* Both side buttons are fixed width so the title stays centered */
-.ne-mobile-top-btn {
-  background: none;
-  border: none;
-  color: var(--text-normal);
-  font-size: 13px;
-  flex: 0 0 44px;
-  height: 44px;
-  cursor: pointer;
+/* Both side buttons have the same fixed width, which keeps the title centred. */
+.ne-phone-top-btn {
+  position: relative;
   display: flex;
+  flex: 0 0 44px;
   align-items: center;
   justify-content: center;
+  height: 44px;
+  border: none;
   outline: none;
   box-shadow: none;
-  position: relative;
+  font-size: 13px;
+  color: var(--text-normal);
+  background: none;
+  cursor: pointer;
 }
 
-/* 32×32 visible hit zone centred inside the 44×44 touch area */
-.ne-mobile-top-btn::after {
+/* The visible 32×32 pressed area sits centred inside the 44×44 touch target. */
+.ne-phone-top-btn::after {
   content: '';
   position: absolute;
+  top: 50%;
+  left: 50%;
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  top: 50%;
-  left: 50%;
   transform: translate(-50%, -50%);
   transition: background 0.1s;
 }
 
-.ne-mobile-top-btn:active::after {
+.ne-phone-top-btn:active::after {
   background: var(--background-modifier-hover);
 }
 
-.ne-mobile-top-confirm {
-  color: var(--interactive-accent);
+.ne-phone-top-confirm {
   font-weight: 600;
+  color: var(--interactive-accent);
 }
 
-.ne-mobile-top-title {
-  flex: 1;
+.ne-phone-top-title {
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   gap: 4px;
@@ -217,229 +216,228 @@ canvas {
 
 .ne-modal-title-icon {
   display: flex;
-  align-items: center;
   flex-shrink: 0;
+  align-items: center;
 }
 .ne-modal-title-icon svg {
   width: 14px;
   height: 14px;
 }
 
-/* Type tabs */
-.ne-mobile-tabs {
+/* Transaction type tabs */
+.ne-phone-tabs {
   display: flex;
   flex-shrink: 0;
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-/* Doubled .ne-transaction-modal-container so .ne-mobile-tab beats Obsidian's
-   body.is-phone .modal-container button:hover (0,3,2) without !important. */
-.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab {
+/* The container class is doubled so the tab outranks Obsidian's
+   body.is-phone .modal-container button:hover (0,3,2) without needing !important. */
+.ne-entry-form-container.ne-entry-form-container .ne-phone-tab {
+  position: relative;
   flex: 1;
-  background: none;
+  padding: 14px 10px;
   border: none;
   border-radius: 0;
-  box-shadow: none;
   outline: none;
-  padding: 14px 10px;
+  box-shadow: none;
   font-size: 13px;
   color: var(--text-muted);
+  background: none;
   cursor: pointer;
-  position: relative;
   -webkit-tap-highlight-color: transparent;
 }
 
-.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab:hover,
-.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab:active,
-.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab:focus,
-.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab:focus-visible {
-  background: none;
+.ne-entry-form-container.ne-entry-form-container .ne-phone-tab:hover,
+.ne-entry-form-container.ne-entry-form-container .ne-phone-tab:active,
+.ne-entry-form-container.ne-entry-form-container .ne-phone-tab:focus,
+.ne-entry-form-container.ne-entry-form-container .ne-phone-tab:focus-visible {
   outline: none;
   box-shadow: none;
   color: var(--text-muted);
+  background: none;
 }
 
-.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab.is-active,
-.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab.is-active:hover,
-.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab.is-active:active,
-.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab.is-active:focus,
-.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-tab.is-active:focus-visible {
-  background: none;
+.ne-entry-form-container.ne-entry-form-container .ne-phone-tab.is-active,
+.ne-entry-form-container.ne-entry-form-container .ne-phone-tab.is-active:hover,
+.ne-entry-form-container.ne-entry-form-container .ne-phone-tab.is-active:active,
+.ne-entry-form-container.ne-entry-form-container .ne-phone-tab.is-active:focus,
+.ne-entry-form-container.ne-entry-form-container .ne-phone-tab.is-active:focus-visible {
   outline: none;
   box-shadow: none;
-  color: var(--interactive-accent);
   font-weight: 600;
+  color: var(--interactive-accent);
+  background: none;
 }
 
-.ne-mobile-tab.is-active::after {
+.ne-phone-tab.is-active::after {
   content: '';
   position: absolute;
+  right: 12px;
   bottom: 0;
   left: 12px;
-  right: 12px;
   height: 2px;
-  background: var(--interactive-accent);
   border-radius: 1px;
+  background: var(--interactive-accent);
 }
 
-/* Amount display */
-.ne-mobile-amount-area {
-  padding: 10px 20px 8px;
-  text-align: center;
+/* The big amount */
+.ne-phone-amount-area {
   flex-shrink: 0;
+  padding: 10px 20px 8px;
   border-bottom: 1px solid var(--background-modifier-border);
+  text-align: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-.ne-mobile-amount-area:active {
+.ne-phone-amount-area:active {
   background: var(--background-modifier-hover);
 }
 
-.ne-mobile-amount-display {
+.ne-phone-amount-display {
+  min-height: 44px;
   font-size: 48px;
   font-weight: 500;
-  color: var(--text-normal);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 1px;
-  min-height: 44px;
   line-height: 1.2;
+  letter-spacing: 1px;
+  color: var(--text-normal);
   transition: color 0.15s;
 }
 
-.ne-mobile-amount-display.is-empty {
+.ne-phone-amount-display.is-empty {
   color: var(--text-muted);
 }
 
-/* Error in mobile modal */
-.ne-mobile-error {
-  margin: 0;
-  border-radius: 0;
+.ne-phone-error {
   flex-shrink: 0;
-  font-size: 12px;
+  margin: 0;
   padding: 6px 16px;
+  border-radius: 0;
+  font-size: 12px;
 }
 
-/* Field rows */
-.ne-mobile-rows {
+/* One tappable row per field */
+.ne-phone-rows {
   flex: 1;
   overflow-y: auto;
   padding-bottom: 16px;
 }
 
-.ne-mobile-row {
+.ne-phone-row {
+  position: relative;
   display: flex;
   align-items: center;
-  padding: 0 20px;
   height: 48px;
+  padding: 0 20px;
   border-bottom: 1px solid var(--background-modifier-border);
-  position: relative;
 }
 
-.ne-mobile-refund-hint-row {
+.ne-phone-refund-hint-row {
   padding: 6px 20px 8px 0;
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.4;
   border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.ne-refund-block .ne-mobile-row {
-  padding-left: 0;
-  gap: 10px;
-}
-
-.ne-mobile-row-label {
-  font-size: 15px;
+  font-size: 12px;
+  line-height: 1.4;
   color: var(--text-muted);
+}
+
+.ne-refund-block .ne-phone-row {
+  gap: 10px;
+  padding-left: 0;
+}
+
+.ne-phone-row-label {
   flex: 0 0 auto;
   min-width: 64px;
+  font-size: 15px;
   white-space: nowrap;
+  color: var(--text-muted);
 }
 
-.ne-mobile-row-value {
+.ne-phone-row-value {
   flex: 1;
-  font-size: 16px;
-  color: var(--text-normal);
-  text-align: right;
   overflow: hidden;
+  font-size: 16px;
+  text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-normal);
 }
 
-.ne-mobile-date-row {
+.ne-phone-date-row {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-.ne-mobile-date-row::after {
+.ne-phone-date-row::after {
   content: '›';
   flex: 0 0 24px;
   margin-left: 6px;
-  color: var(--text-muted);
   font-size: 22px;
   line-height: 1;
   text-align: right;
+  color: var(--text-muted);
 }
 
-.ne-mobile-bottom-sheet-row {
+.ne-phone-choice-row {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-.ne-mobile-bottom-sheet-row:active {
+.ne-phone-choice-row:active {
   background: var(--background-modifier-hover);
 }
 
-.ne-mobile-bottom-sheet-row::after {
+.ne-phone-choice-row::after {
   content: '›';
   flex: 0 0 24px;
   margin-left: 6px;
-  color: var(--text-muted);
   font-size: 22px;
   line-height: 1;
   text-align: right;
+  color: var(--text-muted);
 }
 
-/* Invisible native picker overlay (date + select) */
-
-/* Tripled .ne-transaction-modal-container to beat Obsidian's
-   body.is-phone .modal input[type=text] (0,3,2) attribute selector. */
-.ne-transaction-modal-container.ne-transaction-modal-container.ne-transaction-modal-container .ne-mobile-note-input {
+/* Text inputs inside a row. The container class is repeated three times so the input outranks
+   Obsidian's body.is-phone .modal input[type=text] (0,3,2) attribute selector. */
+.ne-entry-form-container.ne-entry-form-container.ne-entry-form-container .ne-phone-note-input {
   flex: 1;
-  background: transparent;
+  min-width: 0;
+  padding: 0;
   border: none;
   border-radius: 0;
-  font-size: 16px;
-  color: var(--text-normal);
-  text-align: right;
   outline: none;
-  padding: 0;
-  min-width: 0;
-  appearance: none;
-  -webkit-appearance: none;
   box-shadow: none;
+  font-size: 16px;
+  text-align: right;
+  color: var(--text-normal);
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-.ne-mobile-note-input::placeholder {
+.ne-phone-note-input::placeholder {
   color: var(--text-faint);
 }
 
-/* iOS WKWebView doesn't shrink viewport when keyboard rises; pad the scroll
-   container so scrollIntoView has room to lift the focused row above the keyboard.
-   --ne-keyboard-h is set by visualViewport listener (exact px); falls back to 60vh. */
+/* iOS WKWebView does not shrink the viewport when the keyboard rises. Padding the scroll area by
+   the keyboard's height gives scrollIntoView room to lift the focused row clear of it.
+   --ne-keyboard-h is the exact height set from the visualViewport listener; 60vh is the fallback. */
 @media (pointer: coarse) {
-  .ne-mobile-content.ne-mobile-text-focus .ne-mobile-rows,
-  .ne-mobile-content.ne-bottom-sheet-active .ne-mobile-rows {
+  .ne-phone-content.ne-phone-text-focus .ne-phone-rows,
+  .ne-phone-content.ne-sheet-active .ne-phone-rows {
     padding-bottom: var(--ne-keyboard-h, 60vh);
   }
 }
 
-body.ne-bottom-sheet-lock {
+/* ── Slide-up sheets ── */
+
+body.ne-sheet-lock {
   overflow: hidden;
 }
 
-.ne-bottom-sheet-backdrop {
+.ne-sheet-backdrop {
   position: fixed;
   inset: 0;
   z-index: 200;
@@ -449,486 +447,461 @@ body.ne-bottom-sheet-lock {
   transition: background-color 200ms ease-out;
 }
 
-.ne-bottom-sheet-backdrop.is-leaf-context {
+.ne-sheet-backdrop.is-leaf-context {
   padding-bottom: 0;
 }
 
-.ne-bottom-sheet-backdrop.is-leaf-context .ne-bottom-sheet {
+.ne-sheet-backdrop.is-leaf-context .ne-sheet {
   height: min(85vh, 760px);
 }
 
-.ne-bottom-sheet-backdrop.is-open {
+.ne-sheet-backdrop.is-open {
   background: rgba(0, 0, 0, 0.35);
 }
 
-.ne-bottom-sheet-backdrop.is-closing {
+.ne-sheet-backdrop.is-closing {
   background: rgba(0, 0, 0, 0);
 }
 
-.ne-bottom-sheet {
-  width: calc(100% - 16px);
-  height: min(78vh, 640px);
+.ne-sheet {
   display: flex;
   flex-direction: column;
-  background: var(--background-primary);
-  border-radius: var(--ne-radius-lg) var(--ne-radius-lg) 0 0;
-  box-shadow: var(--ne-shadow-overlay-above);
-  transform: translateY(100%);
-  transition: transform 200ms ease-out;
+  width: calc(100% - 16px);
+  height: min(78vh, 640px);
   margin: 0 8px;
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-radius: var(--ne-radius-lg) var(--ne-radius-lg) 0 0;
+  box-shadow: var(--ne-shadow-overlay-above);
+  background: var(--background-primary);
+  transform: translateY(100%);
+  transition: transform 200ms ease-out;
   -webkit-user-select: text;
   user-select: text;
 }
 
-.ne-bottom-sheet-backdrop.is-open .ne-bottom-sheet {
+.ne-sheet-backdrop.is-open .ne-sheet {
   transform: translateY(0);
 }
 
-.ne-bottom-sheet-backdrop.is-closing .ne-bottom-sheet {
+.ne-sheet-backdrop.is-closing .ne-sheet {
   transform: translateY(100%);
 }
 
-.ne-bottom-sheet-handle {
+.ne-sheet-handle {
+  flex-shrink: 0;
   width: 36px;
   height: 4px;
   margin: 8px auto 4px;
   border-radius: 2px;
   background: var(--background-modifier-border);
-  flex-shrink: 0;
 }
 
-.ne-bottom-sheet-bar {
+.ne-sheet-bar {
   display: grid;
+  flex-shrink: 0;
   grid-template-columns: 64px 1fr 64px;
   align-items: center;
   min-height: 44px;
   padding: 0 12px;
   border-bottom: 1px solid var(--background-modifier-border);
-  flex-shrink: 0;
 }
 
-/* Doubled .ne-bottom-sheet prefix beats Obsidian's body.is-phone .modal-container button (0,3,2)
-   without !important. All sibling rules (--done, .is-selected, etc.) doubled for consistent cascade. */
-.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-btn {
+/* The sheet class is doubled so these buttons outrank Obsidian's
+   body.is-phone .modal-container button (0,3,2) without !important. The --done, .is-selected and
+   related rules below are doubled as well so the whole group cascades the same way. */
+.ne-sheet.ne-sheet .ne-sheet-btn {
   justify-self: start;
-  background: transparent;
+  padding: 8px 0;
   border: none;
   box-shadow: none;
-  color: var(--interactive-accent);
   font-size: 15px;
-  padding: 8px 0;
+  color: var(--interactive-accent);
+  background: transparent;
 }
 
-.ne-bottom-sheet-title {
-  text-align: center;
+.ne-sheet-title {
+  overflow: hidden;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-normal);
-  overflow: hidden;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-normal);
 }
 
-.ne-bottom-sheet-spacer {
+.ne-sheet-spacer {
   width: 64px;
 }
 
-.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-search {
-  margin: 10px 14px 8px;
-  width: calc(100% - 28px);
+.ne-sheet.ne-sheet .ne-sheet-search {
   box-sizing: border-box;
   flex-shrink: 0;
-  font-size: 16px;
+  width: calc(100% - 28px);
+  margin: 10px 14px 8px;
   border-radius: 8px;
+  font-size: 16px;
 }
 
-.ne-bottom-sheet-options {
+.ne-sheet-options {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
 }
 
-.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-option {
-  width: 100%;
-  min-height: 46px;
+.ne-sheet.ne-sheet .ne-sheet-option {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: transparent;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 20px;
   border: none;
   border-radius: 0;
   box-shadow: none;
-  color: var(--text-normal);
   font-size: 16px;
   text-align: left;
-  padding: 0 20px;
+  color: var(--text-normal);
+  background: transparent;
 }
 
-.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-option:active {
+.ne-sheet.ne-sheet .ne-sheet-option:active {
   background: var(--background-modifier-hover);
 }
 
-.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-option.is-selected {
-  color: var(--interactive-accent);
+.ne-sheet.ne-sheet .ne-sheet-option.is-selected {
   font-weight: 600;
-}
-
-.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-option.is-selected::after {
-  content: '✓';
   color: var(--interactive-accent);
-  font-size: 16px;
 }
 
-.ne-bottom-sheet-empty {
+.ne-sheet.ne-sheet .ne-sheet-option.is-selected::after {
+  content: '✓';
+  font-size: 16px;
+  color: var(--interactive-accent);
+}
+
+.ne-sheet-empty {
   padding: 18px 20px 24px;
-  color: var(--text-muted);
   font-size: 14px;
   text-align: center;
+  color: var(--text-muted);
 }
 
-/* ===== Tag Picker (Phase 3a) ===== */
+/* ── Tag sheet ── */
 
-.ne-tag-picker {
+.ne-tag-sheet {
+  position: relative; /* anchors the .is-dimmed ::after overlay */
   display: flex;
   flex-direction: column;
-  position: relative; /* anchor for .is-dimmed ::after overlay */
 }
 
-.ne-bottom-sheet.ne-bottom-sheet .ne-bottom-sheet-btn--done {
+.ne-sheet.ne-sheet .ne-sheet-btn--done {
   justify-self: end;
   font-weight: 600;
 }
 
-.ne-tag-picker-chips {
+.ne-tag-sheet-chips {
+  display: flex;
   flex: 1;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
   min-height: 0;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   padding: 8px 14px 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-content: flex-start;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* Chip appears in two contexts: bottom sheet picker + modal-side .ne-mobile-tag-chips.
-   Doubled prefix in both so chip styles beat Obsidian's modal button rules. */
-.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-chip,
-.ne-mobile-tag-chips.ne-mobile-tag-chips .ne-tag-picker-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: color-mix(in srgb, var(--interactive-accent) 30%, var(--background-primary) 70%);
-  color: var(--text-normal);
-  border: none;
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 14px;
-  cursor: pointer;
-  box-shadow: none;
-  transition: background-color 200ms ease-out, color 200ms ease-out, opacity 200ms ease-out;
-}
-
-.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-chip.is-selected,
-.ne-mobile-tag-chips.ne-mobile-tag-chips .ne-tag-picker-chip.is-selected {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-}
-
-.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-chip.is-disabled,
-.ne-mobile-tag-chips.ne-mobile-tag-chips .ne-tag-picker-chip.is-disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.ne-tag-picker-empty {
+.ne-tag-sheet-empty {
   width: 100%;
+  padding: 24px 12px;
+  font-size: 14px;
   text-align: center;
   color: var(--text-muted);
-  font-size: 14px;
-  padding: 24px 12px;
 }
 
-.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-add-row {
+.ne-sheet.ne-sheet .ne-tag-sheet-add-row {
+  flex-shrink: 0;
   width: 100%;
   min-height: 48px;
-  background: transparent;
+  padding: 0 20px;
   border: none;
   border-top: 1px solid var(--background-modifier-border);
   border-radius: 0;
   box-shadow: none;
-  color: var(--interactive-accent);
   font-size: 16px;
   text-align: left;
-  padding: 0 20px;
-  flex-shrink: 0;
+  color: var(--interactive-accent);
+  background: transparent;
 }
 
-.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-add-row:active {
+.ne-sheet.ne-sheet .ne-tag-sheet-add-row:active {
   background: var(--background-modifier-hover);
 }
 
-.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-add-row.is-disabled {
+.ne-sheet.ne-sheet .ne-tag-sheet-add-row.is-disabled {
   color: var(--text-muted);
   cursor: default;
 }
 
-.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-add-row.is-disabled:active {
+.ne-sheet.ne-sheet .ne-tag-sheet-add-row.is-disabled:active {
   background: transparent;
 }
 
-/* Inline add button — sits between search and chip area, always visible
-   above the keyboard when it rises. */
-.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-inline-add {
+/* The add button right under the search box, so it stays visible above the rising keyboard. */
+.ne-sheet.ne-sheet .ne-tag-sheet-inline-add {
+  flex-shrink: 0;
   width: calc(100% - 28px);
-  margin: 4px 14px 0;
   min-height: 40px;
-  background: transparent;
+  margin: 4px 14px 0;
+  padding: 0 6px;
   border: none;
   border-bottom: 1px solid var(--background-modifier-border);
   border-radius: 0;
   box-shadow: none;
-  color: var(--interactive-accent);
   font-size: 15px;
   text-align: left;
-  padding: 0 6px;
-  flex-shrink: 0;
+  color: var(--interactive-accent);
+  background: transparent;
 }
 
-.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-inline-add:active {
+.ne-sheet.ne-sheet .ne-tag-sheet-inline-add:active {
   background: var(--background-modifier-hover);
 }
 
-.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-inline-add.is-disabled {
+.ne-sheet.ne-sheet .ne-tag-sheet-inline-add.is-disabled {
   color: var(--text-muted);
   cursor: default;
 }
 
-.ne-bottom-sheet.ne-bottom-sheet .ne-tag-picker-inline-add.is-disabled:active {
+.ne-sheet.ne-sheet .ne-tag-sheet-inline-add.is-disabled:active {
   background: transparent;
 }
 
-/* Modal-side mobile tag row — chips OR placeholder, whole row taps to open picker.
-   Uses .ne-tag-picker-chip.is-selected styling for visual consistency with picker. */
-.ne-mobile-tag-chips {
+/* The form's tag row: the chosen chips, or a placeholder; a tap anywhere on it opens the sheet. */
+.ne-phone-tag-chips {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
   flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   min-height: 24px;
   cursor: pointer;
 }
 
-.ne-mobile-tag-chip,
+.ne-phone-tag-chip,
 .ne-tx-tag-chip {
   display: inline-flex;
   align-items: center;
   max-width: 100%;
   border: 1px solid color-mix(in srgb, var(--interactive-accent) 24%, var(--background-modifier-border) 76%);
-  background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
-  color: color-mix(in srgb, var(--interactive-accent) 68%, var(--text-muted) 32%);
   white-space: nowrap;
+  color: color-mix(in srgb, var(--interactive-accent) 68%, var(--text-muted) 32%);
+  background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
 }
 
-.ne-mobile-tag-chip {
+.ne-phone-tag-chip {
   padding: 3px 9px;
   border-radius: 999px;
   font-size: 13px;
   line-height: 1.4;
 }
 
-.ne-mobile-tag-row-placeholder {
-  color: var(--text-muted);
+.ne-phone-tag-row-placeholder {
   font-size: 14px;
+  color: var(--text-muted);
 }
 
-/* Mobile delete row (edit mode only) — last row inside fields area */
-.ne-mobile-danger-zone {
+/* Delete row: only shown when editing, last in the list of fields */
+.ne-phone-danger-zone {
   margin-top: 24px;
   padding-top: 8px;
   border-top: 1px solid var(--background-modifier-border);
 }
 
-button.ne-mobile-delete-row {
-  width: 100%;
+button.ne-phone-delete-row {
   justify-content: center;
-  background: transparent;
+  width: 100%;
   border: none;
   border-bottom: 1px solid var(--background-modifier-border);
   border-radius: 0;
   box-shadow: none;
-  color: var(--text-error);
   font-size: 15px;
+  color: var(--text-error);
+  background: transparent;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-button.ne-mobile-delete-row:hover,
-button.ne-mobile-delete-row:active {
+button.ne-phone-delete-row:hover,
+button.ne-phone-delete-row:active {
   background: rgba(var(--color-red-rgb), 0.08);
 }
 
-.ne-mobile-calculator-sheet {
-  --ne-mobile-calculator-bg: var(--interactive-normal);
+/* ── Amount keypad ── */
+
+.ne-keypad-sheet {
+  --ne-keypad-bg: var(--interactive-normal);
 
   height: auto;
   min-height: 0;
-  background: var(--ne-mobile-calculator-bg);
+  background: var(--ne-keypad-bg);
 }
 
-.ne-mobile-calculator-sheet .ne-bottom-sheet-handle,
-.ne-mobile-calculator-sheet .ne-bottom-sheet-bar {
-  background: var(--ne-mobile-calculator-bg);
+.ne-keypad-sheet .ne-sheet-handle,
+.ne-keypad-sheet .ne-sheet-bar {
+  background: var(--ne-keypad-bg);
 }
 
-.ne-mobile-calculator-sheet .ne-bottom-sheet-bar {
+.ne-keypad-sheet .ne-sheet-bar {
   min-height: 36px;
   border-bottom: 0;
 }
 
-.ne-mobile-calculator-sheet .ne-bottom-sheet-title {
-  color: var(--text-muted);
+/* The sheet's title line shows the formula being typed. */
+.ne-keypad-sheet .ne-sheet-title {
+  overflow: visible;
   font-size: 18px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   white-space: normal;
-  overflow: visible;
+  color: var(--text-muted);
 }
 
-.ne-mobile-calculator-sheet .ne-bottom-sheet-title.is-empty {
+.ne-keypad-sheet .ne-sheet-title.is-empty {
   color: transparent;
 }
 
-.ne-mobile-calculator-sheet .ne-bottom-sheet-title.is-warning {
+.ne-keypad-sheet .ne-sheet-title.is-warning {
   color: var(--text-warning);
 }
 
-.ne-mobile-calculator-pad {
+.ne-keypad-pad {
   width: 100%;
-  background: var(--ne-mobile-calculator-bg);
+  background: var(--ne-keypad-bg);
 }
 
-.ne-mobile-calculator-error {
+.ne-keypad-error {
   display: none;
   min-height: 28px;
   padding: 6px 16px;
-  color: var(--text-error);
+  border-bottom: 1px solid var(--background-modifier-border);
   font-size: 12px;
   line-height: 16px;
-  border-bottom: 1px solid var(--background-modifier-border);
+  color: var(--text-error);
 }
 
-.ne-mobile-calculator-error.is-visible {
+.ne-keypad-error.is-visible {
   display: block;
 }
 
-.ne-mobile-calculator-grid {
+.ne-keypad-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  background: var(--ne-mobile-calculator-bg);
+  background: var(--ne-keypad-bg);
 }
 
-button.ne-mobile-calculator-btn {
+button.ne-keypad-btn {
   height: 54px;
   border: 0;
   border-radius: 0;
-  background: var(--interactive-normal);
-  color: var(--text-normal);
-  font-size: 22px;
   box-shadow: none;
+  font-size: 22px;
+  color: var(--text-normal);
+  background: var(--interactive-normal);
   -webkit-tap-highlight-color: transparent;
 }
 
-button.ne-mobile-calculator-operator,
-button.ne-mobile-calculator-clear {
+button.ne-keypad-operator,
+button.ne-keypad-clear {
   color: var(--text-muted);
 }
 
-button.ne-mobile-calculator-equals {
+button.ne-keypad-equals {
   font-weight: 600;
 }
 
-button.ne-mobile-calculator-done {
-  color: var(--interactive-accent);
+button.ne-keypad-done {
   font-size: 16px;
   font-weight: 500;
+  color: var(--interactive-accent);
 }
 
-/* Doubled .ne-transaction-modal-container beats Obsidian's body.is-phone .modal-container button:hover (0,3,2).
-   .is-pressed needs triple to beat the doubled hover rule above it. */
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-btn:hover,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-btn:active,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-btn:focus,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-btn:focus-visible {
-  background: var(--interactive-normal);
-  color: var(--text-normal);
+/* The container class is doubled so these outrank Obsidian's
+   body.is-phone .modal-container button:hover (0,3,2). The .is-pressed rule at the end is tripled
+   to win over the doubled hover rules before it. */
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-btn:hover,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-btn:active,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-btn:focus,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-btn:focus-visible {
   outline: none;
   box-shadow: none;
+  color: var(--text-normal);
+  background: var(--interactive-normal);
 }
 
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-operator:hover,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-operator:active,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-operator:focus,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-operator:focus-visible,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-clear:hover,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-clear:active,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-clear:focus,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-clear:focus-visible {
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-operator:hover,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-operator:active,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-operator:focus,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-operator:focus-visible,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-clear:hover,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-clear:active,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-clear:focus,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-clear:focus-visible {
   color: var(--text-muted);
 }
 
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-done:hover,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-done:active,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-done:focus,
-.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-done:focus-visible {
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-done:hover,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-done:active,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-done:focus,
+.ne-entry-form-container.ne-entry-form-container button.ne-keypad-done:focus-visible {
   color: var(--interactive-accent);
 }
 
-.ne-transaction-modal-container.ne-transaction-modal-container.ne-transaction-modal-container button.ne-mobile-calculator-btn.is-pressed {
+.ne-entry-form-container.ne-entry-form-container.ne-entry-form-container button.ne-keypad-btn.is-pressed {
   background: var(--background-modifier-hover);
 }
 
+/* ── Desktop entry form ── */
+
 .ne-modal h2 {
-  margin-bottom: 16px;
-  color: var(--text-normal);
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-bottom: 16px;
+  color: var(--text-normal);
 }
 
 .ne-type-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 16px;
-  flex-wrap: wrap;
 }
 
 .ne-type-tab {
   padding: 4px 12px;
-  border-radius: 20px;
   border: 1px solid var(--background-modifier-border);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 13px;
-  transition: background 0.15s, color 0.15s;
+  border-radius: 20px;
   outline: none;
   box-shadow: none;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
 }
 
 .ne-type-tab:hover {
-  background: var(--background-modifier-hover);
   color: var(--text-normal);
+  background: var(--background-modifier-hover);
 }
 
 .ne-type-tab.is-active {
-  background: var(--background-secondary);
-  color: var(--text-normal);
   border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
+  color: var(--text-normal);
+  background: var(--background-secondary);
 }
 
 .ne-type-tab.is-active:hover {
@@ -955,26 +928,26 @@ button.ne-mobile-calculator-done {
 }
 
 .ne-field-label {
+  flex-shrink: 0;
   min-width: 72px;
   font-size: 13px;
   color: var(--text-muted);
-  flex-shrink: 0;
 }
 
 .ne-field-required {
-  color: var(--ne-expense);
   margin-left: 2px;
+  color: var(--ne-expense);
 }
 
 .ne-field-input {
   flex: 1;
-  padding: 6px 8px;
-  border-radius: 4px;
-  border: 1px solid var(--background-modifier-border);
-  background: var(--background-primary);
-  color: var(--text-normal);
-  font-size: 14px;
   min-height: 32px;
+  padding: 6px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--text-normal);
+  background: var(--background-primary);
 }
 
 .ne-field-input:focus {
@@ -987,23 +960,24 @@ button.ne-mobile-calculator-done {
   flex: 1;
 }
 
+/* The native select arrow is hidden (appearance: none below), so this draws a replacement. */
 .ne-select-wrapper::after {
   content: '▾';
   position: absolute;
-  right: 10px;
   top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
+  right: 10px;
   font-size: 12px;
+  color: var(--text-muted);
+  transform: translateY(-50%);
   pointer-events: none;
 }
 
 .ne-select-wrapper > select.ne-field-input {
   width: 100%;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
   padding-right: 28px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .ne-select-wrapper > select.ne-field-input:hover {
@@ -1015,9 +989,9 @@ button.ne-mobile-calculator-done {
   width: 16px;
   height: 16px;
   min-height: unset;
-  padding: 0;
-  margin-left: auto;
   margin-right: 0;
+  margin-left: auto;
+  padding: 0;
   cursor: pointer;
 }
 
@@ -1040,13 +1014,13 @@ button.ne-mobile-calculator-done {
 .ne-amount-field-wrapper input {
   flex: 1;
   min-width: 0;
-  border: none;
-  background: transparent;
-  padding: 0;
-  outline: none;
   min-height: unset;
-  color: inherit;
+  padding: 0;
+  border: none;
+  outline: none;
   font-size: inherit;
+  color: inherit;
+  background: transparent;
 }
 
 .ne-tag-input-wrapper.ne-field-input,
@@ -1066,10 +1040,10 @@ button.ne-mobile-calculator-done {
 }
 
 .ne-amount-prefix {
-  font-weight: 600;
-  font-size: 16px;
-  line-height: 1;
   display: none;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .ne-amount-prefix.is-visible {
@@ -1083,26 +1057,26 @@ button.ne-mobile-calculator-done {
 }
 
 .ne-error {
-  color: var(--text-error);
-  font-size: 13px;
   margin-bottom: 8px;
   padding: 6px 8px;
   border-radius: 4px;
+  font-size: 13px;
+  color: var(--text-error);
   background: rgba(var(--color-red-rgb), 0.1);
 }
 
 .ne-btn-row {
   display: flex;
-  gap: 8px;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: 12px;
 }
 
 .ne-btn-row button:not(.mod-cta) {
-  background: transparent;
   border: none;
-  color: var(--text-muted);
   box-shadow: none;
+  color: var(--text-muted);
+  background: transparent;
 }
 
 .ne-btn-row button:not(.mod-cta):hover {
@@ -1120,39 +1094,19 @@ button.ne-mobile-calculator-done {
   background: rgba(var(--color-red-rgb), 0.1);
 }
 
-/* ── Dashboard ── */
+/* ── Overview ── */
+
 .ne-dashboard {
   padding-bottom: 40px;
 }
 
-/* Asset view */
+/* ── Accounts page ── */
+
 .ne-asset {
   padding: 0 0 16px;
 }
 
-.ne-grid-2.ne-asset-grid {
-  grid-template-columns: 300px 1fr;
-  padding-top: 16px;
-}
-
-.ne-asset-left,
-.ne-asset-right {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.ne-asset-right > .ne-card:last-child {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.ne-asset-right > .ne-card:last-child > .ne-chart-wrap {
-  flex: 1;
-}
-
-/* Card header row — title + inline controls (e.g. range buttons) */
+/* A card's title with controls (such as range buttons) beside it */
 .ne-card-header-row {
   display: flex;
   align-items: center;
@@ -1164,30 +1118,28 @@ button.ne-mobile-calculator-done {
   margin-bottom: 0;
 }
 
-/* Chart legend (rect + label, horizontal) */
-
-/* Navigation arrow buttons (month navigation) */
+/* Round arrow buttons that step the month */
 .ne-nav-btn {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  cursor: pointer;
-  font-size: 20px;
-  line-height: 1;
-  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  box-shadow: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
 
 .ne-nav-btn:hover:not(:disabled) {
-  background: var(--ne-surface-hover);
   color: var(--text-normal);
+  background: var(--ne-surface-hover);
 }
 
 .ne-nav-btn:disabled {
@@ -1196,51 +1148,50 @@ button.ne-mobile-calculator-done {
 }
 
 .ne-month-label {
+  min-width: 76px;
   font-size: var(--font-ui-medium);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--text-normal);
-  min-width: 76px;
   text-align: center;
+  color: var(--text-normal);
 }
 
-/* Secondary actions (set up, select, bulk bar, clear filters) */
+/* Secondary actions: setup, select, the bulk bar, clear filters */
 .ne-action-btn {
-  background: transparent;
-  border: 1px solid var(--ne-hairline);
-  box-shadow: none;
-  border-radius: var(--ne-radius-sm);
   height: auto;
   padding: 6px 14px;
+  border: 1px solid var(--ne-hairline);
+  border-radius: var(--ne-radius-sm);
+  box-shadow: none;
   font-size: var(--font-ui-small);
-  cursor: pointer;
   color: var(--text-normal);
+  background: transparent;
+  cursor: pointer;
   transition: background 0.1s, border-color 0.1s;
 }
 
 .ne-action-btn:hover {
-  background: var(--ne-surface-hover);
   border-color: var(--background-modifier-border-hover);
+  background: var(--ne-surface-hover);
 }
 
 .ne-action-btn.mod-warning {
-  color: var(--text-error);
   border-color: color-mix(in srgb, var(--text-error) 40%, transparent);
+  color: var(--text-error);
 }
 
-/* Shared header (overview / asset / detail) */
 /* ── App shell ──
- * Every Nestegg view is a grid: a floating navigation rail in the first column, and the page
- * (top bar, then the view's own content) in the second. On phones the rail becomes a bottom
- * tab bar and the grid collapses to a single column (see the max-width: 700px block). */
+ * Each Nestegg view is a two-column grid: a floating navigation rail on the left, and the page
+ * (the top bar followed by the view's own content) on the right. On phones the rail turns into a
+ * bottom tab bar and the grid becomes one column (see the max-width: 700px block). */
 .ne-dashboard,
 .ne-budget,
 .ne-asset,
 .ne-detail {
   display: grid;
   grid-template-columns: 232px minmax(0, 1fr);
-  /* max-content, not auto: the view has a definite height, and auto rows would shrink a
-   * card with overflow hidden to fit it instead of letting the page scroll. */
+  /* max-content rather than auto: the view has a fixed height, and auto rows would squeeze a card
+   * that has overflow hidden to fit instead of letting the page scroll. */
   grid-auto-rows: max-content;
   align-content: start;
 }
@@ -1269,9 +1220,9 @@ button.ne-mobile-calculator-done {
   gap: 4px;
   margin: 12px 0 12px 12px;
   padding: 12px 10px;
-  background: var(--ne-surface);
   border: 1px solid var(--ne-hairline);
   border-radius: var(--ne-radius-lg);
+  background: var(--ne-surface);
 }
 
 .ne-nav-brand {
@@ -1288,11 +1239,14 @@ button.ne-mobile-calculator-done {
   width: 32px;
   height: 32px;
   border-radius: 10px;
-  background: var(--interactive-accent);
   color: var(--text-on-accent);
+  background: var(--interactive-accent);
 }
 
-.ne-nav-brand-icon svg { width: 18px; height: 18px; }
+.ne-nav-brand-icon svg {
+  width: 18px;
+  height: 18px;
+}
 
 .ne-nav-brand-name {
   font-size: var(--font-ui-medium);
@@ -1314,41 +1268,48 @@ button.ne-mobile-calculator-done {
   width: 100%;
   height: auto;
   padding: 9px 10px;
-  background: transparent;
   border: none;
-  box-shadow: none;
   border-radius: var(--ne-radius-sm);
-  color: var(--text-muted);
+  box-shadow: none;
   font-size: var(--font-ui-small);
   font-weight: 500;
   text-align: left;
+  color: var(--text-muted);
+  background: transparent;
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
 
-.ne-nav-item { justify-content: flex-start; }
+.ne-nav-item {
+  justify-content: flex-start;
+}
 
 .ne-nav-item:hover:not(.is-active),
 .ne-nav-setup:hover {
-  background: var(--ne-surface-hover);
   color: var(--text-normal);
+  background: var(--ne-surface-hover);
 }
 
 .ne-nav-item.is-active {
-  background: var(--ne-accent-tint);
-  color: var(--text-normal);
   font-weight: 600;
+  color: var(--text-normal);
+  background: var(--ne-accent-tint);
   cursor: default;
 }
 
-.ne-nav-item.is-active .ne-nav-item-icon { color: var(--interactive-accent); }
+.ne-nav-item.is-active .ne-nav-item-icon {
+  color: var(--interactive-accent);
+}
 
 .ne-nav-item-icon {
   display: flex;
   flex-shrink: 0;
 }
 
-.ne-nav-item-icon svg { width: 18px; height: 18px; }
+.ne-nav-item-icon svg {
+  width: 18px;
+  height: 18px;
+}
 
 .ne-nav-setup {
   margin-top: 14px;
@@ -1357,7 +1318,7 @@ button.ne-mobile-calculator-done {
   border-radius: 0 0 var(--ne-radius-sm) var(--ne-radius-sm);
 }
 
-/* Top bar: page title, month stepper, primary action. */
+/* Top bar: page title, month stepper and the primary action */
 .ne-topbar {
   position: sticky;
   top: 0;
@@ -1375,8 +1336,8 @@ button.ne-mobile-calculator-done {
   margin: 0;
   font-size: var(--font-ui-large);
   font-weight: 700;
-  letter-spacing: -0.02em;
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .ne-topbar-month {
@@ -1384,73 +1345,67 @@ button.ne-mobile-calculator-done {
   align-items: center;
   gap: 2px;
   padding: 2px;
-  background: var(--ne-surface);
   border: 1px solid var(--ne-hairline);
   border-radius: 999px;
+  background: var(--ne-surface);
 }
 
-.ne-topbar-month.is-empty { display: none; }
+.ne-topbar-month.is-empty {
+  display: none;
+}
 
-.ne-topbar-month.is-disabled .ne-month-label { opacity: 0.4; }
+.ne-topbar-month.is-disabled .ne-month-label {
+  opacity: 0.4;
+}
 
-/* The primary action: filled with the theme accent. */
+/* The main action, filled with the theme's accent colour */
 .ne-add-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: auto;
   padding: 8px 16px;
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
   border: none;
-  box-shadow: none;
   border-radius: 999px;
+  box-shadow: none;
   font-size: var(--font-ui-small);
   font-weight: 600;
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
   cursor: pointer;
 }
 
-.ne-add-btn:hover:not(:disabled) { background: var(--interactive-accent-hover); }
+.ne-add-btn:hover:not(:disabled) {
+  background: var(--interactive-accent-hover);
+}
 
 .ne-add-icon {
   font-size: 18px;
   line-height: 1;
 }
 
-/* Wallet list */
-.ne-wallet-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+/* ── Account lists ── */
+
+.ne-wallet-badge {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
-.ne-asset-wallet-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.ne-asset-wallet-row:last-child {
-  border-bottom: none;
-}
-
-.ne-wallet-left { display: flex; align-items: center; gap: 8px; }
-
-.ne-wallet-badge { font-size: 11px; padding: 2px 7px; border-radius: 10px; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
-.ne-badge-cash       { background: var(--ne-income-tint); color: var(--ne-cash); }
-.ne-badge-bank       { background: var(--ne-bank-tint); color: var(--ne-bank); }
-.ne-badge-creditCard { background: var(--ne-credit-tint); color: var(--ne-credit); }
-.ne-badge-loan       { background: var(--ne-credit-tint); color: var(--ne-credit); }
-.ne-badge-investing  { background: var(--ne-bank-tint); color: var(--ne-bank); }
+.ne-badge-cash       { color: var(--ne-cash);   background: var(--ne-income-tint); }
+.ne-badge-creditCard { color: var(--ne-credit); background: var(--ne-credit-tint); }
+.ne-badge-loan       { color: var(--ne-credit); background: var(--ne-credit-tint); }
+.ne-badge-investing  { color: var(--ne-bank);   background: var(--ne-bank-tint); }
 
 .ne-entries-list {
   display: flex;
   flex-direction: column;
   max-height: 40vh;
-  overflow-y: auto;
   margin-bottom: 12px;
+  overflow-y: auto;
 }
 
 .ne-entries-row {
@@ -1480,49 +1435,13 @@ button.ne-mobile-calculator-done {
 }
 
 .ne-entries-note {
-  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
 }
 
-.ne-wallet-name {
-  color: var(--text-normal);
-  font-size: 14px;
-}
+/* ── Overview layout and charts ── */
 
-.ne-wallet-balance {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-normal);
-}
-
-.ne-wallet-balance.is-negative {
-  color: var(--ne-expense);
-}
-
-.ne-net-asset-row {
-  margin-top: 6px;
-  padding-top: 8px;
-  border-top: 2px solid var(--background-modifier-border);
-  border-bottom: none;
-}
-
-.ne-net-label {
-  font-weight: 600;
-}
-
-.ne-net-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--ne-income);
-}
-
-.ne-net-value.is-negative {
-  color: var(--ne-expense);
-}
-
-/* Charts */
-
-/* PC 2-column dashboard grid */
+/* Wide screens: the bars on the left, a fixed-width column of pies on the right */
 .ne-grid-2 {
   display: grid;
   grid-template-columns: 1fr 380px;
@@ -1536,7 +1455,7 @@ button.ne-mobile-calculator-done {
   gap: 12px;
 }
 
-/* Bar chart card — flex so chart-wrap fills height */
+/* The bar-chart card is a flex column so its chart can fill the height. */
 .ne-inc-exp-card {
   display: flex;
   flex-direction: column;
@@ -1545,22 +1464,22 @@ button.ne-mobile-calculator-done {
 
 .ne-inc-exp-card .ne-chart-wrap {
   flex: 1;
-  min-height: 200px;
   min-width: 0;
+  min-height: 200px;
   overflow: hidden;
 }
 
 .ne-chart-wrap {
+  position: relative;
   flex: 1;
   min-width: 180px;
-  position: relative;
 }
 
 .ne-no-data {
-  color: var(--text-faint);
+  padding: 20px 0;
   font-size: 13px;
   text-align: center;
-  padding: 20px 0;
+  color: var(--text-faint);
 }
 
 .ne-pie-wrap {
@@ -1572,8 +1491,8 @@ button.ne-mobile-calculator-done {
 }
 
 .ne-pie-canvas-wrap {
-  flex-shrink: 0;
   position: relative;
+  flex-shrink: 0;
 }
 
 .ne-pie-legend {
@@ -1595,33 +1514,38 @@ button.ne-mobile-calculator-done {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  white-space: nowrap;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ne-legend-amt {
-  color: var(--text-normal);
-  font-variant-numeric: tabular-nums;
   margin-right: 8px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-normal);
 }
 
-.ne-legend-pct { color: var(--text-faint); }
+.ne-legend-pct {
+  color: var(--text-faint);
+}
 
 .ne-legend-dot {
+  flex-shrink: 0;
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  flex-shrink: 0;
 }
 
-/* ── Detail View ── */
-/* Rows: top bar, filters, scrolling list, bulk bar, subtotal. The list is the only part that scrolls. */
+/* ── Transactions page ──
+ * Rows from the top: header, filters, the scrolling list, the bulk bar, the subtotals. Only the
+ * list scrolls. */
 .ne-detail {
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   height: 100%;
 }
 
-.ne-detail > .ne-nav { grid-row: 1 / -1; }
+.ne-detail > .ne-nav {
+  grid-row: 1 / -1;
+}
 
 .ne-detail-header {
   padding: 0 var(--ne-gutter) 12px;
@@ -1635,8 +1559,8 @@ button.ne-mobile-calculator-done {
 
 .ne-type-pills {
   display: flex;
-  gap: 6px;
   flex-wrap: wrap;
+  gap: 6px;
   margin-top: 12px;
   margin-bottom: 8px;
 }
@@ -1647,17 +1571,17 @@ button.ne-mobile-calculator-done {
 }
 
 .ne-cat-toggle {
-  background: transparent;
-  border: 1px solid var(--ne-hairline);
-  box-shadow: none;
   height: auto;
-  border-radius: 999px;
   padding: 5px 13px;
+  border: 1px solid var(--ne-hairline);
+  border-radius: 999px;
+  box-shadow: none;
   font-size: var(--font-ui-smaller);
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: background 0.1s;
   white-space: nowrap;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.1s;
 }
 
 .ne-cat-toggle:hover {
@@ -1665,10 +1589,10 @@ button.ne-mobile-calculator-done {
 }
 
 .ne-cat-toggle.is-active {
-  background: var(--ne-accent-tint-strong);
   border-color: transparent;
-  color: var(--text-normal);
   font-weight: 600;
+  color: var(--text-normal);
+  background: var(--ne-accent-tint-strong);
 }
 
 .ne-cat-panel {
@@ -1676,12 +1600,12 @@ button.ne-mobile-calculator-done {
   top: calc(100% + 4px);
   right: 0;
   z-index: 100;
-  background: var(--background-primary);
+  min-width: 160px;
+  padding: 6px;
   border: 1px solid var(--ne-hairline);
   border-radius: var(--ne-radius-md);
-  padding: 6px;
-  min-width: 160px;
   box-shadow: var(--ne-shadow-dropdown);
+  background: var(--background-primary);
 }
 
 .ne-cat-item {
@@ -1690,11 +1614,11 @@ button.ne-mobile-calculator-done {
   gap: 8px;
   padding: 5px 8px;
   border-radius: 5px;
-  cursor: pointer;
   font-size: 12px;
   color: var(--text-normal);
-  user-select: none;
+  cursor: pointer;
   -webkit-user-select: none;
+  user-select: none;
 }
 
 .ne-cat-item:hover {
@@ -1702,91 +1626,105 @@ button.ne-mobile-calculator-done {
 }
 
 .ne-cat-check {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
   width: 14px;
   height: 14px;
   border: 1px solid var(--background-modifier-border-hover);
   border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
   font-size: 9px;
   color: white;
 }
 
 .ne-cat-check.is-checked {
-  background: var(--interactive-accent);
   border-color: var(--interactive-accent);
+  background: var(--interactive-accent);
 }
 
-/* Filter tabs (pill-shaped buttons for transaction type filtering)
- * Color via modifier class .ne-pill-color-<key>:
- *   sets --ne-pill-color (border + text active)
- *   sets --ne-pill-tint  (background active)
- * Base rule below reads both. */
+/* Filter pills.
+ * A .ne-pill-color-<key> modifier sets two variables that the base rules read:
+ *   --ne-pill-color  the border and text colour when selected
+ *   --ne-pill-tint   the background when selected */
 button.ne-pill {
-  background: transparent;
-  border: 1px solid var(--ne-hairline);
-  box-shadow: none;
   height: auto;
-  border-radius: 999px;
   padding: 6px 14px;
+  border: 1px solid var(--ne-hairline);
+  border-radius: 999px;
+  box-shadow: none;
   font-size: var(--font-ui-small);
-  cursor: pointer;
   color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
   transition: background 0.1s, color 0.1s, border-color 0.1s;
 }
 
-/* Color modifiers — set the two vars consumed below.
- * Active uses *-tint-strong (28-32%) for adequate contrast against sheet
- * panels; chip/badge consumers stick with the regular *-tint (16-22%).
- * Neutral pill uses --interactive-accent so dark/light themes both look
- * coherent (raw --text-normal tint reads as white-fog in dark, black-fog
- * in light — visually inconsistent). */
-.ne-pill-color-income    { --ne-pill-color: var(--ne-income);            --ne-pill-tint: var(--ne-income-tint-strong); }
-.ne-pill-color-expense   { --ne-pill-color: var(--ne-expense);           --ne-pill-tint: var(--ne-expense-tint-strong); }
-.ne-pill-color-transfer  { --ne-pill-color: var(--ne-transfer);          --ne-pill-tint: var(--ne-transfer-tint-strong); }
-.ne-pill-color-bank      { --ne-pill-color: var(--ne-bank);              --ne-pill-tint: var(--ne-bank-tint-strong); }
-.ne-pill-color-cash      { --ne-pill-color: var(--ne-cash);              --ne-pill-tint: var(--ne-cash-tint-strong); }
-.ne-pill-color-credit    { --ne-pill-color: var(--ne-credit);            --ne-pill-tint: var(--ne-credit-tint-strong); }
-.ne-pill-color-neutral   { --ne-pill-color: var(--interactive-accent);   --ne-pill-tint: var(--ne-accent-tint-strong); }
+/* A selected pill uses the *-tint-strong washes (28–32%) so it reads against sheet panels;
+ * chips and badges keep the regular 16–22% tints. The neutral pill follows --interactive-accent:
+ * a tint of raw --text-normal looks like white fog on dark themes and black fog on light ones. */
+.ne-pill-color-income {
+  --ne-pill-color: var(--ne-income);
+  --ne-pill-tint: var(--ne-income-tint-strong);
+}
+.ne-pill-color-expense {
+  --ne-pill-color: var(--ne-expense);
+  --ne-pill-tint: var(--ne-expense-tint-strong);
+}
+.ne-pill-color-transfer {
+  --ne-pill-color: var(--ne-transfer);
+  --ne-pill-tint: var(--ne-transfer-tint-strong);
+}
+.ne-pill-color-cash {
+  --ne-pill-color: var(--ne-cash);
+  --ne-pill-tint: var(--ne-cash-tint-strong);
+}
+.ne-pill-color-credit {
+  --ne-pill-color: var(--ne-credit);
+  --ne-pill-tint: var(--ne-credit-tint-strong);
+}
+.ne-pill-color-neutral {
+  --ne-pill-color: var(--interactive-accent);
+  --ne-pill-tint: var(--ne-accent-tint-strong);
+}
 
-/* Hover (only when not active) — 8% same-color tint as a pre-active hint */
+/* Hovering an unselected pill previews its colour with an 8% wash. */
 .ne-pill:hover:not(.is-active) {
   background: color-mix(in srgb, var(--ne-pill-color, var(--text-normal)) 8%, transparent);
 }
 
-/* Active — tint background + same-color border + same-color text */
+/* Selected: tinted background, no border, text in the pill's colour */
 .ne-pill.is-active {
-  background: var(--ne-pill-tint, var(--background-secondary));
   border-color: transparent;
-  color: var(--ne-pill-color, var(--text-normal));
   font-weight: 600;
+  color: var(--ne-pill-color, var(--text-normal));
+  background: var(--ne-pill-tint, var(--background-secondary));
 }
 
-/* iOS sticky :active fix — prevent Obsidian global button styles from overriding */
+/* On iOS :active sticks after a tap, so both states are pinned here against Obsidian's own
+ * button styles. */
 .ne-pill:active:not(.is-active) {
-  background: color-mix(in srgb, var(--ne-pill-color, var(--text-normal)) 8%, transparent);
   color: var(--text-muted);
+  background: color-mix(in srgb, var(--ne-pill-color, var(--text-normal)) 8%, transparent);
 }
 
 .ne-pill.is-active:active {
-  background: var(--ne-pill-tint, var(--background-secondary));
   border-color: transparent;
   color: var(--ne-pill-color, var(--text-normal));
+  background: var(--ne-pill-tint, var(--background-secondary));
 }
 
 .ne-detail-search-row .ne-search-input {
+  box-sizing: border-box;
   flex: 1;
   width: 100%;
-  padding: 8px 14px;
   min-height: 38px;
-  border-radius: 999px;
+  padding: 8px 14px;
   border: 1px solid var(--ne-hairline);
-  background: var(--ne-surface);
-  color: var(--text-normal);
+  border-radius: 999px;
   font-size: var(--font-ui-small);
-  box-sizing: border-box;
+  color: var(--text-normal);
+  background: var(--ne-surface);
 }
 
 .ne-detail-search-row .ne-search-input:focus {
@@ -1794,12 +1732,7 @@ button.ne-pill {
   border-color: var(--interactive-accent);
 }
 
-/* Detail account dropdown — sibling of ne-cat-dropdown, no auto margin */
-.ne-account-dropdown {
-  position: relative;
-}
-
-/* Detail date range row — two inputs separated by ─, clear btn right-aligned */
+/* Date range: two inputs with a dash between them and the clear button at the right edge */
 .ne-detail-date-row {
   display: flex;
   align-items: center;
@@ -1809,8 +1742,8 @@ button.ne-pill {
 
 .ne-date-sep {
   flex: 0 0 auto;
-  color: var(--text-muted);
   font-size: 14px;
+  color: var(--text-muted);
   user-select: none;
 }
 
@@ -1818,13 +1751,13 @@ button.ne-pill {
   margin-left: auto;
 }
 
-/* Mobile filter sheet override: inputs stretch to fill sheet */
+/* Inside the filter sheet the date inputs stretch to fill it. */
 .ne-filter-sheet-body .ne-detail-date-row .ne-date-input {
   flex: 1;
   min-width: 0;
 }
 
-/* Mobile narrow fallback (desktop window <=380px): stack vertically */
+/* Very narrow desktop windows (380px or less): stack the range vertically. */
 @media (max-width: 380px) {
   .ne-detail-date-row {
     flex-direction: column;
@@ -1839,15 +1772,15 @@ button.ne-pill {
 }
 
 .ne-date-input {
-  font-size: 12px;
   padding: 4px 8px;
-  border-radius: 6px;
   border: 0.5px solid var(--background-modifier-border-hover);
-  background: var(--background-primary);
+  border-radius: 6px;
+  font-size: 12px;
   color: var(--text-normal);
+  background: var(--background-primary);
 }
 
-/* Detail search row (search + mobile filter btn) */
+/* Search box, plus the filter button on phones */
 .ne-detail-search-row {
   display: flex;
   align-items: center;
@@ -1859,17 +1792,17 @@ button.ne-pill {
 }
 
 .ne-filter-btn {
-  background: transparent;
-  border: 1px solid var(--ne-hairline);
-  box-shadow: none;
-  height: auto;
-  border-radius: 999px;
-  padding: 7px 16px;
-  font-size: var(--font-ui-small);
-  cursor: pointer;
-  color: var(--text-normal);
-  white-space: nowrap;
   flex-shrink: 0;
+  height: auto;
+  padding: 7px 16px;
+  border: 1px solid var(--ne-hairline);
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
+  color: var(--text-normal);
+  background: transparent;
+  cursor: pointer;
 }
 
 .ne-filter-btn:hover {
@@ -1877,33 +1810,32 @@ button.ne-pill {
 }
 
 .ne-filter-btn.is-active {
-  background: var(--ne-accent-tint-strong);
   border-color: transparent;
   font-weight: 600;
+  background: var(--ne-accent-tint-strong);
 }
 
-/* Whole filter sheet (header + body) shares grey panel */
-.ne-bottom-sheet.ne-filter-sheet {
+/* The filter sheet is one grey panel, header and body alike. */
+.ne-sheet.ne-filter-sheet {
   background: var(--background-secondary);
 }
 
-/* Filter bottom sheet body */
 .ne-filter-sheet-body {
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-height: 0;
   overflow-y: auto;
   padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
 }
 
-/* Date inputs inside filter sheet body — match desktop input style */
+/* Date inputs in the sheet look like the desktop form fields. */
 .ne-filter-sheet-body .ne-date-input {
-  background: var(--background-modifier-form-field);
   padding: 8px 12px;
-  border-radius: 6px;
   border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
   font-size: 13px;
+  background: var(--background-modifier-form-field);
 }
 
 .ne-filter-section {
@@ -1915,10 +1847,10 @@ button.ne-pill {
 }
 
 .ne-filter-label {
-  font-size: 13px;
-  color: var(--text-muted);
   margin-bottom: 8px;
+  font-size: 13px;
   font-weight: 500;
+  color: var(--text-muted);
 }
 
 .ne-pill-group {
@@ -1929,10 +1861,10 @@ button.ne-pill {
 
 .ne-filter-clear-all {
   width: 100%;
-  text-align: center;
-  padding: 10px 12px;
   margin-top: 72px;
+  padding: 10px 12px;
   font-size: 14px;
+  text-align: center;
   color: var(--text-error);
 }
 
@@ -1942,25 +1874,25 @@ button.ne-pill {
   gap: 12px;
 }
 
-/* One card per day: a header band with the date and running balances, then that day's rows. */
+/* One card per day: a header band with the date and the running balances, then that day's rows */
 .ne-day-group {
   flex-shrink: 0;
-  background: var(--ne-surface);
+  overflow: hidden;
   border: 1px solid var(--ne-hairline);
   border-radius: var(--ne-radius-lg);
-  overflow: hidden;
+  background: var(--ne-surface);
 }
 
 .ne-day-header {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
+  justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
-  background: color-mix(in srgb, var(--text-normal) 4%, transparent);
   font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-normal) 4%, transparent);
 }
 
 .ne-day-date {
@@ -1988,10 +1920,10 @@ button.ne-pill {
   flex-wrap: wrap;
   gap: 4px 14px;
   padding: 6px;
-  background: var(--background-primary);
   border-bottom: 1px solid var(--background-modifier-border);
   font-size: 12px;
   color: var(--text-muted);
+  background: var(--background-primary);
 }
 
 .ne-legend-item {
@@ -2000,8 +1932,14 @@ button.ne-pill {
   gap: 6px;
 }
 
-.ne-legend-item.is-toggle { cursor: pointer; }
-.ne-legend-item.is-off { opacity: 0.45; text-decoration: line-through; }
+.ne-legend-item.is-toggle {
+  cursor: pointer;
+}
+
+.ne-legend-item.is-off {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
 
 .ne-legend-dot {
   width: 8px;
@@ -2030,10 +1968,10 @@ button.ne-pill {
 }
 
 .ne-account-dot {
+  flex-shrink: 0;
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  flex-shrink: 0;
 }
 
 .ne-tx-row {
@@ -2046,90 +1984,96 @@ button.ne-pill {
   cursor: pointer;
 }
 
-.ne-day-header + .ne-tx-row { border-top: none; }
+.ne-day-header + .ne-tx-row {
+  border-top: none;
+}
 
 .ne-tx-row:hover {
   background: var(--background-modifier-hover);
 }
 
 .ne-tx-row-stack {
-  flex: 1;
-  min-width: 0;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .ne-tx-row-line3 {
   display: flex;
-  gap: 4px;
   align-items: baseline;
-  white-space: nowrap;
+  gap: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Round type marker leading each row; the .ne-type-* rules below tint it. */
+/* The round marker at the start of a row; the .ne-type-* rules below colour it. */
 .ne-tx-avatar {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--ne-neutral-tint);
   color: var(--text-muted);
+  background: var(--ne-neutral-tint);
 }
 
-.ne-tx-avatar svg { width: 18px; height: 18px; }
+.ne-tx-avatar svg {
+  width: 18px;
+  height: 18px;
+}
 
-.ne-tx-type-text { color: var(--text-faint); }
+.ne-tx-type-text {
+  color: var(--text-faint);
+}
 
-.ne-type-expense  { background: var(--ne-expense-tint); color: var(--ne-expense); }
-.ne-type-income   { background: var(--ne-income-tint);  color: var(--ne-income); }
-.ne-type-transfer { background: var(--ne-transfer-tint); color: var(--ne-transfer); }
-.ne-type-debt     { background: var(--ne-credit-tint);   color: var(--ne-credit); }
-.ne-type-payment  { background: var(--ne-payment-tint); color: var(--ne-payment); }
+.ne-type-expense  { color: var(--ne-expense);  background: var(--ne-expense-tint); }
+.ne-type-income   { color: var(--ne-income);   background: var(--ne-income-tint); }
+.ne-type-transfer { color: var(--ne-transfer); background: var(--ne-transfer-tint); }
+.ne-type-debt     { color: var(--ne-credit);   background: var(--ne-credit-tint); }
 
 .ne-tx-category {
-  font-weight: 500;
-  color: var(--text-normal);
-  font-size: 13px;
-  white-space: nowrap;
   overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-normal);
 }
 
 .ne-tx-note {
-  color: var(--text-muted);
-  font-size: 12px;
   overflow: hidden;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-muted);
 }
 
 .ne-tx-empty {
-  color: var(--text-faint);
   font-size: 12px;
+  color: var(--text-faint);
 }
 
 .ne-tx-wallet {
-  color: var(--text-muted);
-  font-size: 12px;
-  white-space: nowrap;
   overflow: hidden;
+  font-size: 12px;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
 }
 
 .ne-tx-amount {
-  margin-left: auto;
-  text-align: right;
-  font-weight: 600;
-  font-size: 16px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+  margin-left: auto;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .ne-tx-amount.is-income  { color: var(--ne-income); }
@@ -2138,9 +2082,9 @@ button.ne-pill {
 
 .ne-subtotal-row {
   display: flex;
-  gap: 24px;
-  justify-content: flex-end;
   flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 24px;
   padding: 8px 16px;
   border-top: 1px solid var(--background-modifier-border);
   font-size: 13px;
@@ -2155,42 +2099,41 @@ button.ne-pill {
     display: none;
   }
 
-  /* When keyboard is open, constrain list to visible area above keyboard.
-     --ne-keyboard-h is set by visualViewport listener (JS also sets ne-keyboard-open). */
+  /* With the keyboard up, the list is limited to what is visible above it. --ne-keyboard-h comes
+     from the visualViewport listener, which also adds ne-keyboard-open. */
   .ne-detail.ne-keyboard-open .ne-detail-list-wrap {
     flex: none;
     max-height: 35vh;
   }
 }
 
-.ne-subtotal-income  { color: var(--ne-income); font-weight: 600; }
-.ne-subtotal-expense { color: var(--ne-expense); font-weight: 600; }
+.ne-subtotal-income  { font-weight: 600; color: var(--ne-income); }
+.ne-subtotal-expense { font-weight: 600; color: var(--ne-expense); }
 
-/* Card container for charts */
+/* ── Cards and metrics ── */
+
 .ne-card {
-  background: var(--ne-surface);
+  margin-bottom: 12px;
+  padding: 16px 18px;
   border: 1px solid var(--ne-hairline);
   border-radius: var(--ne-radius-lg);
-  padding: 16px 18px;
-  margin-bottom: 12px;
   box-shadow: var(--ne-card-shadow);
+  background: var(--ne-surface);
 }
 
 .ne-card--raised {
   box-shadow: var(--ne-card-shadow-raised);
 }
 
-/* Small-caps eyebrow: the number or chart below is the content, the title only names it. */
+/* A small-caps eyebrow: the figure or chart below is the content, the title just names it. */
 .ne-card-title {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   margin-bottom: 12px;
+  font-size: var(--font-ui-smaller);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
-
-/* Chart legend */
 
 .ne-leg {
   display: flex;
@@ -2200,13 +2143,13 @@ button.ne-pill {
   color: var(--text-muted);
 }
 
-/* Metrics (summary cards at bottom) */
+/* The summary tiles under a chart */
 .ne-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr 1.4fr;
   gap: 12px;
-  padding: 4px var(--ne-gutter) 16px;
   margin-bottom: 0;
+  padding: 4px var(--ne-gutter) 16px;
 }
 
 .ne-asset .ne-metrics {
@@ -2214,42 +2157,42 @@ button.ne-pill {
 }
 
 .ne-metric {
-  background: var(--ne-surface);
+  min-width: 0;
+  padding: 14px 16px;
   border: 1px solid var(--ne-hairline);
   border-radius: var(--ne-radius-md);
-  padding: 14px 16px;
-  min-width: 0;
+  background: var(--ne-surface);
 }
 
-/* The hero metric is the month's verdict: tinted with its own colour instead of a left rule. */
+/* The hero tile is the month's verdict: it takes its own colour as a tint instead of a left rule. */
 .ne-metric--hero {
   padding: 14px 16px;
 }
 .ne-metric--hero.income,
 .ne-metric--hero.positive {
-  background: var(--ne-income-tint);
   border-color: color-mix(in srgb, var(--ne-income) 35%, transparent);
+  background: var(--ne-income-tint);
 }
 .ne-metric--hero.expense,
 .ne-metric--hero.negative {
-  background: var(--ne-expense-tint);
   border-color: color-mix(in srgb, var(--ne-expense) 35%, transparent);
+  background: var(--ne-expense-tint);
 }
 
 .ne-metric-label {
+  margin-bottom: 6px;
   font-size: var(--font-ui-smaller);
   font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
-  margin-bottom: 6px;
-  letter-spacing: 0.06em;
 }
 
 .ne-metric-value {
   font-size: 26px;
   font-weight: 650;
-  line-height: 1.15;
   font-variant-numeric: tabular-nums;
+  line-height: 1.15;
   letter-spacing: -0.01em;
   overflow-wrap: anywhere;
 }
@@ -2259,32 +2202,29 @@ button.ne-pill {
 .ne-metric-value.positive { color: var(--ne-income); }
 .ne-metric-value.negative { color: var(--ne-expense); }
 
-/* Chart tooltip */
+/* ── Setup wizard and settings ── */
 
-/* ── Settings ── */
-
-/* Grouped settings rows (replaces per-item cards) */
+/* Rows of settings grouped into one rounded block instead of a card each */
 .ne-settings-group {
-  background: var(--ne-surface);
+  margin: 4px 0 16px;
+  overflow: hidden;
   border: 1px solid var(--ne-hairline);
   border-radius: var(--ne-radius-lg);
-  overflow: hidden;
-  margin: 4px 0 16px;
+  background: var(--ne-surface);
 }
 
 .ne-settings-group .setting-item {
+  margin: 0;
+  padding: 10px 14px;
   border-top: none;
   border-bottom: 1px solid var(--background-modifier-border);
   border-radius: 0;
-  margin: 0;
-  padding: 10px 14px;
 }
 
 .ne-settings-group .setting-item:last-child {
   border-bottom: none;
 }
 
-/* Wallet list rows */
 .ne-wallet-row {
   display: flex;
   align-items: center;
@@ -2298,22 +2238,22 @@ button.ne-pill {
 }
 
 .ne-wallet-row-info {
-  flex: 1;
-  min-width: 0;
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: flex-start;
   gap: 3px;
+  min-width: 0;
 }
 
 .ne-wallet-row-name {
+  max-width: 100%;
+  overflow: hidden;
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-normal);
-  white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+  white-space: nowrap;
+  color: var(--text-normal);
 }
 
 .ne-wallet-row-desc {
@@ -2322,56 +2262,34 @@ button.ne-pill {
 }
 
 .ne-wallet-row-balance {
-  font-size: 13px;
-  color: var(--text-muted);
-  white-space: nowrap;
   flex-shrink: 0;
   margin-right: 4px;
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--text-muted);
 }
 
 .ne-wallet-row-balance.is-debt {
   color: var(--text-error);
 }
 
-.ne-drag-handle {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  margin-right: 6px;
-  color: var(--text-faint);
-  cursor: grab;
-  padding: 0 2px;
-}
-
-.ne-drag-handle:active {
-  cursor: grabbing;
-}
-
-.ne-wallet-row.ne-dragging {
-  opacity: 0.4;
-}
-
-.ne-drag-ghost {
-  opacity: 0.4;
-}
-
 .ne-wallet-row-actions {
   display: flex;
-  gap: 6px;
   flex-shrink: 0;
+  gap: 6px;
 }
 
 .ne-wallet-row-actions button {
-  box-shadow: 0 0 0 1px var(--background-modifier-border-hover);
   border-radius: var(--button-radius, 4px);
+  box-shadow: 0 0 0 1px var(--background-modifier-border-hover);
 }
 
 .ne-add-wallet-card,
 .ne-category-card {
-  background: var(--setting-items-background);
-  margin-left: 0;
   margin-top: 8px;
+  margin-left: 0;
   padding: 0.875rem 1rem 1rem 0.875rem;
+  background: var(--setting-items-background);
 }
 
 .ne-add-wallet-form {
@@ -2390,17 +2308,17 @@ button.ne-pill {
   min-width: 0;
   min-height: 36px;
   padding: 6px 10px;
-  border-radius: 8px;
   border: 1px solid var(--background-modifier-border);
-  background: var(--background-primary);
-  color: var(--text-normal);
+  border-radius: 8px;
   font-size: 14px;
   line-height: 1.4;
+  color: var(--text-normal);
+  background: var(--background-primary);
 }
 
 select.ne-add-wallet-input {
-  appearance: auto;
   padding-right: 28px;
+  appearance: auto;
 }
 
 .ne-add-wallet-input:focus {
@@ -2410,17 +2328,17 @@ select.ne-add-wallet-input {
 }
 
 .ne-balance-hint {
+  margin: 10px 0 0;
   font-size: 12px;
   color: var(--text-muted);
-  margin: 10px 0 0;
 }
 
 .ne-budget-subhead {
   margin: 10px 0 2px;
   font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -2430,10 +2348,10 @@ select.ne-add-wallet-input {
   border: 1px solid var(--text-error);
   border-left-width: 4px;
   border-radius: 6px;
-  background: color-mix(in srgb, var(--text-error) 12%, transparent);
-  color: var(--text-error);
   font-size: 14px;
   font-weight: 700;
+  color: var(--text-error);
+  background: color-mix(in srgb, var(--text-error) 12%, transparent);
 }
 
 .ne-wallet-edit-form {
@@ -2489,24 +2407,24 @@ select.ne-add-wallet-input {
 
 .ne-setting-input-subtitle {
   display: block;
+  margin-bottom: 8px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-bottom: 8px;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .ne-category-divider {
+  margin: 14px 0;
   border: none;
   border-top: 1px solid var(--background-modifier-border);
-  margin: 14px 0;
 }
 
 .ne-category-tags {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 8px;
 }
 
@@ -2515,54 +2433,55 @@ select.ne-add-wallet-input {
   align-items: center;
   gap: 4px;
   padding: 3px 10px 3px 12px;
-  border-radius: 16px;
-  background: var(--background-modifier-hover);
   border: 1px solid var(--background-modifier-border);
+  border-radius: 16px;
   font-size: 13px;
+  background: var(--background-modifier-hover);
 }
 
 .ne-tag-remove {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 16px;
   height: 16px;
-  border-radius: 50%;
-  background: var(--background-modifier-border);
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
   padding: 0;
-  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-muted);
+  background: var(--background-modifier-border);
+  cursor: pointer;
 }
 
 .ne-tag-remove:hover {
-  background: var(--text-error);
   color: #ffffff;
+  background: var(--text-error);
 }
 
 .ne-category-add-row {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 8px;
 }
 
 .ne-category-input {
   flex: 1;
   padding: 6px 8px;
-  border-radius: 4px;
   border: 1px solid var(--background-modifier-border);
-  background: var(--background-primary);
-  color: var(--text-normal);
+  border-radius: 4px;
   font-size: 14px;
+  color: var(--text-normal);
+  background: var(--background-primary);
 }
 
 .ne-settings-empty {
-  color: var(--text-faint);
   font-size: 13px;
+  color: var(--text-faint);
 }
 
-/* ── Mobile responsiveness ── */
+/* ── Small screens ── */
+
 @media (max-width: 480px) {
   .ne-add-wallet-submit {
     justify-content: stretch;
@@ -2571,8 +2490,6 @@ select.ne-add-wallet-input {
   .ne-add-wallet-submit button {
     width: 100%;
   }
-
-  
 
   .ne-grid-2 {
     grid-template-columns: 1fr;
@@ -2583,18 +2500,11 @@ select.ne-add-wallet-input {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: 12px;
   }
-
-  
-
-  
-
-  
-
 }
 
-/* Phone and narrow panes: the grid becomes a column, the rail a bottom tab bar pinned to the
- * foot of the scroll area (so it clears Obsidian's own toolbar), and Add transaction a round
- * button floating above it. */
+/* Phones and narrow panes: the grid turns into one column, the rail into a bottom tab bar pinned
+ * to the foot of the scroll area (so it clears Obsidian's own toolbar), and "Add transaction"
+ * into a round button floating above that bar. */
 @media (max-width: 700px) {
   .ne-dashboard,
   .ne-budget,
@@ -2612,11 +2522,23 @@ select.ne-add-wallet-input {
     flex-shrink: 0;
   }
 
-  .ne-detail { height: 100%; }
-  .ne-detail > .ne-detail-list-wrap { flex: 1 1 0; min-height: 0; flex-shrink: 1; }
+  .ne-detail {
+    height: 100%;
+  }
 
-  .ne-topbar { padding: 12px var(--ne-gutter) 8px; }
-  .ne-topbar-title { font-size: var(--font-ui-larger); }
+  .ne-detail > .ne-detail-list-wrap {
+    flex: 1 1 0;
+    flex-shrink: 1;
+    min-height: 0;
+  }
+
+  .ne-topbar {
+    padding: 12px var(--ne-gutter) 8px;
+  }
+
+  .ne-topbar-title {
+    font-size: var(--font-ui-larger);
+  }
 
   .ne-nav-btn {
     width: var(--ne-tap);
@@ -2627,24 +2549,28 @@ select.ne-add-wallet-input {
   .ne-budget > .ne-nav,
   .ne-asset > .ne-nav,
   .ne-detail > .ne-nav {
-    order: 99;
     position: sticky;
     bottom: 0;
     z-index: 10;
+    order: 99;
     flex-direction: row;
     align-items: stretch;
+    gap: 2px;
     margin: auto 0 0;
     padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
-    gap: 2px;
-    border-radius: var(--ne-radius-lg) var(--ne-radius-lg) 0 0;
     border-width: 1px 0 0;
+    border-radius: var(--ne-radius-lg) var(--ne-radius-lg) 0 0;
     overflow-x: auto;
     scrollbar-width: none;
   }
 
-  .ne-nav::-webkit-scrollbar { display: none; }
+  .ne-nav::-webkit-scrollbar {
+    display: none;
+  }
 
-  .ne-nav-brand { display: none; }
+  .ne-nav-brand {
+    display: none;
+  }
 
   .ne-nav-list {
     flex: 1;
@@ -2667,9 +2593,14 @@ select.ne-add-wallet-input {
     text-align: center;
   }
 
-  .ne-nav-setup { flex: 0 0 64px; }
+  .ne-nav-setup {
+    flex: 0 0 64px;
+  }
 
-  .ne-nav-item-icon svg { width: 22px; height: 22px; }
+  .ne-nav-item-icon svg {
+    width: 22px;
+    height: 22px;
+  }
 
   .ne-add-btn {
     position: fixed;
@@ -2684,11 +2615,17 @@ select.ne-add-wallet-input {
     box-shadow: var(--ne-card-shadow-raised);
   }
 
-  .ne-add-icon { font-size: 28px; font-weight: 400; }
-  .ne-add-label { display: none; }
+  .ne-add-icon {
+    font-size: 28px;
+    font-weight: 400;
+  }
 
-  /* Keep the last card and row clear of the floating button (the nav is first in the DOM,
-   * so the page's last element is :last-child even though the bar is shown after it). */
+  .ne-add-label {
+    display: none;
+  }
+
+  /* Keeps the last card and row clear of the floating button. The nav comes first in the DOM, so
+   * the page's final element is :last-child even though the bar is displayed after it. */
   .ne-dashboard > :last-child,
   .ne-budget > :last-child,
   .ne-asset > :last-child {
@@ -2700,30 +2637,22 @@ select.ne-add-wallet-input {
   }
 }
 
-/* ── Asset view: mobile overrides ── */
-.is-mobile .ne-grid-2.ne-asset-grid {
-  grid-template-columns: 1fr;
-  padding-top: 0;
-}
+/* ── Tags in transaction rows ── */
 
-.is-mobile .ne-asset-right > .ne-card:last-child {
-  flex: none;
-}
-
-/* ── Tag chips in transaction rows ── */
 .ne-tx-tags {
   display: inline-flex;
-  gap: 4px;
   align-items: center;
+  gap: 4px;
 }
 
 .ne-tx-tag-chip {
-  font-size: 10px;
   padding: 1px 5px;
   border-radius: 999px;
+  font-size: 10px;
 }
 
-/* ── Tag input in modals ── */
+/* ── Tag field in the entry form ── */
+
 .ne-tag-input-wrapper {
   position: relative;
   display: flex;
@@ -2736,28 +2665,26 @@ select.ne-add-wallet-input {
 .ne-tag-dropdown {
   position: fixed;
   z-index: 9999;
-  background: var(--background-secondary);
+  max-height: 320px; /* about ten suggestions before it scrolls (desktop) */
+  overflow-y: auto;
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
   box-shadow: var(--ne-shadow-overlay);
-  max-height: 320px; /* desktop: ~10 items before scroll */
-  overflow-y: auto;
+  background: var(--background-secondary);
   -webkit-overflow-scrolling: touch;
 }
 
-/* Mobile: keyboard open, dropdown shows above input */
-
 .ne-tag-dropdown-item {
   padding: 7px 14px;
-  cursor: pointer;
+  border-radius: 4px;
   font-size: 13px;
   color: var(--text-normal);
-  border-radius: 4px;
+  cursor: pointer;
 }
 
 .ne-tag-dropdown-item:hover {
-  background: var(--interactive-accent);
   color: var(--text-on-accent);
+  background: var(--interactive-accent);
 }
 
 .ne-tag-chips {
@@ -2770,74 +2697,75 @@ select.ne-add-wallet-input {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
   padding: 2px 7px;
-  border-radius: 3px;
-  background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
+  border-radius: 3px;
+  font-size: 11px;
   color: var(--text-muted);
+  background: var(--background-secondary);
 }
 
 .ne-tag-chip-remove {
-  cursor: pointer;
-  color: var(--text-faint);
-  font-size: 13px;
-  line-height: 1;
-  padding: 8px;
-  margin: -8px -4px -8px 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 16px;
   min-height: 16px;
+  margin: -8px -4px -8px 0;
+  padding: 8px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-faint);
+  cursor: pointer;
 }
 
 .ne-tag-chip-remove:hover {
   color: var(--text-normal);
 }
 
-/* Tripled .ne-tag-input-wrapper to beat Obsidian's body.is-phone .modal input[type=text] (0,3,2). */
+/* The wrapper class is repeated three times so the input outranks Obsidian's
+   body.is-phone .modal input[type=text] (0,3,2). */
 .ne-tag-input-wrapper.ne-tag-input-wrapper.ne-tag-input-wrapper .ne-tag-input {
   flex: 1;
   min-width: 80px;
+  padding: 0;
   border: none;
-  box-shadow: none;
-  background: transparent;
   outline: none;
+  box-shadow: none;
   font-size: 13px;
   color: var(--text-normal);
-  padding: 0;
+  background: transparent;
 }
 
-/* ── ValidationModal ── */
+/* ── Data check dialog ── */
 
 .ne-validation-modal {
   padding: 0;
 }
 
-/* Header: [X] [title] [spacer] — three columns, title centered */
+/* Header: close button, title and an empty spacer of the same width, so the title is centred */
 .ne-validation-header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
   height: 44px;
+  padding: 0 14px;
   border-bottom: 1px solid var(--background-modifier-border);
-  flex-shrink: 0;
 }
 
 .ne-validation-close-btn {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
   border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-muted);
   background: var(--background-secondary);
   cursor: pointer;
-  color: var(--text-muted);
-  font-size: 14px;
-  flex-shrink: 0;
 }
 
 .ne-validation-close-btn:hover {
@@ -2845,20 +2773,19 @@ select.ne-add-wallet-input {
 }
 
 .ne-validation-title {
+  flex: 1;
+  margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-normal);
-  margin: 0;
   text-align: center;
-  flex: 1;
+  color: var(--text-normal);
 }
 
 .ne-validation-header-spacer {
-  width: 32px;
   flex-shrink: 0;
+  width: 32px;
 }
 
-/* Content area */
 .ne-validation-content {
   display: flex;
   flex-direction: column;
@@ -2867,7 +2794,6 @@ select.ne-add-wallet-input {
   overflow-y: auto;
 }
 
-/* Section */
 .ne-validation-section {
   display: flex;
   flex-direction: column;
@@ -2877,58 +2803,45 @@ select.ne-add-wallet-input {
 .ne-validation-section-label {
   font-size: 11px;
   font-weight: 500;
-  color: var(--text-faint);
-  text-transform: uppercase;
   letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
-/* Issue card */
+/* One card per finding */
 .ne-validation-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
+  border: 1px solid var(--ne-hairline);
   border-radius: var(--ne-radius-md);
   background: var(--ne-surface);
-  border: 1px solid var(--ne-hairline);
 }
 
 .ne-validation-card-text {
-  font-size: 12px;
-  color: var(--text-muted);
   margin: 0;
+  font-size: 12px;
   line-height: 1.5;
+  color: var(--text-muted);
 }
 
-/* Footer row for frontmatter cards (fix button, right-aligned) */
+/* Findings with one fix: the button at the right edge */
 .ne-validation-card-footer {
   display: flex;
   justify-content: flex-end;
 }
 
-/* Actions row for orphan cards (remap select + fix button) */
-.ne-validation-card-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.ne-validation-remap-select {
-  flex: 1;
-  font-size: 12px;
-}
-
 .ne-validation-fix-btn {
   flex-shrink: 0;
-  font-size: 12px;
   padding: 4px 12px;
-  border-radius: 6px;
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
   border: none;
-  cursor: pointer;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 500;
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  cursor: pointer;
 }
 
 .ne-validation-fix-btn:disabled {
@@ -2936,28 +2849,27 @@ select.ne-add-wallet-input {
   cursor: default;
 }
 
-/* Divider */
 .ne-validation-divider {
+  flex-shrink: 0;
   height: 1px;
   background: var(--background-modifier-border);
-  flex-shrink: 0;
 }
 
-/* Footer: full-width fix-all button */
+/* Footer: one full-width "fix all" button */
 .ne-validation-footer {
-  padding: 16px;
   flex-shrink: 0;
+  padding: 16px;
 }
 
 .ne-validation-fix-all-btn {
   width: 100%;
   padding: 12px 0;
-  border-radius: 10px;
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
   border: none;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
   cursor: pointer;
 }
 
@@ -2965,7 +2877,8 @@ select.ne-add-wallet-input {
   background: var(--interactive-accent-hover);
 }
 
-/* ── A11y: keyboard focus rings ── */
+/* ── Keyboard focus rings ── */
+
 .ne-action-btn:focus-visible,
 .ne-nav-btn:focus-visible,
 .ne-pill:focus-visible,
@@ -2974,30 +2887,91 @@ select.ne-add-wallet-input {
   outline-offset: 2px;
 }
 
-/* Categories settings: one block per category with its subcategories */
-.ne-category-block { margin: 12px 0; }
-.ne-category-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.ne-category-head strong { flex: 1; }
-.ne-category-head .ne-category-type { flex: 0 0 auto; }
+/* ── Setup wizard ── */
 
-/* Setup wizard */
-.ne-wizard-container .modal { width: min(720px, 94vw); }
-.ne-wizard-body { max-height: 60vh; overflow-y: auto; padding-right: 4px; }
-.ne-wizard-footer { margin-top: 12px; justify-content: flex-end; }
-.ne-wizard-callout { padding: 8px 12px; border-left: 3px solid var(--interactive-accent); background: var(--background-secondary); border-radius: 4px; }
-.ne-wizard-error { color: var(--text-error); }
+/* Each category as a block holding its subcategories */
+.ne-category-block {
+  margin: 12px 0;
+}
 
-/* Tag input: why the typed text can't become a tag */
-.ne-tag-error { color: var(--text-error); font-size: var(--font-ui-smaller); margin-top: 4px; }
-.ne-tag-input.is-invalid { border-color: var(--text-error); }
+.ne-category-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
 
-.ne-accounts-add { padding: 0 var(--ne-gutter) 20px; max-width: 960px; }
-.ne-wizard-note { padding: 8px 12px; background: var(--background-secondary); border-radius: 4px; }
+.ne-category-head strong {
+  flex: 1;
+}
 
-/* Transactions: select mode and the bulk action bar */
-.ne-detail-select-btn { margin-top: 8px; }
-.ne-tx-row.is-selecting .ne-tx-check { flex-shrink: 0; pointer-events: none; }
-.ne-tx-row.is-selected { background: var(--background-modifier-hover); }
+.ne-category-head .ne-category-type {
+  flex: 0 0 auto;
+}
+
+.ne-wizard-container .modal {
+  width: min(720px, 94vw);
+}
+
+.ne-wizard-body {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ne-wizard-footer {
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.ne-wizard-callout {
+  padding: 8px 12px;
+  border-left: 3px solid var(--interactive-accent);
+  border-radius: 4px;
+  background: var(--background-secondary);
+}
+
+.ne-wizard-error {
+  color: var(--text-error);
+}
+
+/* Explains why what is typed in the tag box cannot become a tag */
+.ne-tag-error {
+  margin-top: 4px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-error);
+}
+
+.ne-tag-input.is-invalid {
+  border-color: var(--text-error);
+}
+
+.ne-accounts-add {
+  max-width: 960px;
+  padding: 0 var(--ne-gutter) 20px;
+}
+
+.ne-wizard-note {
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--background-secondary);
+}
+
+/* ── Transactions: select mode and the bulk bar ── */
+
+.ne-detail-select-btn {
+  margin-top: 8px;
+}
+
+.ne-tx-row.is-selecting .ne-tx-check {
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.ne-tx-row.is-selected {
+  background: var(--background-modifier-hover);
+}
+
 .ne-bulk-bar {
   display: flex;
   flex-wrap: wrap;
@@ -3007,56 +2981,183 @@ select.ne-add-wallet-input {
   border-top: 1px solid var(--background-modifier-border);
   background: var(--background-secondary);
 }
-.ne-bulk-count { flex: 1; font-weight: var(--font-semibold); min-width: 90px; }
 
-/* Budget view: a row is name | planned | spent | progress bar */
-.ne-budget .ne-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding-bottom: 12px; }
-.ne-metric--small { padding: 12px 14px; }
-.ne-metric--small .ne-metric-label { margin-bottom: 4px; }
-.ne-metric--small .ne-metric-value { font-size: 20px; }
-.ne-metric-hint { font-size: var(--font-ui-smaller); color: var(--text-faint); margin-top: 4px; }
-.ne-budget-muted { color: var(--text-muted); }
-.ne-budget-empty { margin: 16px var(--ne-gutter); max-width: 480px; }
-.ne-budget-section { margin: 0 var(--ne-gutter) 12px; padding: 0; overflow: hidden; }
-/* name | planned | spent on the first line, the progress bar full width beneath it. */
+.ne-bulk-count {
+  flex: 1;
+  min-width: 90px;
+  font-weight: var(--font-semibold);
+}
+
+/* ── Budget page ──
+ * A row is: name, planned, spent, and a progress bar underneath. */
+
+.ne-budget .ne-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding-bottom: 12px;
+}
+
+.ne-metric--small {
+  padding: 12px 14px;
+}
+
+.ne-metric--small .ne-metric-label {
+  margin-bottom: 4px;
+}
+
+.ne-metric--small .ne-metric-value {
+  font-size: 20px;
+}
+
+.ne-metric-hint {
+  margin-top: 4px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
+.ne-budget-muted {
+  color: var(--text-muted);
+}
+
+.ne-budget-empty {
+  max-width: 480px;
+  margin: 16px var(--ne-gutter);
+}
+
+.ne-budget-section {
+  margin: 0 var(--ne-gutter) 12px;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Name, planned and spent share the first line; the progress bar spans the full width below. */
 .ne-budget-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 104px 104px;
-  gap: 6px 10px;
   align-items: center;
+  gap: 6px 10px;
   padding: 10px 16px 12px;
 }
 
-.ne-budget-row > .ne-budget-bar { grid-column: 1 / -1; }
-.ne-budget-cols { padding-bottom: 4px; }
-.ne-budget-cols > :last-child { display: none; }
-.ne-budget-body .ne-budget-row { border-top: 1px solid var(--ne-hairline); }
-.ne-budget-head { padding: 14px 16px; font-weight: var(--font-semibold); cursor: pointer; }
-.ne-budget-head:hover { background: var(--ne-surface-hover); }
-.ne-budget-section.is-collapsed .ne-budget-body { display: none; }
-
-/* Chevron: points down while open, turns right when collapsed. */
-.ne-budget-head .ne-budget-name { display: flex; align-items: center; gap: 8px; }
-.ne-budget-chevron { display: flex; flex-shrink: 0; color: var(--text-muted); transition: transform 0.15s; }
-.ne-budget-chevron svg { width: 16px; height: 16px; }
-.ne-budget-section.is-collapsed .ne-budget-chevron { transform: rotate(-90deg); }
-.ne-budget-head:hover .ne-budget-chevron { color: var(--text-normal); }
-.ne-budget-section:not(.is-collapsed) > .ne-budget-head { background: color-mix(in srgb, var(--text-normal) 4%, transparent); }
-.ne-budget-cols { border-top: none !important; font-size: var(--font-ui-smaller); font-weight: 600; letter-spacing: 0.05em; color: var(--text-muted); text-transform: uppercase; }
-.ne-budget-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ne-budget-amount { text-align: right; font-variant-numeric: tabular-nums; }
-.ne-budget-input { width: 100%; text-align: right; font-variant-numeric: tabular-nums; min-height: 34px; border-radius: var(--ne-radius-sm); }
-.ne-budget-bar { height: 6px; border-radius: 3px; background: var(--ne-neutral-tint); overflow: hidden; }
-.ne-budget-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
-.ne-budget-fill.is-under { background: var(--ne-income); }
-.ne-budget-fill.is-at { background: var(--color-yellow); }
-.ne-budget-fill.is-over { background: var(--ne-credit); }
-@media (max-width: 600px) {
-  .ne-budget .ne-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ne-budget-row { grid-template-columns: minmax(0, 1fr) 86px 78px; padding: 10px 12px 12px; }
+.ne-budget-row > .ne-budget-bar {
+  grid-column: 1 / -1;
 }
 
-/* Long term debt view */
+.ne-budget-cols {
+  padding-bottom: 4px;
+}
+
+.ne-budget-cols > :last-child {
+  display: none;
+}
+
+.ne-budget-body .ne-budget-row {
+  border-top: 1px solid var(--ne-hairline);
+}
+
+.ne-budget-head {
+  padding: 14px 16px;
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+}
+
+.ne-budget-head:hover {
+  background: var(--ne-surface-hover);
+}
+
+.ne-budget-section.is-collapsed .ne-budget-body {
+  display: none;
+}
+
+/* The chevron points down while a section is open and turns to the right when it is collapsed. */
+.ne-budget-head .ne-budget-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ne-budget-chevron {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+}
+
+.ne-budget-chevron svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ne-budget-section.is-collapsed .ne-budget-chevron {
+  transform: rotate(-90deg);
+}
+
+.ne-budget-head:hover .ne-budget-chevron {
+  color: var(--text-normal);
+}
+
+.ne-budget-section:not(.is-collapsed) > .ne-budget-head {
+  background: color-mix(in srgb, var(--text-normal) 4%, transparent);
+}
+
+.ne-budget-cols {
+  border-top: none !important;
+  font-size: var(--font-ui-smaller);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ne-budget-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ne-budget-amount {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.ne-budget-input {
+  width: 100%;
+  min-height: 34px;
+  border-radius: var(--ne-radius-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.ne-budget-bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--ne-neutral-tint);
+}
+
+.ne-budget-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.ne-budget-fill.is-under { background: var(--ne-income); }
+.ne-budget-fill.is-at    { background: var(--color-yellow); }
+.ne-budget-fill.is-over  { background: var(--ne-credit); }
+
+@media (max-width: 600px) {
+  .ne-budget .ne-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ne-budget-row {
+    grid-template-columns: minmax(0, 1fr) 86px 78px;
+    padding: 10px 12px 12px;
+  }
+}
+
+/* ── Debt cards ── */
+
 .ne-debt-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -3065,10 +3166,10 @@ select.ne-add-wallet-input {
 }
 
 .ne-debt-card {
-  background: var(--ne-surface);
+  padding: 14px 16px;
   border: 1px solid var(--ne-hairline);
   border-radius: var(--ne-radius-md);
-  padding: 14px 16px;
+  background: var(--ne-surface);
 }
 
 .ne-debt-card-header {
@@ -3079,9 +3180,9 @@ select.ne-add-wallet-input {
 }
 
 .ne-debt-card-name {
-  font-weight: 600;
   flex: 1;
   min-width: 0;
+  font-weight: 600;
 }
 
 .ne-debt-card-kind {
@@ -3092,9 +3193,9 @@ select.ne-add-wallet-input {
 .ne-debt-card-stat {
   display: flex;
   justify-content: space-between;
+  padding: 2px 0;
   font-size: 13px;
   color: var(--text-muted);
-  padding: 2px 0;
 }
 
 .ne-debt-card-line {
@@ -3109,14 +3210,14 @@ select.ne-add-wallet-input {
 }
 
 .ne-debt-card-value {
-  color: var(--text-normal);
   font-variant-numeric: tabular-nums;
+  color: var(--text-normal);
 }
 
 .ne-debt-card-hint {
+  margin-top: 6px;
   font-size: 12px;
   color: var(--text-faint);
-  margin-top: 6px;
 }
 
 .ne-asset-note {
@@ -3124,20 +3225,20 @@ select.ne-add-wallet-input {
   padding: 8px 10px;
   border-left: 3px solid var(--ne-hairline);
   border-radius: 0 var(--ne-radius-sm) var(--ne-radius-sm) 0;
-  background: color-mix(in srgb, var(--text-normal) 4%, transparent);
-  color: var(--text-muted);
   font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-normal) 4%, transparent);
   overflow-wrap: anywhere;
 }
 
 .ne-debt-card-extra {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
+  margin-top: 8px;
   font-size: 13px;
   color: var(--text-muted);
-  margin-top: 8px;
 }
 
 .ne-debt-card-extra-input {
@@ -3145,7 +3246,9 @@ select.ne-add-wallet-input {
   text-align: right;
 }
 
-/* Assets tab: the total graph takes most of the width, the by-type pie a small share */
+/* ── Net worth page ── */
+
+/* Assets: the total chart takes most of the width and the by-type pie a small share. */
 .ne-assets-charts {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 240px;
@@ -3162,10 +3265,12 @@ select.ne-add-wallet-input {
 }
 
 @media (max-width: 700px) {
-  .ne-assets-charts { grid-template-columns: minmax(0, 1fr); }
+  .ne-assets-charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-/* Net worth tab: one heading per section, and the legend with each line's current value */
+/* One heading per section, then a legend showing each line's current value */
 .ne-section-title {
   margin: 24px var(--ne-gutter) 0;
   font-size: var(--font-ui-medium);
@@ -3218,7 +3323,8 @@ select.ne-add-wallet-input {
   min-height: 260px;
 }
 
-/* Savings buckets */
+/* ── Savings buckets ── */
+
 .ne-bucket-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3227,10 +3333,10 @@ select.ne-add-wallet-input {
 }
 
 .ne-bucket-summary-item {
-  background: var(--ne-surface);
+  padding: 8px 12px;
   border: 1px solid var(--ne-hairline);
   border-radius: var(--ne-radius-sm);
-  padding: 8px 12px;
+  background: var(--ne-surface);
 }
 
 .ne-bucket-summary-label {
@@ -3258,16 +3364,16 @@ select.ne-add-wallet-input {
 
 .ne-bucket-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
 }
 
 .ne-bucket-bar {
   height: 6px;
+  overflow: hidden;
   border-radius: 3px;
   background: var(--ne-neutral-tint);
-  overflow: hidden;
 }
 
 .ne-bucket-bar-fill {
@@ -3293,15 +3399,16 @@ select.ne-add-wallet-input {
   margin-top: 14px;
 }
 
-/* The separator sits under an account's row and its bucket list together, so the buckets read as part of that account. */
+/* The border wraps an account's row together with its bucket list, so the buckets read as part
+   of that account. */
 .ne-wallet-entry {
-  background: var(--background-primary);
+  overflow: hidden;
   border: 1px solid var(--ne-hairline);
   border-radius: var(--ne-radius-md);
-  overflow: hidden;
+  background: var(--background-primary);
 }
 
-/* Accounts and assets read as a grid of tiles rather than one long list. */
+/* Accounts and assets are laid out as a grid of tiles instead of one long list. */
 .ne-asset > .ne-card:has(.ne-wallet-entry) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -3316,7 +3423,8 @@ select.ne-add-wallet-input {
   margin-bottom: 0;
 }
 
-/* Tile: identity on top (dot beside the name, details beneath), balance, then actions pinned to the foot. */
+/* A tile has the identity on top (a dot beside the name, the details below it), then the balance,
+   then the actions pinned to the bottom edge. */
 .ne-wallet-entry {
   display: flex;
   flex-direction: column;
@@ -3331,16 +3439,21 @@ select.ne-add-wallet-input {
 }
 
 .ne-wallet-entry .ne-wallet-row-info {
-  flex: 0 0 auto;
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   column-gap: 8px;
   row-gap: 2px;
-  align-items: center;
 }
 
-.ne-wallet-entry .ne-wallet-row-info > * { grid-column: 2; }
-.ne-wallet-entry .ne-wallet-row-info > .ne-account-dot { grid-column: 1; }
+.ne-wallet-entry .ne-wallet-row-info > * {
+  grid-column: 2;
+}
+
+.ne-wallet-entry .ne-wallet-row-info > .ne-account-dot {
+  grid-column: 1;
+}
 
 .ne-wallet-entry .ne-wallet-row-name {
   font-size: var(--font-ui-medium);
@@ -3351,9 +3464,9 @@ select.ne-add-wallet-input {
   margin: 0;
   font-size: 24px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   color: var(--text-normal);
-  font-variant-numeric: tabular-nums;
 }
 
 .ne-wallet-entry .ne-wallet-row-actions {
@@ -3361,7 +3474,9 @@ select.ne-add-wallet-input {
   margin-top: auto;
 }
 
-.ne-wallet-entry .ne-wallet-row-balance.is-debt { color: var(--ne-credit); }
+.ne-wallet-entry .ne-wallet-row-balance.is-debt {
+  color: var(--ne-credit);
+}
 
 .ne-wallet-entry > .ne-wallet-row,
 .ne-bucket-details .ne-bucket-row:last-child {
@@ -3369,8 +3484,9 @@ select.ne-add-wallet-input {
 }
 
 .ne-bucket-details summary {
-  cursor: pointer;
   padding: 6px 14px;
   font-size: 12px;
   color: var(--text-muted);
+  cursor: pointer;
 }
+

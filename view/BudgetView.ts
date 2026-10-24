@@ -4,17 +4,17 @@ import { centsToDecimal, formatCents } from '../domain/money'
 import { t, tn } from '../labels'
 import type { Ledger } from '../services/Ledger'
 import { budgetSheetOf, findBudget } from '../snapshot/budgetQueries'
-import { currentYearMonth } from '../utils'
+import { thisMonth } from '../helpers'
 import { barWidth, leftText } from './budgetRow'
 import { budgetCards } from './budgetCards'
 import { NESTEGG_ICON } from '../plugin/icon'
-import { createMetric, renderCard } from './components'
-import { renderSharedHeader } from './SharedHeader'
+import { buildMetricTile, buildCard } from './panels'
+import { drawPageHeader } from './PageHeader'
 
 export const BUDGET_VIEW_TYPE = 'nestegg-budget'
 
 export class BudgetView extends ItemView {
-  private yearMonth = currentYearMonth()
+  private yearMonth = thisMonth()
   private collapsed = new Set<string>()
 
   constructor(leaf: WorkspaceLeaf, private ledger: Ledger) {
@@ -47,12 +47,12 @@ export class BudgetView extends ItemView {
     contentEl.empty()
     contentEl.addClass('ne-budget')
 
-    renderSharedHeader(contentEl, {
-      view: this,
+    drawPageHeader(contentEl, {
+      owner: this,
       ledger: this.ledger,
-      activeView: 'budget',
-      yearMonth: this.yearMonth,
-      onMonthChange: (ym) => { this.yearMonth = ym; void this.render() },
+      page: 'budget',
+      month: this.yearMonth,
+      onMonth: (month) => { this.yearMonth = month; void this.render() },
     })
 
     if (!findBudget(this.ledger.snapshot, this.yearMonth)) {
@@ -64,7 +64,7 @@ export class BudgetView extends ItemView {
   }
 
   private renderEmpty(parent: HTMLElement) {
-    const card = renderCard(parent, { className: 'ne-budget-empty' })
+    const card = buildCard(parent, { className: 'ne-budget-empty' })
     card.createEl('p', { text: tn('budget.empty', { month: this.yearMonth }) })
     card.createEl('p', { text: t('budget.emptyHint'), cls: 'ne-budget-muted' })
     card.createEl('button', { text: t('budget.create'), cls: 'mod-cta' })
@@ -76,7 +76,7 @@ export class BudgetView extends ItemView {
 
     const metrics = parent.createDiv('ne-metrics')
     for (const c of budgetCards(summary)) {
-      createMetric(metrics, c.label, c.valueCents, c.variant, { compact: true, signed: c.signed, hero: c.hero, hint: c.hint })
+      buildMetricTile(metrics, c.label, c.valueCents, c.variant, { compact: true, signed: c.signed, hero: c.hero, hint: c.hint })
     }
 
     for (const group of sectionsByCategory([...income, ...expense, ...payments])) this.renderCategory(parent, group)
@@ -87,7 +87,7 @@ export class BudgetView extends ItemView {
   private renderCategory(parent: HTMLElement, group: BudgetSection[]) {
     const [main] = group
     const totals = categoryTotals(group)
-    const card = renderCard(parent, { className: 'ne-budget-section' })
+    const card = buildCard(parent, { className: 'ne-budget-section' })
     const key = main.category
     if (this.collapsed.has(key)) card.addClass('is-collapsed')
 

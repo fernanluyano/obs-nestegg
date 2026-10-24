@@ -35,7 +35,6 @@ const strings = {
     'dashboard.title': 'Expenses History',
     'dash.income': 'Income',
     'dash.expense': 'Expense',
-    'dash.balance': 'Balance',
     'dash.surplus': 'Surplus',
     'dash.expenseByCategory': 'Expense by category',
     'dash.expenseByTag': 'Expense by tag',
@@ -85,14 +84,14 @@ const strings = {
     'modal.tags': 'Tags',
     'modal.tagsPlaceholder': 'Type and press Enter',
     'modal.done': 'Done',
-    'tagPicker.title': 'Select tags',
-    'tagPicker.search': 'Search or type a new tag',
-    'tagPicker.addTag': '+ Add tag',
-    'tagPicker.addNamed': '+ Add "{name}"',
-    'tagPicker.noResults': 'No tags containing "{searchTerm}"',
-    'tagPicker.tagLimit': 'Tag limit reached',
-    'tagPicker.tooLong': 'Too long to add (max 16 characters)',
-    'tagPicker.rowPlaceholder': 'Select tags',
+    'tagSheet.title': 'Select tags',
+    'tagSheet.search': 'Search or type a new tag',
+    'tagSheet.addTag': '+ Add tag',
+    'tagSheet.addNamed': '+ Add "{name}"',
+    'tagSheet.noResults': 'No tags containing "{searchTerm}"',
+    'tagSheet.tagLimit': 'Tag limit reached',
+    'tagSheet.tooLong': 'Too long to add (max 16 characters)',
+    'tagSheet.rowPlaceholder': 'Select tags',
     'modal.amount': 'Amount',
     'modal.principal': 'Principal',
     'modal.interest': 'Interest',
@@ -126,10 +125,10 @@ const strings = {
     'err.tagInvalid': 'Tags can only contain letters, numbers and dashes',
     'err.balanceRequired': 'Enter the current balance. Zero is fine, but it cannot be left blank.',
 
-    'calculator.err.pendingExpression': 'Press = to finish the calculation',
-    'calculator.err.negativeResult': 'Calculation result cannot be negative',
-    'calculator.err.divideByZero': 'Cannot divide by 0',
-    'calculator.done': 'Done',
+    'keypad.err.pendingExpression': 'Press = to finish the calculation',
+    'keypad.err.negativeResult': 'Calculation result cannot be negative',
+    'keypad.err.divideByZero': 'Cannot divide by 0',
+    'keypad.done': 'Done',
 
     'settings.defaultAccount': 'Default account',
     'settings.defaultAccountDesc': 'Default account selected when adding a transaction',
@@ -161,9 +160,6 @@ const strings = {
     'settings.debtNegativeWarning': 'Enter what you owe as a NEGATIVE number. Owe 3,000 → type -3000.',
     'err.debtBalancePositive': 'A debt is entered as a negative number, e.g. -3000',
     'settings.cashBalanceHint': 'Enter the actual balance on the date below. Transactions dated after it adjust the current balance.',
-    'settings.expenseCategories': 'Expense',
-    'settings.incomeCategories': 'Income',
-    'settings.transferCategories': 'Transfer',
     'settings.addCategory': 'Add category',
     'settings.categoryPlaceholder': 'Category name (its Misc takes the type chosen)',
     'settings.subcategoryPlaceholder': 'New subcategory',
@@ -378,8 +374,6 @@ const strings = {
     'assets.empty': 'No assets yet. Add a house, a car, gold or anything else you own.',
     'assets.add': 'Add asset',
     'assets.addValuation': 'Add valuation',
-    'assets.totalTrend': 'Total value of assets',
-    'assets.totalValue': 'Total value',
     'assets.byType': 'Assets by type',
     'assets.valueAsOf': 'as of {date}',
     'assets.currentValue': 'Value',
@@ -452,33 +446,29 @@ const strings = {
 
 export type LabelKey = keyof typeof strings
 
-export function t(key: LabelKey): string {
-	return strings[key]
-}
+export const t = (key: LabelKey): string => strings[key]
 
+// Fills each {placeholder} in the label with its value; only the first occurrence of each is replaced.
 export function tn(key: LabelKey, vars: Record<string, string>): string {
-	let str: string = strings[key]
-	for (const [k, v] of Object.entries(vars)) {
-		str = str.replace(`{${k}}`, v)
-	}
-	return str
+	return Object.entries(vars).reduce<string>((text, [name, value]) => text.replace(`{${name}}`, value), strings[key])
 }
 
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-export function formatYearMonth(yearMonth: string, style: 'numeric' | 'short' = 'numeric'): string {
-	const match = /^(\d{4})-(\d{2})$/.exec(yearMonth)
-	if (!match) return yearMonth
-	const month = Number(match[2])
-	if (month < 1 || month > 12) return yearMonth
-	return style === 'short'
-		? `${MONTH_NAMES[month - 1]} ${match[1]}`
-		: `${month}/${match[1]}`
+// "2026-03" as "3/2026", or "Mar 2026" for the short style. Anything else comes back unchanged.
+export function monthWithYear(yearMonth: string, style: 'numeric' | 'short' = 'numeric'): string {
+	const parts = /^(\d{4})-(\d{2})$/.exec(yearMonth)
+	if (!parts) return yearMonth
+	const [, year, mm] = parts
+	const number = Number(mm)
+	if (number < 1 || number > 12) return yearMonth
+	return style === 'short' ? `${SHORT_MONTHS[number - 1]} ${year}` : `${number}/${year}`
 }
 
-export function formatMonthLabel(yearMonth: string): string {
-	const match = /^\d{4}-(\d{2})$/.exec(yearMonth)
-	if (!match) return yearMonth
-	const month = Number(match[1])
-	return month >= 1 && month <= 12 ? MONTH_NAMES[month - 1] : yearMonth
+// "2026-03" as "Mar"; anything else comes back unchanged.
+export function monthName(yearMonth: string): string {
+	const parts = /^\d{4}-(\d{2})$/.exec(yearMonth)
+	if (!parts) return yearMonth
+	const number = Number(parts[1])
+	return number >= 1 && number <= 12 ? SHORT_MONTHS[number - 1] : yearMonth
 }

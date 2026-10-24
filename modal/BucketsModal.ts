@@ -4,7 +4,7 @@ import { t, tn } from '../labels'
 import type { Ledger } from '../services/Ledger'
 import { availability, bucketsOf } from '../snapshot/queries'
 import { bucketRowModel, parseAmountText, parseGoalText } from './bucketState'
-import { ConfirmModal } from './ConfirmModal'
+import { ConfirmDialog } from './ConfirmDialog'
 
 type Action = 'moveIn' | 'moveOut' | 'goal' | 'rename'
 
@@ -136,14 +136,14 @@ export class BucketsModal extends Modal {
       const message = parsed.goalCents === undefined
         ? tn('confirm.createBucket', { name: name.value, account: this.account })
         : tn('confirm.createBucketGoal', { name: name.value, account: this.account, goal: formatCents(parsed.goalCents) })
-      new ConfirmModal(this.app, message, () => this.apply(() => this.ledger.buckets.create(this.account, name.value, parsed.goalCents))).open()
+      new ConfirmDialog(this.app, message, () => this.apply(() => this.ledger.buckets.create(this.account, name.value, parsed.goalCents))).open()
     }
     form.createEl('button', { text: t('buckets.create'), cls: 'mod-cta' }).addEventListener('click', () => void create())
   }
 
   private confirmDelete(name: string, balanceCents: number) {
     const message = tn('confirm.deleteBucket', { name, amount: formatCents(balanceCents) })
-    new ConfirmModal(this.app, message, () => this.apply(() => this.ledger.buckets.remove(this.account, name))).open()
+    new ConfirmDialog(this.app, message, () => this.apply(() => this.ledger.buckets.remove(this.account, name))).open()
   }
 
   private async apply(action: () => Promise<void>) {

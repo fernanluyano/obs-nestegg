@@ -1,7 +1,7 @@
 import { DEFAULT_ACCOUNT_COLOR } from '../../domain/colors'
 import { formatCents } from '../../domain/money'
 import { t } from '../../labels'
-import { dateToMonthDay } from '../../utils'
+import { monthAndDay } from '../../helpers'
 
 const colorOf = (colors: Map<string, string>, account: string) => colors.get(account) ?? DEFAULT_ACCOUNT_COLOR
 
@@ -38,7 +38,7 @@ export function renderDayHeader(
 ): void {
   const header = container.createDiv('ne-day-header')
   header.dataset['testid'] = 'day-header'
-  header.createEl('span', { text: dateToMonthDay(date), cls: 'ne-day-date' })
+  header.createEl('span', { text: monthAndDay(date), cls: 'ne-day-date' })
   const list = header.createDiv('ne-day-balances')
   for (const [account, cents] of balances ?? []) {
     list.createEl('span', { text: formatCents(cents), cls: 'ne-day-amount' }).style.color = colorOf(colors, account)

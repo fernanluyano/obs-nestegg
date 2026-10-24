@@ -4,7 +4,7 @@ import { buildAccountNote } from "../notes/accountNote";
 import { refreshTotals } from "../notes/monthNote";
 import { accountPath } from "../notes/paths";
 import { discardTransit, promoteTransit } from "../rename/recovery";
-import { accountsOf, activeAccounts } from "../snapshot/queries";
+import { activeAccounts } from "../snapshot/queries";
 import { accountTransactions } from "../snapshot/snapshot";
 import { cleanupEmptyFolders } from "../storage/folders";
 import type { ValidationIssue } from "../validation/issues";

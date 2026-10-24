@@ -7,7 +7,7 @@ import { t, tn } from '../labels'
 import {
   correctionPatch, parseCorrectionForm, previewCorrection, type BalanceCorrection, type CorrectionForm,
 } from './balanceCorrectionState'
-import { ConfirmModal } from './ConfirmModal'
+import { ConfirmDialog } from './ConfirmDialog'
 
 export class BalanceCorrectionModal extends Modal {
   private form: CorrectionForm
@@ -101,7 +101,7 @@ export class BalanceCorrectionModal extends Modal {
     const message = tn('correction.confirm', {
       name: this.account.name, previous: formatCents(p.previousCents), projected: formatCents(p.projectedCents),
     }) + (patch.unbalancedCents === undefined ? '' : ' ' + t('correction.confirmUnbalanced'))
-    new ConfirmModal(this.app, message, async () => {
+    new ConfirmDialog(this.app, message, async () => {
       try {
         await this.onSave(patch)
         this.close()

@@ -3,7 +3,7 @@ import { todayString } from '../../domain/dates'
 import { formatCents } from '../../domain/money'
 import { isLiability, type Account, type AccountType } from '../../domain/types'
 import { t, tn } from '../../labels'
-import { ConfirmModal } from '../../modal/ConfirmModal'
+import { ConfirmDialog } from '../../modal/ConfirmDialog'
 import { openAccountEdit } from '../../modal/editAccountFlow'
 import { accountBalances, accountHasTransactions, bucketsOf } from '../../snapshot/queries'
 import { loanScheduleText } from '../../view/accounts/loanScheduleText'
@@ -80,7 +80,7 @@ function removeAccount(ctx: WizardContext, account: Account, hasRows: boolean): 
     ? (hasBuckets ? 'wizard.confirm.archiveAccountBuckets' : 'wizard.confirm.archiveAccount')
     : (hasBuckets ? 'wizard.confirm.deleteAccountBuckets' : 'wizard.confirm.deleteAccount')
   const message = tn(key, { name: account.name })
-  new ConfirmModal(ctx.app, message, async () => {
+  new ConfirmDialog(ctx.app, message, async () => {
     await runAction(ctx, () => (hasRows ? ctx.ledger.archiveAccount(account.name) : ctx.ledger.accounts.remove(account.name)))
   }).open()
 }
@@ -108,7 +108,7 @@ function renderArchived(container: HTMLElement, ctx: WizardContext): void {
       void runAction(ctx, () => ctx.ledger.accounts.update(account.name, { includeInNetAsset: !account.includeInNetAsset }))
     })
     actions.createEl('button', { text: t('ui.unarchive') }).addEventListener('click', () => {
-      new ConfirmModal(ctx.app, t('confirm.unarchiveAccount'), async () => {
+      new ConfirmDialog(ctx.app, t('confirm.unarchiveAccount'), async () => {
         await runAction(ctx, () => ctx.ledger.accounts.setActive(account.name, true))
       }).open()
     })

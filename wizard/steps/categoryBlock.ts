@@ -2,7 +2,7 @@ import { buildCategoryIndex, migrationTargets } from '../../domain/categories'
 import { miscName } from '../../domain/names'
 import { TRANSACTION_TYPES, type Category, type Subcategory, type TransactionType } from '../../domain/types'
 import { t, tn, type LabelKey } from '../../labels'
-import { ConfirmModal } from '../../modal/ConfirmModal'
+import { ConfirmDialog } from '../../modal/ConfirmDialog'
 import { SubcategoryPickModal } from '../../modal/SubcategoryPickModal'
 import { TextPromptModal } from '../../modal/TextPromptModal'
 import { subcategoryTypeLocked, subcategoryUsage } from '../../snapshot/queries'
@@ -25,7 +25,7 @@ function promptRename(
   new TextPromptModal(ctx.app, t(promptKey), from, async (to) => {
     const impact = impactOf()
     const message = tn(confirmKey, { from, to, files: String(impact.files), transactions: String(impact.transactions) })
-    new ConfirmModal(ctx.app, message, () => runAction(ctx, () => run(to), t('notice.renamed'))).open()
+    new ConfirmDialog(ctx.app, message, () => runAction(ctx, () => run(to), t('notice.renamed'))).open()
   }).open()
 }
 
@@ -80,7 +80,7 @@ function renderTypeSelect(chip: HTMLElement, ctx: WizardContext, sub: Subcategor
     const message = tn('wizard.confirm.changeType', {
       name: sub.name, from: t(`label.type.${sub.type}`).toLowerCase(), to: t(`label.type.${to}`).toLowerCase(),
     })
-    new ConfirmModal(
+    new ConfirmDialog(
       app,
       message,
       () => runAction(ctx, () => ledger.categories.setSubcategoryType(sub.name, to), t('notice.typeChanged')),
@@ -136,7 +136,7 @@ function confirmDelete(
 ): void {
   const { ledger, app } = ctx
   if (removed.every(s => subcategoryUsage(ledger.snapshot, s) === 0)) {
-    new ConfirmModal(app, t(confirmKey), () => runAction(ctx, () => run())).open()
+    new ConfirmDialog(app, t(confirmKey), () => runAction(ctx, () => run())).open()
     return
   }
   const categories = ledger.snapshot.categories.map(c => c.category)

@@ -7,7 +7,7 @@ import { t, tn } from '../labels'
 import type { Ledger } from '../services/Ledger'
 import { parseNewAssetForm } from './assetState'
 import { renderColorSwatches } from './ColorSwatches'
-import { ConfirmModal } from './ConfirmModal'
+import { ConfirmDialog } from './ConfirmDialog'
 
 export class AddAssetModal extends Modal {
   constructor(
@@ -69,7 +69,7 @@ export class AddAssetModal extends Modal {
       const message = tn('assets.confirmAdd', {
         type: t(`label.assetType.${type}`).toLowerCase(), name: parsed.name, value: formatCents(parsed.valueCents), date: parsed.date,
       })
-      new ConfirmModal(this.app, message, async () => {
+      new ConfirmDialog(this.app, message, async () => {
         const added = await this.run(
           () => this.ledger.assets.create({ name: parsed.name, assetType: type, color, valueCents: parsed.valueCents, date: parsed.date, note }),
           tn('notice.assetAdded', { name: parsed.name }),

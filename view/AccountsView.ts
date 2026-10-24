@@ -12,8 +12,8 @@ import { InvestingEntriesModal } from '../modal/InvestingEntriesModal'
 import type { Ledger } from '../services/Ledger'
 import { accountBalances, bucketsOf } from '../snapshot/queries'
 import { loanScheduleText } from './accounts/loanScheduleText'
-import { renderCard } from './components'
-import { renderSharedHeader } from './SharedHeader'
+import { buildCard } from './panels'
+import { drawPageHeader } from './PageHeader'
 
 export const ACCOUNTS_VIEW_TYPE = 'nestegg-accounts'
 
@@ -74,9 +74,9 @@ export class AccountsView extends ItemView {
     const savedScroll = contentEl.scrollTop
     contentEl.empty()
     contentEl.addClass('ne-asset')
-    renderSharedHeader(contentEl, { view: this, ledger: this.ledger, activeView: 'accounts', yearMonth: null })
+    drawPageHeader(contentEl, { owner: this, ledger: this.ledger, page: 'accounts', month: null })
 
-    const card = renderCard(contentEl, { title: t('accounts.title') })
+    const card = buildCard(contentEl, { title: t('accounts.title') })
     const balances = accountBalances(this.ledger.snapshot).filter(b => b.account.active)
     if (balances.length === 0) {
       card.createEl('p', { text: t('settings.noActiveAccounts'), cls: 'ne-settings-empty' })

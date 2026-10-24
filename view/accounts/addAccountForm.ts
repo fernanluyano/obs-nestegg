@@ -7,7 +7,7 @@ import { nameProblem } from '../../domain/names'
 import { isLiability, LOAN_KINDS, type AccountType, type LoanKind } from '../../domain/types'
 import { t, tn, type LabelKey } from '../../labels'
 import { renderColorSwatches } from '../../modal/ColorSwatches'
-import { ConfirmModal } from '../../modal/ConfirmModal'
+import { ConfirmDialog } from '../../modal/ConfirmDialog'
 import type { Ledger } from '../../services/Ledger'
 import { checkBalance } from '../../wizard/model'
 
@@ -104,7 +104,7 @@ export function renderAddAccountForm(container: HTMLElement, { app, ledger, run 
     const message = tn('accounts.confirmAdd', {
       type: t(`label.accountType.${type}`).toLowerCase(), name, balance: formatCents(checked.cents), date: asOf,
     })
-    new ConfirmModal(app, message, () => run(
+    new ConfirmDialog(app, message, () => run(
       () => ledger.addAccount({
         name, accountType: type, enteredBalanceCents: checked.cents, enteredBalanceAsOf: asOf, color,
         ...(plan?.ok ? { loanKind, ...plan.fields } : {}),

@@ -4,7 +4,6 @@ Obsidian plugin for personal finance, right inside the user's vault: budgeting a
 
 ## Sources and licensing
 
-- Some code was inherited from Penny Wallet (MIT) and there is no notice file for it. **Before the first release, all of it must be rewritten so no Penny Wallet code is left** (the mobile calculator, bottom sheets, chart helpers, styles and modal structure are the likeliest places).
 - Budget Vault (`~/dev/github/budget-vault`, AGPL-3.0) is **ideas only** — never copy its code or structure; implement clean-room.
 
 ## Data
@@ -44,7 +43,7 @@ Layers, from pure to Obsidian-bound; each folder mirrors a spec folder under `te
 - `services/` — `Ledger` facade and the services that write (transactions, accounts, categories, settings, validation fixes); run against `tests/helpers/memoryVault.ts`
 - `plugin/` — wiring only: views, commands, startup
 - `wizard/` — the setup wizard, the only place to manage accounts, categories and finance preferences (the plugin settings tab holds just the per-device colour theme, stored in `data.json`, never in the vault; themes are data in `domain/themes.ts`, so adding one is a single entry); `wizard/model.ts` holds the pure rules (mandatory pieces, rename impact), `steps/` one file per step
-- `view/`, `modal/` — Obsidian UI; keep logic in the pure modules beside them (`view/detail/filters.ts`, `modal/transactionState.ts`, `modal/tagPickerState.ts`)
+- `view/`, `modal/` — Obsidian UI; keep logic in the pure modules beside them (`view/detail/filters.ts`, `modal/entryDraft.ts`, `modal/tagSheetState.ts`)
 - `main.ts` — plugin entry point, registered in `manifest.json` by `id`; stays tiny
 - `labels.ts` — the English string table
 - `styles.css` — plugin styles, loaded automatically by Obsidian
@@ -54,6 +53,18 @@ Layers, from pure to Obsidian-bound; each folder mirrors a spec folder under `te
 Vault layout (all under a fixed `Nestegg/` folder): `Settings.md`, `Accounts/<Name>/<Name>.md`, `Accounts/<Name>/Transactions/YYYY-MM.md`, `Categories/<Category>.md`, `Assets/<Name>.md` (one flat note per asset: a house, a vehicle, metals; frontmatter plus one `Date | ValueCents | Note` table of dated valuations, sorted by date; assets are not accounts and never enter net asset), `Budgets/YYYY-MM.md` (one table of `Subcategory | PlannedCents` per calendar month, planned per subcategory only; a new month copies the previous plan and nothing else carries over). Properties win over paths; every note has `state: current | in_transit`.
 
 Coverage is enforced over every logic layer (see `vitest.config.ts`); only files that call the Obsidian API directly are excluded.
+
+## Before the first release
+
+Code, tests and docs are done; what is left is checking by hand, because the UI layer has no unit tests (`make dev` in the `Dev` vault, reload Obsidian, on desktop and on a phone):
+
+- Add and edit a transaction of every type (expense, income, transfer, loan payment, refund) on the desktop form and the phone form, including the keypad, the account/category/tag sheets, the date row and delete.
+- Transactions page: filters (desktop panel and phone sheet), search, select mode and bulk delete/reassign.
+- Overview, Budget, Accounts and Net worth pages: charts render, the pies are clickable, light and dark themes, a narrow window.
+- Investing accounts: add, edit and delete entries, the last-entry guard, and the account showing up in the net worth chart and breakdown.
+- Setup wizard on an empty vault, and **Validate data** with a damaged note.
+- Read the README against the app once; its feature list was written from the code, not from running it.
+- Last: `make build` and `make test` green, then `make release`.
 
 ## Conventions
 

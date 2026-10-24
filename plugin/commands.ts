@@ -1,13 +1,13 @@
 import { Notice, Platform, Plugin } from 'obsidian'
 import type { TransactionModalParams } from '../domain/types'
 import { t } from '../labels'
-import { MobileTransactionModal } from '../modal/MobileTransactionModal'
-import { TransactionModal } from '../modal/TransactionModal'
-import { ValidationModal } from '../modal/ValidationModal'
+import { EntryFormModal } from '../modal/EntryFormModal'
+import { MobileEntryFormModal } from '../modal/MobileEntryFormModal'
+import { IssueReviewModal } from '../modal/IssueReviewModal'
 import type { Ledger } from '../services/Ledger'
 import { SetupWizard } from '../wizard/SetupWizard'
 import { NESTEGG_ICON } from './icon'
-import { openAccounts, openBudget, openDashboard, openDetail, openNetWorth } from './views'
+import { openAccounts, openBudget, openOverview, openTransactions, openNetWorth } from './views'
 
 export function openSetupWizard(plugin: Plugin, ledger: Ledger): void {
   new SetupWizard(plugin.app, ledger).open()
@@ -18,7 +18,7 @@ export function refreshViews(plugin: Plugin): void {
 }
 
 export function openTransactionModal(plugin: Plugin, ledger: Ledger, params: TransactionModalParams = {}): void {
-  const ModalClass = Platform.isMobile ? MobileTransactionModal : TransactionModal
+  const ModalClass = Platform.isMobile ? MobileEntryFormModal : EntryFormModal
   new ModalClass(plugin.app, ledger, params, null, () => refreshViews(plugin)).open()
 }
 
@@ -28,15 +28,15 @@ export async function runValidation(plugin: Plugin, ledger: Ledger, showNoticeIf
     if (showNoticeIfClean) new Notice(t('notice.validationClean'))
     return
   }
-  new ValidationModal(plugin.app, ledger, issues, () => refreshViews(plugin)).open()
+  new IssueReviewModal(plugin.app, ledger, issues, () => refreshViews(plugin)).open()
 }
 
 export function registerCommands(plugin: Plugin, ledger: Ledger): void {
-  plugin.addRibbonIcon(NESTEGG_ICON, 'Nestegg', () => { void openDashboard(plugin) })
-  plugin.addCommand({ id: 'open-dashboard', name: 'Open expenses history', callback: () => { void openDashboard(plugin) } })
+  plugin.addRibbonIcon(NESTEGG_ICON, 'Nestegg', () => { void openOverview(plugin) })
+  plugin.addCommand({ id: 'open-dashboard', name: 'Open expenses history', callback: () => { void openOverview(plugin) } })
   plugin.addCommand({ id: 'open-networth', name: 'Open net worth', callback: () => { void openNetWorth(plugin) } })
   plugin.addCommand({ id: 'open-accounts', name: 'Open accounts', callback: () => { void openAccounts(plugin) } })
-  plugin.addCommand({ id: 'open-detail', name: 'Open transactions', callback: () => { void openDetail(plugin) } })
+  plugin.addCommand({ id: 'open-detail', name: 'Open transactions', callback: () => { void openTransactions(plugin) } })
   plugin.addCommand({ id: 'open-budget', name: 'Open budget', callback: () => { void openBudget(plugin) } })
   plugin.addCommand({ id: 'add-transaction', name: 'Add transaction', callback: () => openTransactionModal(plugin, ledger) })
   plugin.addCommand({ id: 'setup', name: 'Set up accounts and categories', callback: () => openSetupWizard(plugin, ledger) })

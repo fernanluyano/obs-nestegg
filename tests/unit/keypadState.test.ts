@@ -1,14 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import {
-  createMobileCalculatorState,
-  pressMobileCalculatorKey,
-} from '../../modal/mobileCalculatorState'
+import { newKeypadState, pressKeypadKey } from '../../modal/keypadState'
 
 function pressAll(keys: string[], initialAmount = '') {
-  return keys.reduce(
-    (state, key) => pressMobileCalculatorKey(state, key),
-    createMobileCalculatorState(initialAmount),
-  )
+  return keys.reduce((state, key) => pressKeypadKey(state, key), newKeypadState(initialAmount))
 }
 
 describe('mobile calculator state', () => {
@@ -43,7 +37,7 @@ describe('mobile calculator state', () => {
     expect(state.amountValue).toBe('20')
     expect(state.expressionText).toBe('100 + 20')
     expect(state.isPendingExpression).toBe(true)
-    expect(state.submitBlocker).toBe('calculator.err.pendingExpression')
+    expect(state.submitBlocker).toBe('keypad.err.pendingExpression')
   })
 
   it('uses left-to-right calculation for chained operators', () => {
@@ -102,9 +96,9 @@ describe('mobile calculator state', () => {
     const state = pressAll(['2', '0', '-', '1', '0', '0', '='])
     expect(state.amountValue).toBe('100')
     expect(state.expressionText).toBe('20 - 100')
-    expect(state.errorKey).toBe('calculator.err.negativeResult')
+    expect(state.errorKey).toBe('keypad.err.negativeResult')
     expect(state.isPendingExpression).toBe(true)
-    expect(state.submitBlocker).toBe('calculator.err.pendingExpression')
+    expect(state.submitBlocker).toBe('keypad.err.pendingExpression')
   })
 
   it('ignores operators when there is no amount', () => {
@@ -183,7 +177,7 @@ describe('mobile calculator state', () => {
 
   it('done preserves error and pending flag on negative result', () => {
     const state = pressAll(['2', '0', '-', '1', '0', '0', 'done'])
-    expect(state.errorKey).toBe('calculator.err.negativeResult')
+    expect(state.errorKey).toBe('keypad.err.negativeResult')
     expect(state.isPendingExpression).toBe(true)
   })
 })

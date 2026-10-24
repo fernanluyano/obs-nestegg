@@ -3,10 +3,10 @@ import { buildCategoryIndex } from '../../domain/categories'
 import { CREDIT_CARD_PAYMENT, defaultCategories, LOAN_PAYMENT } from '../../domain/defaults'
 import type { Account, LedgerEntry } from '../../domain/types'
 import {
-  accountChoices, activeAccounts, addTagToList, buildDraft, categoryChoices, formFromEntry, initialFormState,
-  debtTargetAccount, normalizeTransferForm, pendingTagProblem, resetFormForType, transferAccountCandidates, validateTransactionForm,
-  type FormContext, type TransactionFormState,
-} from '../../modal/transactionState'
+  accountChoices, activeAccounts, tryAddTag, buildDraft, categoryChoices, formFromEntry, initialFormState,
+  debtTargetAccount, normalizeTransferForm, pendingTagProblem, resetFormForType, transferAccountCandidates, checkDraft,
+  type FormContext, type EntryDraft,
+} from '../../modal/entryDraft'
 import { account } from '../helpers/fixtures'
 
 const accounts: Account[] = [
@@ -19,12 +19,12 @@ const accounts: Account[] = [
 const categories = defaultCategories()
 const ctx: FormContext = { accounts, categories, index: buildCategoryIndex(categories), defaultAccount: 'Cash Main' }
 
-const form = (over: Partial<TransactionFormState> = {}): TransactionFormState => ({
+const form = (over: Partial<EntryDraft> = {}): EntryDraft => ({
   date: '2026-05-03', type: 'expense', account: 'Cash Main', fromAccount: '', toAccount: '',
   subcategory: 'Groceries', merchant: '', note: '', tags: [], amount: '12.50', interest: '', isRefund: false, ...over,
 })
 
-const transferForm = (over: Partial<TransactionFormState> = {}) =>
+const transferForm = (over: Partial<EntryDraft> = {}) =>
   form({ type: 'transfer', account: '', fromAccount: 'Cash Main', toAccount: 'Savings', subcategory: 'Account transfer', ...over })
 
 describe('initialFormState', () => {
@@ -156,7 +156,7 @@ describe('choices', () => {
   })
 })
 
-const debtForm = (over: Partial<TransactionFormState> = {}) =>
+const debtForm = (over: Partial<EntryDraft> = {}) =>
   transferForm({ type: 'debt', subcategory: LOAN_PAYMENT, toAccount: '', ...over })
 
 describe('debtTargetAccount / normalizeTransferForm', () => {
@@ -221,51 +221,51 @@ describe('resetFormForType', () => {
   })
 })
 
-describe('addTagToList', () => {
+describe('tryAddTag', () => {
   it('rejects empty and blank input', () => {
-    expect(addTagToList(['a'], '')).toEqual({ kind: 'empty' })
-    expect(addTagToList(['a'], '   ')).toEqual({ kind: 'empty' })
-    expect(addTagToList(['a'], '#')).toEqual({ kind: 'empty' })
+    expect(tryAddTag(['a'], '')).toEqual({ kind: 'empty' })
+    expect(tryAddTag(['a'], '   ')).toEqual({ kind: 'empty' })
+    expect(tryAddTag(['a'], '#')).toEqual({ kind: 'empty' })
   })
 
   it('strips the hash, trims and lowercases', () => {
-    expect(addTagToList(['a'], '#Foo')).toEqual({ kind: 'added', next: ['a', 'foo'] })
-    expect(addTagToList([], '  Bar  ')).toEqual({ kind: 'added', next: ['bar'] })
+    expect(tryAddTag(['a'], '#Foo')).toEqual({ kind: 'added', next: ['a', 'foo'] })
+    expect(tryAddTag([], '  Bar  ')).toEqual({ kind: 'added', next: ['bar'] })
   })
 
   it('rejects invalid tags', () => {
-    expect(addTagToList([], 'foo,bar').kind).toBe('invalid')
-    expect(addTagToList([], 'a|b').kind).toBe('invalid')
+    expect(tryAddTag([], 'foo,bar').kind).toBe('invalid')
+    expect(tryAddTag([], 'a|b').kind).toBe('invalid')
   })
 
   it('rejects a space inside a tag name, but trims spaces around it', () => {
-    expect(addTagToList([], 'two words').kind).toBe('invalid')
-    expect(addTagToList([], 'a\tb').kind).toBe('invalid')
-    expect(addTagToList([], '  word  ')).toEqual({ kind: 'added', next: ['word'] })
+    expect(tryAddTag([], 'two words').kind).toBe('invalid')
+    expect(tryAddTag([], 'a\tb').kind).toBe('invalid')
+    expect(tryAddTag([], '  word  ')).toEqual({ kind: 'added', next: ['word'] })
   })
 
   it('reports a tag over sixteen characters as too long, not just invalid', () => {
-    expect(addTagToList([], 'abcdefghijklmnopq')).toEqual({ kind: 'too-long' })
-    expect(addTagToList([], 'abcdefghijklmnop').kind).toBe('added')
+    expect(tryAddTag([], 'abcdefghijklmnopq')).toEqual({ kind: 'too-long' })
+    expect(tryAddTag([], 'abcdefghijklmnop').kind).toBe('added')
   })
 
   it('allows dashes and digits but rejects underscores and other symbols', () => {
-    expect(addTagToList([], 'q3-2026')).toEqual({ kind: 'added', next: ['q3-2026'] })
-    expect(addTagToList([], 'under_score').kind).toBe('invalid')
-    expect(addTagToList([], 'a.b').kind).toBe('invalid')
-    expect(addTagToList([], 'café').kind).toBe('invalid')
+    expect(tryAddTag([], 'q3-2026')).toEqual({ kind: 'added', next: ['q3-2026'] })
+    expect(tryAddTag([], 'under_score').kind).toBe('invalid')
+    expect(tryAddTag([], 'a.b').kind).toBe('invalid')
+    expect(tryAddTag([], 'café').kind).toBe('invalid')
   })
 
   it('lowercases before checking, so an uppercase tag is accepted as lowercase', () => {
-    expect(addTagToList([], 'NEED')).toEqual({ kind: 'added', next: ['need'] })
+    expect(tryAddTag([], 'NEED')).toEqual({ kind: 'added', next: ['need'] })
   })
 
   it('treats differently cased input as a duplicate', () => {
-    expect(addTagToList(['foo'], 'FOO')).toEqual({ kind: 'duplicate' })
+    expect(tryAddTag(['foo'], 'FOO')).toEqual({ kind: 'duplicate' })
   })
 
   it('caps the list at three', () => {
-    expect(addTagToList(['a', 'b', 'c'], 'd')).toEqual({ kind: 'max' })
+    expect(tryAddTag(['a', 'b', 'c'], 'd')).toEqual({ kind: 'max' })
   })
 })
 
@@ -290,9 +290,9 @@ describe('pendingTagProblem', () => {
   })
 })
 
-describe('validateTransactionForm', () => {
-  const error = (state: TransactionFormState) => {
-    const result = validateTransactionForm(state, ctx)
+describe('checkDraft', () => {
+  const error = (state: EntryDraft) => {
+    const result = checkDraft(state, ctx)
     return result.ok ? null : result.errorKey
   }
 

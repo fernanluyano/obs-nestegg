@@ -7,7 +7,7 @@ import { accountTransactions } from '../snapshot/snapshot'
 import { accountRenameImpact } from '../wizard/model'
 import { AccountEditModal } from './AccountEditModal'
 import { BalanceCorrectionModal } from './BalanceCorrectionModal'
-import { ConfirmModal } from './ConfirmModal'
+import { ConfirmDialog } from './ConfirmDialog'
 
 // Opens the edit modal for an account; `run` executes the resulting ledger change and owns
 // refreshing and error reporting, so the wizard and the Accounts tab share this flow.
@@ -41,7 +41,7 @@ export function openAccountEdit(
     const message = tn('wizard.confirm.renameAccount', {
       from: account.name, to: change.name, files: String(impact.files), transactions: String(impact.transactions),
     })
-    new ConfirmModal(app, message, save).open()
+    new ConfirmDialog(app, message, save).open()
   }).open()
 }
 

@@ -1,5 +1,5 @@
 import { t } from '../../labels'
-import { openFilterSheet } from '../../modal/BottomSheetPicker'
+import { openFilterPanel } from '../../modal/SlideUpSheet'
 import { dateRangeInputs, TYPE_OPTIONS } from './controls'
 import type { FilterHost } from './FilterHost'
 import { availableCategories, cloneFilters, emptyFilters, pruneCategories, toggle } from './filters'
@@ -58,7 +58,7 @@ export function openDetailFilterSheet(containerEl: HTMLElement, host: FilterHost
     body.empty()
     buildBody(body, host, rerender)
   }
-  openFilterSheet({
+  openFilterPanel({
     containerEl,
     title: t('detail.filterTitle'),
     buildBody: (sheet) => { body = sheet; buildBody(sheet, host, rerender) },

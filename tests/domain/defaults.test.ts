@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { findDuplicateSubcategories } from "../../domain/categories";
 import { DEFAULT_SETTINGS, DEFAULT_TAGS, defaultCategories, withMisc } from "../../domain/defaults";
 import { miscName, nameProblem, normalizeTag } from "../../domain/names";
-import { TAG_LIMIT } from "../../modal/transactionState";
-import { validateTag } from "../../utils";
+import { TAG_LIMIT } from "../../modal/entryDraft";
+import { isValidTag } from "../../helpers";
 
 describe("withMisc", () => {
 	it("appends the category's own Misc subcategory", () => {
@@ -45,7 +45,7 @@ describe("DEFAULT_TAGS", () => {
 	it("already satisfy the tag rules, so a user can pick them without them being rejected", () => {
 		for (const tag of DEFAULT_TAGS) {
 			expect(normalizeTag(tag)).toBe(tag);
-			expect(validateTag(tag)).toBe(true);
+			expect(isValidTag(tag)).toBe(true);
 		}
 		expect(new Set(DEFAULT_TAGS).size).toBe(DEFAULT_TAGS.length);
 		expect(DEFAULT_TAGS.length).toBeLessThanOrEqual(TAG_LIMIT);

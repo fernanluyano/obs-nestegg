@@ -5,7 +5,7 @@ import { DEFAULT_TAGS } from "../domain/defaults";
 import { loanDebt, type LoanDebt } from "../domain/loans";
 import { summarize } from "../domain/transactions";
 import type { CategoryIndex } from "../domain/categories";
-import { isInvesting, isLiability, type Account, type AccountBalance, type LedgerEntry, type MonthSummary, type TransactionType } from "../domain/types";
+import { isInvesting, isLiability, type Account, type AccountBalance, type LedgerEntry, type MonthSummary } from "../domain/types";
 import { assetsByType, assetsTimeline } from "./assetQueries";
 import { accountTransactions, categoryIndexOf, entriesOf, type Snapshot } from "./snapshot";
 

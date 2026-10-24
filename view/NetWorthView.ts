@@ -6,8 +6,8 @@ import {
   assetsBreakdown, cashOnHandTimeline, cashStartMonth, creditCardDebts, investingTotal, loanDebts, netWorthStartMonth, netWorthTimeline,
 } from '../snapshot/queries'
 import { cagr, formatChange, formatPercent, growthPoints, yearToDateRatio } from '../domain/growth'
-import { currentYearMonth } from '../utils'
-import { t, tn, formatMonthLabel, formatYearMonth, type LabelKey } from '../labels'
+import { thisMonth } from '../helpers'
+import { t, tn, monthName, monthWithYear, type LabelKey } from '../labels'
 import { latestValuation } from '../domain/assets'
 import { INVESTING_CARD_COLOR } from '../domain/colors'
 import { todayString } from '../domain/dates'
@@ -15,13 +15,13 @@ import { payoffCharts, type LoanDebt } from '../domain/loans'
 import { centsToDecimal, formatCents, parseCents } from '../domain/money'
 import { AddAssetModal } from '../modal/AddAssetModal'
 import { AddValuationModal } from '../modal/AddValuationModal'
-import { ConfirmModal } from '../modal/ConfirmModal'
+import { ConfirmDialog } from '../modal/ConfirmDialog'
 import { EditAssetModal } from '../modal/EditAssetModal'
-import { renderSharedHeader } from './SharedHeader'
+import { drawPageHeader } from './PageHeader'
 import { Chart } from 'chart.js'
-import { drawCashChart, drawNetWorthChart, drawPayoffChart, drawPie, getMonthRange, netWorthColors } from './charts'
+import { drawCashLine, drawNetWorthLines, drawPayoffAreas, drawPieWithLegend, recentMonths, netWorthPalette } from './plots'
 import { NESTEGG_ICON } from '../plugin/icon'
-import { createMetric, renderCard } from './components'
+import { buildMetricTile, buildCard } from './panels'
 import { creditCardRows, debtCard, debtTotals } from './debtRows'
 
 export const NETWORTH_VIEW_TYPE = 'nestegg-networth'
@@ -77,7 +77,7 @@ export class NetWorthView extends ItemView {
   private monthsOfHistory(start: string | null): number {
     if (!start) return 2
     const [sy, sm] = start.split('-').map(Number)
-    const [cy, cm] = currentYearMonth().split('-').map(Number)
+    const [cy, cm] = thisMonth().split('-').map(Number)
     return Math.max((cy - sy) * 12 + (cm - sm) + 1, 2)
   }
 
@@ -86,13 +86,13 @@ export class NetWorthView extends ItemView {
     const start = netWorthStartMonth(this.ledger.snapshot)
     const shown = this.monthsOfHistory(start)
     // A year of lead-in months, so the first month shown still has a previous month and a year ago.
-    const months = getMonthRange(shown + 12)
+    const months = recentMonths(shown + 12)
     const timeline = netWorthTimeline(this.ledger.snapshot, months)
     const values = months.map(ym => timeline.get(ym)?.netCents ?? 0)
     const firstData = Math.max(0, start ? months.indexOf(start) : 0)
     const points = growthPoints(months, values, 12, firstData).map(growth => ({
-      monthLabel: formatMonthLabel(growth.month),
-      tooltipLabel: formatYearMonth(growth.month, 'short'),
+      monthLabel: monthName(growth.month),
+      tooltipLabel: monthWithYear(growth.month, 'short'),
       assetsCents: timeline.get(growth.month)?.assetsCents ?? 0,
       liabilitiesCents: timeline.get(growth.month)?.liabilitiesCents ?? 0,
       netCents: growth.cents,
@@ -101,17 +101,17 @@ export class NetWorthView extends ItemView {
       yoyRatio: growth.yoyRatio,
     }))
     const now = points[points.length - 1]
-    const [cy, cm] = currentYearMonth().split('-').map(Number)
-    const [sy, sm] = (start ?? currentYearMonth()).split('-').map(Number)
+    const [cy, cm] = thisMonth().split('-').map(Number)
+    const [sy, sm] = (start ?? thisMonth()).split('-').map(Number)
     const rate = cagr(values[firstData], values[values.length - 1], (cy - sy) * 12 + (cm - sm))
 
     const byType = new Map([...assetsBreakdown(this.ledger.snapshot)].map(([key, cents]) => [t(key as LabelKey), cents]))
     const wrap = contentEl.createDiv('ne-assets-charts' + (byType.size > 0 ? '' : ' is-single'))
-    const card = renderCard(wrap)
+    const card = buildCard(wrap)
     const header = card.createDiv('ne-card-header-row')
     header.createEl('div', { text: t('networth.title'), cls: 'ne-card-title' })
 
-    const colors = netWorthColors()
+    const colors = netWorthPalette()
     const legend = card.createDiv('ne-networth-legend')
     for (const [label, cents, color] of [
       [t('networth.assets'), now.assetsCents, colors.assets],
@@ -136,10 +136,10 @@ export class NetWorthView extends ItemView {
       item.createSpan({ text: value, cls: 'ne-networth-legend-value' })
     }
 
-    this.charts.push(drawNetWorthChart(card.createDiv('ne-chart-wrap'), points))
+    this.charts.push(drawNetWorthLines(card.createDiv('ne-chart-wrap'), points))
 
     if (byType.size > 0) {
-      this.charts.push(drawPie(renderCard(wrap, { title: t('assets.byType') }), byType, undefined, 150))
+      this.charts.push(drawPieWithLegend(buildCard(wrap, { title: t('assets.byType') }), byType, undefined, 150))
     }
   }
 
@@ -164,7 +164,7 @@ export class NetWorthView extends ItemView {
       .addEventListener('click', () => new EditAssetModal(this.app, this.ledger, asset.name, (a, n) => this.run(a, n)).open())
     actions.createEl('button', { text: t('ui.archive'), cls: 'mod-warning' })
       .addEventListener('click', () => {
-        new ConfirmModal(this.app, tn('assets.confirmArchive', { name: asset.name }), () => {
+        new ConfirmDialog(this.app, tn('assets.confirmArchive', { name: asset.name }), () => {
           void this.run(() => this.ledger.assets.archive(asset.name), tn('notice.assetArchived', { name: asset.name }))
         }).open()
       })
@@ -179,23 +179,23 @@ export class NetWorthView extends ItemView {
 
     const shown = this.monthsOfHistory(start)
     // A year of lead-in months, so the first month shown still has a previous month and a year ago.
-    const months = getMonthRange(shown + 12)
+    const months = recentMonths(shown + 12)
     const timeline = cashOnHandTimeline(snapshot, months)
     const values = months.map(ym => timeline.get(ym) ?? 0)
     const points = growthPoints(months, values, 12, months.indexOf(start)).map(point => ({
       ...point,
-      monthLabel: formatMonthLabel(point.month),
-      tooltipLabel: formatYearMonth(point.month, 'short'),
+      monthLabel: monthName(point.month),
+      tooltipLabel: monthWithYear(point.month, 'short'),
     }))
     const now = points[points.length - 1]
 
     const [sy, sm] = start.split('-').map(Number)
-    const [cy, cm] = currentYearMonth().split('-').map(Number)
+    const [cy, cm] = thisMonth().split('-').map(Number)
     const spanMonths = (cy - sy) * 12 + (cm - sm)
-    const edges = cashOnHandTimeline(snapshot, [start, currentYearMonth()])
-    const rate = cagr(edges.get(start) ?? 0, edges.get(currentYearMonth()) ?? 0, spanMonths)
+    const edges = cashOnHandTimeline(snapshot, [start, thisMonth()])
+    const rate = cagr(edges.get(start) ?? 0, edges.get(thisMonth()) ?? 0, spanMonths)
 
-    const card = renderCard(contentEl.createDiv('ne-assets-charts is-single'))
+    const card = buildCard(contentEl.createDiv('ne-assets-charts is-single'))
     const header = card.createDiv('ne-card-header-row')
     header.createEl('div', { text: t('cash.title'), cls: 'ne-card-title' })
 
@@ -213,7 +213,7 @@ export class NetWorthView extends ItemView {
       item.createSpan({ text: value, cls: 'ne-networth-legend-value' })
     }
 
-    this.charts.push(drawCashChart(card.createDiv('ne-chart-wrap'), points))
+    this.charts.push(drawCashLine(card.createDiv('ne-chart-wrap'), points))
   }
 
   private renderAssets(contentEl: HTMLElement) {
@@ -226,7 +226,7 @@ export class NetWorthView extends ItemView {
     const assets = activeAssets(this.ledger.snapshot)
     const investing = investingTotal(snapshot)
     if (assets.length === 0 && !investing) {
-      const empty = renderCard(contentEl, { title: t('asset.title') })
+      const empty = buildCard(contentEl, { title: t('asset.title') })
       empty.createEl('p', { text: t('assets.empty'), cls: 'ne-settings-empty' })
       addButton(empty)
       return
@@ -275,7 +275,7 @@ export class NetWorthView extends ItemView {
     const loans = loanDebts(this.ledger.snapshot, today)
     const creditCards = creditCardDebts(this.ledger.snapshot)
     if (loans.length === 0 && creditCards.length === 0) {
-      renderCard(contentEl, { title: t('debt.title') }).createEl('p', { text: t('debt.empty'), cls: 'ne-settings-empty' })
+      buildCard(contentEl, { title: t('debt.title') }).createEl('p', { text: t('debt.empty'), cls: 'ne-settings-empty' })
       return
     }
 
@@ -287,7 +287,7 @@ export class NetWorthView extends ItemView {
       row.createSpan({ text: value, cls: 'ne-debt-card-value' })
     }
     // One summary card: the overall debt, then what part of it is cards and what part is loans.
-    const total = createMetric(metrics, t('debt.totalDebt'), totals.owedCents, 'expense', { signed: false, hero: true })
+    const total = buildMetricTile(metrics, t('debt.totalDebt'), totals.owedCents, 'expense', { signed: false, hero: true })
     statLine(total, t('debt.creditCards'), formatCents(totals.cardsCents))
     statLine(total, t('debt.loans'), formatCents(totals.loansCents))
 
@@ -322,10 +322,10 @@ export class NetWorthView extends ItemView {
 
     const chartsWrap = contentEl.createDiv('ne-debt-charts')
     for (const chart of payoffCharts(loans, today)) {
-      const tile = renderCard(chartsWrap, {
+      const tile = buildCard(chartsWrap, {
         title: tn('debt.payoffTimeline', { kind: t(`label.loanKind.${chart.kind}`) }),
       })
-      this.charts.push(drawPayoffChart(tile.createDiv('ne-chart-wrap ne-debt-chart'), chart))
+      this.charts.push(drawPayoffAreas(tile.createDiv('ne-chart-wrap ne-debt-chart'), chart))
     }
   }
 
@@ -336,11 +336,11 @@ export class NetWorthView extends ItemView {
     contentEl.empty()
     contentEl.addClass('ne-asset')
 
-    renderSharedHeader(contentEl, {
-      view: this,
+    drawPageHeader(contentEl, {
+      owner: this,
       ledger: this.ledger,
-      activeView: 'networth',
-      yearMonth: null,
+      page: 'networth',
+      month: null,
     })
 
     this.renderNetWorth(contentEl)
