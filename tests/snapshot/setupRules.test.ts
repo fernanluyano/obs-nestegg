@@ -6,7 +6,7 @@ import { account, accountInput, category, categoryInput, settingsInput, vaultInp
 const card = account({ name: "Card", accountType: "creditCard" });
 const food = category("Food", "expense", ["Groceries", "Food - Misc"]);
 
-const snap = (accounts = [account()], settings = { defaultAccount: "Cash Main", autoValidateOnLoad: true }) =>
+const snap = (accounts = [account()], settings = { defaultAccount: "Cash Main", autoValidateOnLoad: true, tagSets: [] }) =>
 	buildSnapshot(vaultInputs({ accounts, months: [], settings }));
 
 describe("cashAccountCheck", () => {
@@ -43,8 +43,8 @@ describe("categoriesCheck", () => {
 describe("defaultAccountCheck", () => {
 	it("requires the default account to be an active cash account", () => {
 		expect(defaultAccountCheck(snap())).toEqual({ ok: true });
-		expect(defaultAccountCheck(snap([account(), card], { defaultAccount: "Card", autoValidateOnLoad: true }))).toMatchObject({ ok: false, reason: "wizard.needDefaultCash" });
-		expect(defaultAccountCheck(snap([account()], { defaultAccount: "Gone", autoValidateOnLoad: true }))).toMatchObject({ ok: false });
+		expect(defaultAccountCheck(snap([account(), card], { defaultAccount: "Card", autoValidateOnLoad: true, tagSets: [] }))).toMatchObject({ ok: false, reason: "wizard.needDefaultCash" });
+		expect(defaultAccountCheck(snap([account()], { defaultAccount: "Gone", autoValidateOnLoad: true, tagSets: [] }))).toMatchObject({ ok: false });
 		expect(defaultAccountCheck(buildSnapshot([accountInput(account())]))).toMatchObject({ ok: false });
 	});
 });

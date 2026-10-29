@@ -1447,6 +1447,21 @@ button.ne-keypad-done {
   gap: 12px;
 }
 
+.ne-tagset-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.ne-tagset-row select,
+.ne-tagset-row button {
+  height: auto;
+  padding: 4px 10px;
+  font-size: var(--font-ui-smaller);
+}
+
 /* The bar-chart card is a flex column so its chart can fill the height. */
 .ne-inc-exp-card {
   display: flex;
@@ -1517,6 +1532,9 @@ button.ne-keypad-done {
 }
 
 .ne-legend-pct {
+  min-width: 4ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
   color: var(--text-faint);
 }
 

@@ -7,6 +7,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
 	{
+		version: "0.2.0",
+		highlights: [
+			"🏷️ Saved tag sets: name a combination of tags for the expense-by-tag chart, then pick, rename or delete it later",
+		],
+	},
+	{
 		version: "0.1.0",
 		highlights: [
 			"🎉 First release. Personal finance inside your vault, USD only, stored as plain Markdown notes under a Nestegg/ folder",

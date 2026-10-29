@@ -12,6 +12,7 @@ export const DEFAULT_TAGS: readonly string[] = ["need", "want"];
 export const DEFAULT_SETTINGS: Settings = {
 	defaultAccount: "",
 	autoValidateOnLoad: true,
+	tagSets: [],
 };
 
 // Every category carries its own "<Category> - Misc" subcategory so a transaction always has one.

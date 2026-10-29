@@ -74,7 +74,7 @@ export const budgetInput = (month: string, lines: BudgetLine[]) => inputOf(budge
 // A consistent little vault: one cash account, the default categories, one expense in October.
 export function vaultInputs(extra: { accounts?: Account[]; months?: NoteInput[]; settings?: Settings } = {}): NoteInput[] {
 	return [
-		settingsInput(extra.settings ?? { defaultAccount: "Cash Main", autoValidateOnLoad: true }),
+		settingsInput(extra.settings ?? { defaultAccount: "Cash Main", autoValidateOnLoad: true, tagSets: [] }),
 		...(extra.accounts ?? [account({ balanceCents: 200000 - 8450 })]).map(accountInput),
 		...defaultCategories().map(categoryInput),
 		...(extra.months ?? [monthInput("Cash Main", "2026-10", [tx()])]),

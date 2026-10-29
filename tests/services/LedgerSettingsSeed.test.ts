@@ -65,7 +65,7 @@ describe("SettingsService", () => {
 		const vault = new MemoryVault({ "Nestegg/Accounts/A/A.md": accountInput(account({ name: "A" })).content });
 		const ledger = new Ledger(vault);
 		await ledger.load();
-		expect(ledger.settings.current).toEqual({ defaultAccount: "", autoValidateOnLoad: true });
+		expect(ledger.settings.current).toEqual({ defaultAccount: "", autoValidateOnLoad: true, tagSets: [] });
 		await ledger.settings.update({ defaultAccount: "A" });
 		expect(vault.exists(SETTINGS_PATH)).toBe(true);
 		expect(ledger.settings.current.defaultAccount).toBe("A");
@@ -74,6 +74,6 @@ describe("SettingsService", () => {
 	it("patches an existing settings note and keeps the other value", async () => {
 		const { ledger } = await loadedLedger();
 		await ledger.settings.update({ autoValidateOnLoad: false });
-		expect(ledger.settings.current).toEqual({ defaultAccount: "Cash Main", autoValidateOnLoad: false });
+		expect(ledger.settings.current).toEqual({ defaultAccount: "Cash Main", autoValidateOnLoad: false, tagSets: [] });
 	});
 });

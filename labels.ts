@@ -41,6 +41,12 @@ const strings = {
     'dash.tags': 'Tags',
     'dash.noTags': 'None',
     'dash.noData': 'No data this month',
+    'tagSet.pick': 'Saved sets…',
+    'tagSet.save': 'Save set',
+    'tagSet.saveTitle': 'Save selected tags as',
+    'tagSet.renameTitle': 'Rename set',
+    'tagSet.confirmDelete': 'Delete the tag set "{name}"?',
+    'tagSet.pickTags': 'Select at least one tag first',
 
     'detail.title': 'Transactions',
     'detail.filterAll': 'All',

@@ -65,7 +65,7 @@ describe("account issues", () => {
 	});
 
 	it("flags a default account that is missing or archived", () => {
-		const missing = snap(vaultInputs({ settings: { defaultAccount: "Nope", autoValidateOnLoad: true } }));
+		const missing = snap(vaultInputs({ settings: { defaultAccount: "Nope", autoValidateOnLoad: true, tagSets: [] } }));
 		expect(detectInvalidDefaultAccount(missing)).toEqual([{ type: "invalidDefaultAccount", path: "Nestegg/Settings.md", defaultAccount: "Nope" }]);
 		const archived = snap(vaultInputs({ accounts: [account({ active: false })] }));
 		expect(detectInvalidDefaultAccount(archived)).toHaveLength(1);

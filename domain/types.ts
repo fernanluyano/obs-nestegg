@@ -54,9 +54,16 @@ export interface Category {
 	subcategories: Subcategory[];
 }
 
+// A named combination of tags the Overview's expense-by-tag chart can switch to in one click.
+export interface TagSet {
+	name: string;
+	tags: string[];
+}
+
 export interface Settings {
 	defaultAccount: string;
 	autoValidateOnLoad: boolean;
+	tagSets: TagSet[];
 }
 
 // One table row. `amountCents` is signed from the owning account's point of view.

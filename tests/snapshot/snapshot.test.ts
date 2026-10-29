@@ -47,8 +47,8 @@ describe("buildSnapshot", () => {
 	});
 
 	it("keeps the first of several settings notes, by path", () => {
-		const first = settingsInput({ defaultAccount: "A", autoValidateOnLoad: true });
-		const second = { ...settingsInput({ defaultAccount: "B", autoValidateOnLoad: true }), path: "Z/Settings.md" };
+		const first = settingsInput({ defaultAccount: "A", autoValidateOnLoad: true, tagSets: [] });
+		const second = { ...settingsInput({ defaultAccount: "B", autoValidateOnLoad: true, tagSets: [] }), path: "Z/Settings.md" };
 		expect(buildSnapshot([second, first]).settings?.settings.defaultAccount).toBe("A");
 	});
 

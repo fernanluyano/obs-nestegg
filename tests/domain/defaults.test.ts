@@ -54,6 +54,6 @@ describe("DEFAULT_TAGS", () => {
 
 describe("defaults", () => {
 	it("starts with no default account and validation on", () => {
-		expect(DEFAULT_SETTINGS).toEqual({ defaultAccount: "", autoValidateOnLoad: true });
+		expect(DEFAULT_SETTINGS).toEqual({ defaultAccount: "", autoValidateOnLoad: true, tagSets: [] });
 	});
 });
