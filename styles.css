@@ -873,6 +873,16 @@ button.ne-keypad-done {
   color: var(--text-normal);
 }
 
+.ne-changelog-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  line-height: 1.5;
+}
+
 .ne-type-tabs {
   display: flex;
   flex-wrap: wrap;

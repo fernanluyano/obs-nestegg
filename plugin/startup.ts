@@ -4,6 +4,7 @@ import { isInsideRoot } from '../notes/paths'
 import type { Ledger } from '../services/Ledger'
 import { createReloadScheduler } from '../storage/reloadScheduler'
 import { needsSetup } from '../snapshot/setupRules'
+import { maybeShowChangelog } from './changelog'
 import { refreshViews, runValidation } from './commands'
 import { openAccounts } from './views'
 
@@ -33,6 +34,7 @@ export async function startup(plugin: Plugin, ledger: Ledger): Promise<void> {
     await ledger.load()
     watchExternalChanges(plugin, ledger)
     refreshViews(plugin)
+    void maybeShowChangelog(plugin)
     if (needsSetup(ledger.snapshot)) {
       await openAccounts(plugin)
       return

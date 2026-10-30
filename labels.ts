@@ -284,6 +284,9 @@ const strings = {
     'notice.transactionUpdated': '✓ Transaction updated',
     'notice.loadFailed': 'Nestegg failed to load. Please check the notes in the Nestegg folder.',
     'notice.actionFailed': 'Failed: {reason}',
+    'changelog.title': '✨ What\'s new in {version}',
+    'changelog.empty': 'No release notes for this version.',
+    'changelog.close': 'Got it',
 
     'ui.previousMonth': 'Previous month',
     'ui.nextMonth': 'Next month',

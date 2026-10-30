@@ -35,6 +35,12 @@ export const CHANGELOG: ChangelogEntry[] = [
 	},
 ];
 
+// Release notes appear once after an update: never on first install (nothing seen yet), and never
+// again for a version already acknowledged.
+export function isUpdateFrom(lastSeen: string | undefined, current: string): boolean {
+	return lastSeen !== undefined && lastSeen !== current;
+}
+
 export function getChangelogEntry(version: string): ChangelogEntry | undefined {
 	return CHANGELOG.find((e) => e.version === version);
 }

@@ -86,7 +86,7 @@ export async function registerThemeSettings(plugin: Plugin, ledger: Ledger): Pro
   plugin.addSettingTab(new NesteggSettingTab(plugin, ledger, () => theme, async (next) => {
     theme = next
     applyTheme(theme)
-    await plugin.saveData({ ...stored, theme })
+    await plugin.saveData({ ...((await plugin.loadData()) ?? {}), theme })
     plugin.app.workspace.trigger('nestegg:refresh')
   }))
 
