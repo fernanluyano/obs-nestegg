@@ -4,8 +4,10 @@ import { createReloadScheduler } from "../../storage/reloadScheduler";
 describe("createReloadScheduler", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
+		vi.stubGlobal("window", { setTimeout, clearTimeout });
 	});
 	afterEach(() => {
+		vi.unstubAllGlobals();
 		vi.useRealTimers();
 		vi.restoreAllMocks();
 	});
