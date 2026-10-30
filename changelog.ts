@@ -7,6 +7,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
 	{
+		version: "0.3.0",
+		highlights: [
+			"🔄 Multi-device sync: edits made on another device (Obsidian Sync, iCloud and similar) now show up in every open Nestegg page automatically, without reloading the plugin",
+		],
+	},
+	{
 		version: "0.2.0",
 		highlights: [
 			"🏷️ Saved tag sets: name a combination of tags for the expense-by-tag chart, then pick, rename or delete it later",
