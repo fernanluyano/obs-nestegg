@@ -1,5 +1,6 @@
 import type { CategoryIndex } from "./categories";
 import { isIsoDate } from "./dates";
+import { tagProblem } from "./tagRules";
 import { isLiability, isTransferLike, type Account, type LedgerEntry, type TransactionType } from "./types";
 import type { TransferInput } from "./transactions";
 
@@ -20,7 +21,8 @@ export type EntryProblem =
 	| "investingNoTransactions"
 	| "unexpectedFromTo"
 	| "invalidInterest"
-	| "interestOnNonLoan";
+	| "interestOnNonLoan"
+	| "invalidTags";
 
 export interface RuleContext {
 	accounts: Account[];
@@ -47,6 +49,7 @@ export function entryProblem(entry: LedgerEntry, ctx: RuleContext): EntryProblem
 	if (owner === "loan") return "loanTransfersOnly";
 	if (owner === "investing") return "investingNoTransactions";
 	if (entry.fromTo !== "") return "unexpectedFromTo";
+	if (tagProblem(entry.tags)) return "invalidTags";
 	return null;
 }
 
@@ -76,5 +79,6 @@ export function transferProblem(input: TransferInput, ctx: RuleContext): EntryPr
 		if (linked && linked.name !== input.to) return "wrongDebtAccount";
 	}
 	if (input.from === input.to) return "sameAccount";
+	if (tagProblem(input.tags)) return "invalidTags";
 	return null;
 }

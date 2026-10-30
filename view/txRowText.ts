@@ -1,5 +1,8 @@
 import type { LedgerEntry, TransactionType } from '../domain/types'
 import { formatCents } from '../domain/money'
+import { tagProblem } from '../domain/tagRules'
+import { t, tn } from '../labels'
+import { TAG_PROBLEM_ERRORS } from '../modal/entryDraft'
 
 export type DetailLine =
   | { kind: 'tags'; tags: string[] }
@@ -37,6 +40,13 @@ export function amountFigure(
 
   const sign = entry.amountCents > 0 ? '+' : entry.amountCents < 0 ? '-' : ''
   return { text: sign + formatCents(Math.abs(entry.amountCents)), className }
+}
+
+// Why the row's tags break a rule, or null when they are fine. Spending that is not a refund must
+// be tagged need or want.
+export function tagWarning(entry: LedgerEntry, type: TransactionType | undefined): string | null {
+  const problem = tagProblem(entry.tags, { requireNeedOrWant: type === 'expense' && !isMoneyBack(entry, type) })
+  return problem ? tn('tx.badTags', { problem: t(TAG_PROBLEM_ERRORS[problem]) }) : null
 }
 
 export function detailLine(entry: LedgerEntry): DetailLine {

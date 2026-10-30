@@ -1,5 +1,5 @@
 import { percentPaid, type PayoffChart } from '../domain/loans'
-import { formatChange, formatPercent, type GrowthPoint } from '../domain/growth'
+import { formatChange, formatPercent, percentChange, type GrowthPoint } from '../domain/growth'
 import { formatCents } from '../domain/money'
 import { shiftMonth, thisMonth } from '../helpers'
 import { monthWithYear, t, tn } from '../labels'
@@ -133,7 +133,16 @@ export function drawCashFlowBars(parent: HTMLElement, months: IncomeExpenseMonth
         },
         tooltip: {
           callbacks: {
-            label: (item) => `${item.dataset.label ?? ''}: ${compactMoney(item.raw as number)}`,
+            label: (item) => {
+              const text = `${item.dataset.label ?? ''}: ${compactMoney(item.raw as number)}`
+              const previous = months[item.dataIndex - 1]
+              if (!previous) return text
+              const current = months[item.dataIndex]
+              const ratio = item.datasetIndex === 0
+                ? percentChange(previous.income, current.income)
+                : percentChange(previous.expense, current.expense)
+              return tn('dash.tooltipChange', { text, change: formatPercent(ratio) })
+            },
             footer: (items) => {
               const month = months[items[0].dataIndex]
               return `${t('dash.surplus')}: ${formatCents(month.income - month.expense)}`
@@ -385,8 +394,20 @@ export function drawPieWithLegend(
   values: Map<string, number>,
   onSliceClick?: (categoryKey: string) => void,
   size = 200,
+  // Planned cents by the same keys as `values`; adds the budget line to each slice's tooltip.
+  planned?: Map<string, number>,
 ): Chart {
   const kept = foldSmallSlices(values)
+  const plannedFor = (key: string): number => {
+    if (!planned) return 0
+    if (key !== OTHER_SLICE) return planned.get(key) ?? 0
+    return [...values.keys()].filter(k => !kept.has(k)).reduce((sum, k) => sum + (planned.get(k) ?? 0), 0)
+  }
+  const budgetLine = (key: string, spent: number): string => {
+    const plan = plannedFor(key)
+    if (plan <= 0) return t('dash.noBudget')
+    return tn('dash.budgetLine', { planned: formatCents(plan) })
+  }
   const total = [...kept.values()].reduce((sum, value) => sum + value, 0)
 
   const slices = [...kept].map(([key, value]) => ({
@@ -435,6 +456,7 @@ export function drawPieWithLegend(
               const slice = slices[item.dataIndex]
               return `${formatCents(slice.value)} (${percentOf(slice.value)}%)`
             },
+            afterLabel: (item) => planned ? budgetLine(slices[item.dataIndex].key, slices[item.dataIndex].value) : '',
           },
         },
       },

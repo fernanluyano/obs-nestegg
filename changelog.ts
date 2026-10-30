@@ -10,6 +10,8 @@ export const CHANGELOG: ChangelogEntry[] = [
 		version: "0.2.0",
 		highlights: [
 			"🏷️ Saved tag sets: name a combination of tags for the expense-by-tag chart, then pick, rename or delete it later",
+			"📊 Expenses History: stat tiles (averages, expense ratio, \"want\" spending, highest month), month-over-month change in the bar tooltip, and click a category to see its subcategories. Pie tooltips show the planned amount",
+			"🏷️ Every expense needs a \"need\" or \"want\" tag, never both. Rows with broken tags show a warning in Transactions",
 		],
 	},
 	{

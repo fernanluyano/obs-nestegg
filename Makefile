@@ -1,4 +1,4 @@
-.PHONY: install dev build typecheck test test-watch clean release help
+.PHONY: install dev build typecheck test test-watch clean release sync-vault help
 
 install:
 	npm install
@@ -24,6 +24,9 @@ clean:
 release:
 	scripts/release.sh
 
+sync-vault:
+	bash scripts/sync-vault.sh
+
 help:
 	@echo "Usage: make [target]"
 	@echo ""
@@ -35,4 +38,5 @@ help:
 	@echo "  test-watch  Run vitest in watch mode"
 	@echo "  clean       Remove build output (main.js, main.js.map)"
 	@echo "  release     Prompt for a version bump, then build, test, commit, tag, and publish"
+	@echo "  sync-vault  Copy the Nestegg *.md notes from the personal vault into the Dev vault"
 	@echo "  help        Show this message"

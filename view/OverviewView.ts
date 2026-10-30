@@ -4,17 +4,19 @@ import type { TagSet } from '../domain/types'
 import { ConfirmDialog } from '../modal/ConfirmDialog'
 import { TextPromptModal } from '../modal/TextPromptModal'
 import type { Ledger } from '../services/Ledger'
-import { groupByCategory, groupByTags, monthEntries, monthSummaries, netAssetTimeline, suggestedTags } from '../snapshot/queries'
+import { groupByCategory, groupBySubcategory, groupByTags, monthEntries, plannedByTags, monthSummaries, netAssetTimeline, suggestedTags } from '../snapshot/queries'
 import { DEFAULT_TAGS } from '../domain/defaults'
 import type { CategoryIndex } from '../domain/categories'
-import type { LedgerEntry, TransactionType } from '../domain/types'
+import type { LedgerEntry } from '../domain/types'
 import { renderMultiDropdown } from './detail/dropdown'
 import { t, tn, monthName, monthWithYear } from '../labels'
 import { thisMonth } from '../helpers'
+import { formatCents } from '../domain/money'
+import { plannedSpendingByCategory, plannedSpendingBySubcategory } from '../domain/budget'
+import { budgetSheetOf } from '../snapshot/budgetQueries'
+import { historyStats } from '../domain/history'
 import { buildCard } from './panels'
-import { TRANSACTIONS_VIEW_TYPE } from './TransactionsView'
 import { drawPageHeader } from './PageHeader'
-import { openOrRevealView } from './openView'
 import { Chart } from 'chart.js'
 import { NESTEGG_ICON } from '../plugin/icon'
 import { drawCashFlowBars, drawPieWithLegend, monthsEndingAt, type IncomeExpenseMonth } from './plots'
@@ -25,12 +27,16 @@ export const OVERVIEW_VIEW_TYPE = 'nestegg-dashboard'
 const TAG_SETS_EVENT = 'nestegg:tag-sets'
 const MAX_CHOSEN_TAGS = 10
 const TREND_MONTHS = 6
+const STATS_MONTHS = 12
+const WANT_TAG = 'want'
 const PIE_SIZE = 200
 
 export class OverviewView extends ItemView {
   private shownMonth = thisMonth()
   private charts: Chart[] = []
   private tagChart: Chart | null = null
+  private categoryChart: Chart | null = null
+  private drilledCategory: string | null = null
   private chosenTags = new Set<string>(DEFAULT_TAGS)
   private tagPanel = { open: false }
   private redrawTagCard: () => void = () => {}
@@ -75,6 +81,7 @@ export class OverviewView extends ItemView {
     this.charts.forEach(chart => chart.destroy())
     this.charts = []
     this.tagChart = null
+    this.categoryChart = null
   }
 
   async render() {
@@ -107,6 +114,8 @@ export class OverviewView extends ItemView {
       net: netTimeline.get(month) ?? null,
     }))
 
+    this.drawStats(contentEl)
+
     // Two columns: the income/expense bars on the left, the pies on the right.
     const columns = contentEl.createDiv('ne-grid-2')
 
@@ -118,19 +127,55 @@ export class OverviewView extends ItemView {
 
     const pies = columns.createDiv('ne-grid-right')
 
-    const byCategory = groupByCategory(entries, index, 'expense')
-    const categoryCard = buildCard(pies, { title: t('dash.expenseByCategory') })
-    if (byCategory.size > 0) {
-      const openCategory = (category: string) => { void this.openDetailFiltered('expense', category) }
-      this.charts.push(drawPieWithLegend(categoryCard, byCategory, openCategory, PIE_SIZE))
-    } else {
-      categoryCard.createEl('p', { text: t('dash.noData'), cls: 'ne-no-data' })
-    }
+    this.drawCategoryCard(buildCard(pies), entries, index)
 
     const tagCard = buildCard(pies, { title: t('dash.expenseByTag') })
     const tagBody = tagCard.createDiv()
     this.redrawTagCard = () => this.drawTagCard(tagBody, entries, index)
     this.redrawTagCard()
+  }
+
+  private drawStats(parent: HTMLElement) {
+    const months = monthsEndingAt(this.shownMonth, STATS_MONTHS)
+    const { snapshot } = this.ledger
+    const { index } = this.ledger.store
+    const wantByMonth = new Map(months.map(month => [
+      month,
+      groupByTags(monthEntries(snapshot, month), index, [WANT_TAG]).get(WANT_TAG) ?? 0,
+    ]))
+    const stats = historyStats(months, monthSummaries(snapshot, months), wantByMonth)
+    if (!stats) return
+
+    const row = parent.createDiv('ne-metrics ne-metrics--stats')
+    const hint = tn('dash.statsHint', { months: String(stats.monthsCounted) })
+    const tile = (label: string, text: string, variant?: 'income' | 'expense' | 'positive' | 'negative', note = hint) => {
+      const el = row.createDiv('ne-metric ne-metric--small')
+      el.createDiv({ text: label, cls: 'ne-metric-label' })
+      el.createDiv({ text, cls: variant ? `ne-metric-value ${variant}` : 'ne-metric-value' })
+      el.createDiv({ text: note, cls: 'ne-metric-hint' })
+    }
+
+    tile(t('dash.avgIncome'), formatCents(stats.avgIncomeCents), 'income')
+    tile(t('dash.avgExpense'), formatCents(stats.avgExpenseCents), 'expense')
+    tile(
+      t('dash.avgSurplus'),
+      formatCents(Math.abs(stats.avgSurplusCents)),
+      stats.avgSurplusCents >= 0 ? 'positive' : 'negative',
+    )
+    tile(
+      t('dash.expenseRatio'),
+      stats.expenseToIncomeRatio === null ? 'n/a' : `${(stats.expenseToIncomeRatio * 100).toFixed(1)}%`,
+    )
+    const wantShare = stats.avgExpenseCents > 0 ? stats.avgWantCents / stats.avgExpenseCents : null
+    tile(
+      t('dash.avgWant'),
+      formatCents(stats.avgWantCents),
+      'expense',
+      wantShare === null ? hint : tn('dash.wantShare', { percent: (wantShare * 100).toFixed(0) }),
+    )
+    if (stats.highestExpense) {
+      tile(t('dash.highestExpense'), formatCents(stats.highestExpense.cents), 'expense', monthWithYear(stats.highestExpense.month, 'short'))
+    }
   }
 
   // Only this card is rebuilt when a tag set is picked or edited, so the other charts stay put.
@@ -213,13 +258,51 @@ export class OverviewView extends ItemView {
       holder.createEl('p', { text: t('dash.noData'), cls: 'ne-no-data' })
       return
     }
-    this.tagChart = drawPieWithLegend(holder, totals, undefined, PIE_SIZE)
+    const plannedBySubcategory = plannedSpendingBySubcategory(budgetSheetOf(this.ledger.snapshot, this.shownMonth))
+    const planned = plannedByTags(entries, index, [...this.chosenTags], plannedBySubcategory)
+    this.tagChart = drawPieWithLegend(holder, totals, undefined, PIE_SIZE, planned)
     this.charts.push(this.tagChart)
   }
 
-  private async openDetailFiltered(type: TransactionType, category: string) {
-    await openOrRevealView(this.app, TRANSACTIONS_VIEW_TYPE, {
-      yearMonth: this.shownMonth, filterType: type, filterCategory: category, resetFilters: true,
-    })
+  // Clicking a category swaps the pie for that category's subcategories; only this card is redrawn.
+  private drawCategoryCard(card: HTMLElement, entries: LedgerEntry[], index: CategoryIndex) {
+    if (this.categoryChart) {
+      this.categoryChart.destroy()
+      this.charts = this.charts.filter(chart => chart !== this.categoryChart)
+      this.categoryChart = null
+    }
+    card.empty()
+
+    // A category with nothing to show this month (after a month change) falls back to the top level.
+    const drilled = this.drilledCategory
+    const subcategories = drilled ? groupBySubcategory(entries, index, drilled) : null
+    if (drilled && subcategories!.size === 0) this.drilledCategory = null
+
+    const header = card.createDiv('ne-card-title')
+    if (this.drilledCategory) {
+      const back = header.createEl('button', { text: t('ui.back') })
+      back.addEventListener('click', () => {
+        this.drilledCategory = null
+        this.drawCategoryCard(card, entries, index)
+      })
+      header.createSpan({ text: this.drilledCategory })
+    } else {
+      header.setText(t('dash.expenseByCategory'))
+    }
+
+    const totals = this.drilledCategory ? subcategories! : groupByCategory(entries, index, 'expense')
+    if (totals.size === 0) {
+      card.createEl('p', { text: t('dash.noData'), cls: 'ne-no-data' })
+      return
+    }
+    const onSliceClick = this.drilledCategory ? undefined : (category: string) => {
+      if (!category) return
+      this.drilledCategory = category
+      this.drawCategoryCard(card, entries, index)
+    }
+    const sheet = budgetSheetOf(this.ledger.snapshot, this.shownMonth)
+    const planned = this.drilledCategory ? plannedSpendingBySubcategory(sheet) : plannedSpendingByCategory(sheet)
+    this.categoryChart = drawPieWithLegend(card, totals, onSliceClick, PIE_SIZE, planned)
+    this.charts.push(this.categoryChart)
   }
 }

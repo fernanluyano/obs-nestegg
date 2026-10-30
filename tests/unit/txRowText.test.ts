@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LedgerEntry } from '../../domain/types'
 import {
-  accountLabels, accountSummary, amountFigure, detailLine, rowTitle, isMoneyBack,
+  accountLabels, accountSummary, amountFigure, detailLine, rowTitle, isMoneyBack, tagWarning,
 } from '../../view/txRowText'
 
 const entry = (over: Partial<LedgerEntry> = {}): LedgerEntry => ({
@@ -72,6 +72,23 @@ describe('amountFigure', () => {
 
   it('shows zero without a sign', () => {
     expect(amountFigure(entry({ amountCents: 0 }), 'expense').text).toBe('0.00')
+  })
+})
+
+describe('tagWarning', () => {
+  it('is null for good tags and explains the broken rule otherwise', () => {
+    expect(tagWarning(entry({ tags: ['need'] }), 'expense')).toBeNull()
+    expect(tagWarning(entry({ tags: ['need', 'want'] }), 'expense')).toContain('"need" or a "want"')
+    expect(tagWarning(entry({ tags: ['a', 'b', 'c', 'd'] }), 'expense')).toContain('at most 3')
+  })
+
+  it('flags spending without need or want, but not refunds, income or transfers', () => {
+    const spending = entry({ amountCents: -500, tags: [] })
+    expect(tagWarning(spending, 'expense')).toContain('"need" or "want"')
+    expect(tagWarning(entry({ amountCents: 500, tags: [] }), 'expense')).toBeNull()
+    expect(tagWarning(entry({ tags: [] }), 'income')).toBeNull()
+    expect(tagWarning(entry({ tags: [] }), 'transfer')).toBeNull()
+    expect(tagWarning(entry({ tags: [] }), undefined)).toBeNull()
   })
 })
 

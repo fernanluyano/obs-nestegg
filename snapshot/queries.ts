@@ -184,6 +184,18 @@ export function groupByCategory(
 	return totals;
 }
 
+// Expense totals (counted as in groupByCategory) per subcategory of one category.
+export function groupBySubcategory(entries: LedgerEntry[], index: CategoryIndex, category: string): Map<string, number> {
+	const totals = new Map<string, number>();
+	for (const entry of entries) {
+		if (index.categoryOf(entry.subcategory)?.name !== category) continue;
+		const entryType = index.typeOf(entry.subcategory);
+		const counts = entryType === "expense" || (entryType === "debt" && entry.amountCents < 0);
+		if (counts) totals.set(entry.subcategory, (totals.get(entry.subcategory) ?? 0) - entry.amountCents);
+	}
+	return totals;
+}
+
 // Expense totals (counted as in groupByCategory) per chosen tag. A row carrying several chosen tags
 // counts under each, so the slices can add up to more than the month's spending.
 export function groupByTags(entries: LedgerEntry[], index: CategoryIndex, tags: readonly string[]): Map<string, number> {
@@ -197,6 +209,29 @@ export function groupByTags(entries: LedgerEntry[], index: CategoryIndex, tags: 
 		}
 	}
 	return totals;
+}
+
+// The plan behind each chosen tag: the planned amounts of the distinct subcategories that have
+// spending (counted as in groupByTags) carrying that tag, each subcategory once per tag.
+export function plannedByTags(
+	entries: LedgerEntry[],
+	index: CategoryIndex,
+	tags: readonly string[],
+	plannedBySubcategory: ReadonlyMap<string, number>,
+): Map<string, number> {
+	const subcategories = new Map<string, Set<string>>();
+	for (const entry of entries) {
+		const entryType = index.typeOf(entry.subcategory);
+		const counts = entryType === "expense" || (entryType === "debt" && entry.amountCents < 0);
+		if (!counts) continue;
+		for (const tag of tags) {
+			if (!entry.tags.includes(tag)) continue;
+			subcategories.set(tag, (subcategories.get(tag) ?? new Set()).add(entry.subcategory));
+		}
+	}
+	return new Map(
+		[...subcategories].map(([tag, subs]) => [tag, [...subs].reduce((sum, sub) => sum + (plannedBySubcategory.get(sub) ?? 0), 0)]),
+	);
 }
 
 export function knownTags(snapshot: Snapshot): string[] {

@@ -21,7 +21,7 @@ const ctx: FormContext = { accounts, categories, index: buildCategoryIndex(categ
 
 const form = (over: Partial<EntryDraft> = {}): EntryDraft => ({
   date: '2026-05-03', type: 'expense', account: 'Cash Main', fromAccount: '', toAccount: '',
-  subcategory: 'Groceries', merchant: '', note: '', tags: [], amount: '12.50', interest: '', isRefund: false, ...over,
+  subcategory: 'Groceries', merchant: '', note: '', tags: ['need'], amount: '12.50', interest: '', isRefund: false, ...over,
 })
 
 const transferForm = (over: Partial<EntryDraft> = {}) =>
@@ -326,6 +326,21 @@ describe('checkDraft', () => {
     expect(error(form({ subcategory: 'Account transfer' }))).toBe('err.subcategoryWrongType')
     expect(error(transferForm({ subcategory: 'Groceries' }))).toBe('err.subcategoryWrongType')
     expect(error(transferForm({ subcategory: 'Nope' }))).toBe('err.subcategoryUnknown')
+  })
+
+  it('does not save a transaction tagged both need and want', () => {
+    expect(error(form({ tags: ['need', 'want'] }))).toBe('err.conflictingTags')
+    expect(error(transferForm({ tags: ['want', 'need'] }))).toBe('err.conflictingTags')
+    expect(error(form({ tags: ['need'] }))).toBeNull()
+    expect(error(form({ tags: ['want', 'trip'] }))).toBeNull()
+  })
+
+  it('does not save an expense without need or want, but allows the other types', () => {
+    expect(error(form({ tags: [] }))).toBe('err.tagMissing')
+    expect(error(form({ tags: ['trip'] }))).toBe('err.tagMissing')
+    expect(error(form({ type: 'income', subcategory: 'Salary', tags: [] }))).toBeNull()
+    expect(error(transferForm({ tags: [] }))).toBeNull()
+    expect(error(form({ isRefund: true, tags: [] }))).toBeNull()
   })
 
   it('applies the transfer rules', () => {

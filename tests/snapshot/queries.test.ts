@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
 	accountColors, accountBalances, accountHasTransactions, accountsOf, activeAccounts, cashOnHandTimeline, cashStartMonth, creditCardDebts,
-	findAccount, groupByCategory, groupByTags, knownMerchants, knownTags, loanDebts, monthEntries, monthSummaries,
-	monthSummary, netAsset, netAssetTimeline, netWorthStartMonth, netWorthTimeline, subcategoryUsage, suggestedTags,
+	findAccount, groupByCategory, groupBySubcategory, groupByTags, knownMerchants, knownTags, loanDebts, monthEntries, monthSummaries,
+	monthSummary, plannedByTags, netAsset, netAssetTimeline, netWorthStartMonth, netWorthTimeline, subcategoryUsage, suggestedTags,
 } from "../../snapshot/queries";
 import { buildSnapshot, categoryIndexOf, emptySnapshot } from "../../snapshot/snapshot";
 import { account, asset, assetInput, monthInput, tx, valuation, vaultInputs } from "../helpers/fixtures";
@@ -228,6 +228,15 @@ describe("month queries", () => {
 		expect(groupByCategory([{ ...entries[0], subcategory: "Nope" }], index, "expense").size).toBe(0);
 	});
 
+	it("groups the expenses of one category by subcategory", () => {
+		const entries = monthEntries(snap, "2026-10");
+		const totals = groupBySubcategory(entries, index, "Food");
+		expect(totals.get("Restaurants")).toBe(2000);
+		expect([...totals.values()].reduce((sum, v) => sum + v, 0)).toBe(8450 - 1200 + 2000);
+		expect(groupBySubcategory(entries, index, "Income").size).toBe(0);
+		expect(groupBySubcategory(entries, index, "Nope").size).toBe(0);
+	});
+
 	it("groups spending by the chosen tags, a row under each tag it carries", () => {
 		const base = monthEntries(snap, "2026-10")[0];
 		const entries = [
@@ -238,6 +247,19 @@ describe("month queries", () => {
 		];
 		expect([...groupByTags(entries, index, ["need", "want"])]).toEqual([["need", 1500], ["want", 500]]);
 		expect(groupByTags(entries, index, []).size).toBe(0);
+	});
+
+	it("plans a tag as the plans of the distinct subcategories it was spent in", () => {
+		const base = monthEntries(snap, "2026-10")[0];
+		const entries = [
+			{ ...base, subcategory: "Groceries", amountCents: -1000, tags: ["need", "want"] },
+			{ ...base, subcategory: "Groceries", amountCents: -500, tags: ["need"] },
+			{ ...base, subcategory: "Restaurants", amountCents: -300, tags: ["want"] },
+			{ ...base, subcategory: "Salary", amountCents: 9000, tags: ["need"] },
+		];
+		const planned = new Map([["Groceries", 40000], ["Restaurants", 10000], ["Salary", 300000]]);
+		expect([...plannedByTags(entries, index, ["need", "want", "none"], planned)]).toEqual([["need", 40000], ["want", 50000]]);
+		expect(plannedByTags(entries, index, ["want"], new Map()).get("want")).toBe(0);
 	});
 
 	it("counts a debt payment under its category as spending, once", () => {

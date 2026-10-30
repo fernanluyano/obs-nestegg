@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { actualsBySubcategory, budgetProgress, buildBudgetSheet, categoryTotals, parsePlanned, paymentSubcategories, sectionsByCategory, seedBudgetLines } from "../../domain/budget";
+import { actualsBySubcategory, budgetProgress, buildBudgetSheet, categoryTotals, parsePlanned, paymentSubcategories, plannedSpendingByCategory, plannedSpendingBySubcategory, sectionsByCategory, seedBudgetLines } from "../../domain/budget";
 import { buildCategoryIndex } from "../../domain/categories";
 import { defaultCategories } from "../../domain/defaults";
 import type { LedgerEntry } from "../../domain/types";
@@ -289,6 +289,30 @@ describe("categoryTotals", () => {
 	it("shows the income of a category that has nothing else", () => {
 		const onlyIncome = group.filter((s) => s.type === "income");
 		expect(categoryTotals(onlyIncome)).toMatchObject({ plannedCents: 120000, actualCents: 120000 });
+	});
+});
+
+describe("planned spending for the pies", () => {
+	const mixed = [category("Home", "expense", ["Rent", ["Mortgage", "debt"], ["Rental income", "income"]])];
+	const loan = [account({ name: "House", accountType: "loan", loanKind: "mortgage", paymentSubcategory: "Mortgage" })];
+	const sheet = buildBudgetSheet(
+		mixed,
+		[
+			{ subcategory: "Rent", plannedCents: 100000 },
+			{ subcategory: "Mortgage", plannedCents: 185453 },
+			{ subcategory: "Rental income", plannedCents: 120000 },
+		],
+		[],
+		buildCategoryIndex(mixed),
+		loan,
+	);
+
+	it("totals a category's expense and payment plan, without income", () => {
+		expect([...plannedSpendingByCategory(sheet)]).toEqual([["Home", 285453]]);
+	});
+
+	it("lists the plan of each expense and payment subcategory, without income", () => {
+		expect(Object.fromEntries(plannedSpendingBySubcategory(sheet))).toEqual({ Rent: 100000, Mortgage: 185453 });
 	});
 });
 

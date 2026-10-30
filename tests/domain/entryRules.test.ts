@@ -56,12 +56,28 @@ describe("entryProblem", () => {
 		expect(entryProblem(entry(over), ctx)).toBe(problem);
 	});
 
+	it("rejects an entry tagged both need and want, in any case", () => {
+		expect(entryProblem(entry({ tags: ["need", "want"] }), ctx)).toBe("invalidTags");
+		expect(entryProblem(entry({ tags: ["trip", "Want", "NEED"] }), ctx)).toBe("invalidTags");
+	});
+
+	it("accepts neither, either one, or either with other tags", () => {
+		expect(entryProblem(entry({ tags: [] }), ctx)).toBeNull();
+		expect(entryProblem(entry({ tags: ["need"] }), ctx)).toBeNull();
+		expect(entryProblem(entry({ tags: ["want", "trip"] }), ctx)).toBeNull();
+	});
+
 	it("still accepts spending on a credit card", () => {
 		expect(entryProblem(entry({ account: "Card" }), ctx)).toBeNull();
 	});
 });
 
 describe("transferProblem", () => {
+	it("rejects a transfer tagged both need and want", () => {
+		expect(transferProblem(transfer({ tags: ["need", "want"] }), ctx)).toBe("invalidTags");
+		expect(transferProblem(transfer({ tags: ["want"] }), ctx)).toBeNull();
+	});
+
 	it.each([
 		["a transfer from cash to cash", { to: "Savings" }],
 		["a transfer from cash to a credit card", { to: "Card" }],

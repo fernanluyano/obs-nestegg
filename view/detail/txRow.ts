@@ -1,7 +1,7 @@
 import { setIcon } from 'obsidian'
 import type { TransactionType, LedgerEntry } from '../../domain/types'
 import { t } from '../../labels'
-import { accountLabels, amountFigure, detailLine, rowTitle } from '../txRowText'
+import { accountLabels, amountFigure, detailLine, rowTitle, tagWarning } from '../txRowText'
 
 const TYPE_ICONS: Record<TransactionType, string> = {
   expense: 'arrow-up-right',
@@ -56,6 +56,12 @@ export function renderTxRow(
     line3.createSpan({ text: display.text, cls: 'ne-tx-note' })
   } else {
     line3.createSpan({ text: '—', cls: 'ne-tx-empty' })
+  }
+
+  const warning = tagWarning(entry, type)
+  if (warning) {
+    row.addClass('has-tag-problem')
+    setIcon(line3.createSpan({ cls: 'ne-tx-warning', attr: { title: warning, 'aria-label': warning } }), 'alert-triangle')
   }
 
   const amount = amountFigure(entry, type)

@@ -173,6 +173,18 @@ export function categoryTotals(group: BudgetSection[]): CategoryTotals {
 	return { plannedCents, actualCents, progress: budgetProgress(plannedCents, actualCents) };
 }
 
+// What is planned for spending, per category (as a category card totals it) and per subcategory,
+// for the expense pies. Income is left out.
+export function plannedSpendingByCategory(sheet: BudgetSheet): Map<string, number> {
+	const groups = sectionsByCategory([...sheet.expense, ...sheet.payments]);
+	return new Map(groups.map((group) => [group[0].category, categoryTotals(group).plannedCents]));
+}
+
+export function plannedSpendingBySubcategory(sheet: BudgetSheet): Map<string, number> {
+	const rows = [...sheet.expense, ...sheet.payments].flatMap((s) => s.rows);
+	return new Map(rows.map((r) => [r.subcategory, r.plannedCents]));
+}
+
 // A new month starts from the plan of the one before it, and only the plan: what was left over or
 // overspent does not carry. Subcategories added since get a zero line.
 export function seedBudgetLines(categories: Category[], previous: BudgetLine[], linked: ReadonlySet<string> = new Set()): BudgetLine[] {

@@ -2,6 +2,7 @@ import type { CategoryIndex } from '../domain/categories'
 import { subcategoryOptions } from '../domain/categories'
 import { transferProblem, entryProblem, type EntryProblem } from '../domain/entryRules'
 import { isIsoDate } from '../domain/dates'
+import { TAG_LIMIT, tagProblem, type TagProblem } from '../domain/tagRules'
 import { centsToDecimal, parseCents } from '../domain/money'
 import { normalizeTag, normalizeTags } from '../domain/names'
 import { interestOf, signedAmount, splitAmount, stripInterestNote, type TransactionDraft } from '../domain/transactions'
@@ -155,7 +156,7 @@ export type TagAddition =
   | { kind: 'duplicate' }
   | { kind: 'max' }
 
-export const TAG_LIMIT = 3
+export { TAG_LIMIT }
 
 // Tags are lowercase, so "Gift" and "gift" are one tag. The checks run in this order, and the
 // caller decides what to do with the box, the dropdown and the chips for each outcome.
@@ -200,6 +201,12 @@ export type DraftErrorKey =
   | 'err.loanTransfersOnly'
   | 'err.investingNoTransactions'
   | 'err.sameAccount'
+  | 'err.conflictingTags'
+  | 'err.tagTooLong'
+  | 'err.tagInvalid'
+  | 'err.tagMissing'
+  | 'err.tagsTooMany'
+  | 'err.tagsDuplicate'
 
 export type DraftVerdict =
   | { ok: true }
@@ -229,6 +236,9 @@ export function checkDraft(draft: EntryDraft, ctx: FormContext): DraftVerdict {
   }
   if (!draft.subcategory) return reject('err.subcategoryRequired')
 
+  const tags = tagProblem(normalizeTags(draft.tags), { requireNeedOrWant: draft.type === 'expense' && !draft.isRefund })
+  if (tags) return reject(TAG_PROBLEM_ERRORS[tags])
+
   const problem = movesBetweenAccounts
     ? transferProblem(transferInputOf(draft), ctx)
     : entryProblem(entryOf(draft), ctx)
@@ -253,6 +263,17 @@ const PROBLEM_MESSAGES: Record<EntryProblem, DraftErrorKey> = {
   wrongDebtAccount: 'err.wrongDebtAccount',
   loanTransfersOnly: 'err.loanTransfersOnly',
   investingNoTransactions: 'err.investingNoTransactions',
+  invalidTags: 'err.tagInvalid',
+}
+
+// The message for each tag rule, shared by the form and the warning on a transaction row.
+export const TAG_PROBLEM_ERRORS: Record<TagProblem, DraftErrorKey> = {
+  tooLong: 'err.tagTooLong',
+  invalid: 'err.tagInvalid',
+  duplicate: 'err.tagsDuplicate',
+  tooMany: 'err.tagsTooMany',
+  needAndWant: 'err.conflictingTags',
+  missingNeedWant: 'err.tagMissing',
 }
 
 function transferInputOf(draft: EntryDraft) {
